@@ -1,8 +1,8 @@
 # Code Insights
 
-Transform your Claude Code session history into structured, searchable insights.
+Transform your AI coding session history into structured, searchable insights.
 
-Code Insights parses Claude Code's JSONL session files (`~/.claude/projects/`) and syncs them to your own Firebase database, where you can visualize patterns, track decisions, and analyze your AI-assisted development workflow.
+Code Insights parses session data from multiple AI coding tools — Claude Code, Cursor, Codex CLI, and Copilot CLI — and syncs them to your own Firebase database, where you can visualize patterns, track decisions, and analyze your AI-assisted development workflow.
 
 ## Privacy Model
 
@@ -17,7 +17,11 @@ Code Insights parses Claude Code's JSONL session files (`~/.claude/projects/`) a
 ## Prerequisites
 
 - **Node.js** 18 or later
-- **Claude Code** installed with existing session history in `~/.claude/projects/`
+- At least one supported AI coding tool with session history:
+  - **Claude Code** — `~/.claude/projects/`
+  - **Cursor** — Workspace storage (macOS, Linux, Windows)
+  - **OpenAI Codex CLI** — `~/.codex/sessions/`
+  - **GitHub Copilot CLI** — `~/.copilot/session-state/`
 - A **Google account** (for Firebase)
 
 ## Quick Start
@@ -121,9 +125,9 @@ That's it — no manual copy-pasting needed. The CLI reads both files and config
 code-insights sync
 ```
 
-This parses all Claude Code JSONL files in `~/.claude/projects/` and uploads them to your Firestore. First sync may take a moment depending on how many sessions you have.
+This discovers sessions from all supported tools (Claude Code, Cursor, Codex CLI, Copilot CLI) and uploads them to your Firestore. First sync may take a moment depending on how many sessions you have.
 
-> **Large backlogs?** If you have months of Claude Code history, the initial sync may exceed Firebase's free tier (Spark plan) write limits. Consider temporarily switching to the [Blaze plan](https://firebase.google.com/pricing) (pay-as-you-go) — the cost is negligible for a one-time sync. You can switch back to the free tier after a day or two once the backlog is uploaded. Subsequent syncs are incremental and well within free tier limits.
+> **Large backlogs?** If you have months of session history, the initial sync may exceed Firebase's free tier (Spark plan) write limits. Consider temporarily switching to the [Blaze plan](https://firebase.google.com/pricing) (pay-as-you-go) — the cost is negligible for a one-time sync. You can switch back to the free tier after a day or two once the backlog is uploaded. Subsequent syncs are incremental and well within free tier limits.
 
 ### Step 8: Open the Dashboard
 
@@ -144,11 +148,12 @@ This adds a Claude Code hook that automatically runs `code-insights sync -q` whe
 ## Architecture
 
 ```
-~/.claude/projects/**/*.jsonl
+Session files from supported tools
+(Claude Code, Cursor, Codex CLI, Copilot CLI)
            │
            ▼
     ┌─────────────┐
-    │   CLI       │  Parse JSONL, extract metadata
+    │   CLI       │  Discover, parse, extract metadata
     │  (Node.js)  │  Upload to YOUR Firestore
     └─────────────┘
            │
