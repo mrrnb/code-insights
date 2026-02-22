@@ -21,9 +21,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Code Insights CLI (`code-insights`) parses Claude Code session history (`~/.claude/projects/` JSONL files) and syncs structured data to the user's own Firebase Firestore. It follows a **Bring Your Own Firebase (BYOF)** privacy model - no central server, users own all their data.
+Code Insights CLI (`code-insights`) parses AI coding session history from multiple tools and syncs structured data to the user's own Firebase Firestore. It follows a **Bring Your Own Firebase (BYOF)** privacy model - no central server, users own all their data.
 
 This repo contains the **open-source CLI tool only**. The web dashboard lives in a separate closed-source repo (`code-insights-web`).
+
+### Supported Source Tools
+
+| Source Tool | Provider ID | Provider Class | Data Format | Location |
+|-------------|-------------|---------------|-------------|----------|
+| Claude Code | `claude-code` | `ClaudeCodeProvider` | JSONL | `~/.claude/projects/**/*.jsonl` |
+| Cursor | `cursor` | `CursorProvider` | SQLite (state.vscdb) | Platform-specific (macOS/Linux/Windows) |
+| Codex CLI | `codex-cli` | `CodexProvider` | JSONL (rollout files) | `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` |
+| Copilot CLI | `copilot-cli` | `CopilotCliProvider` | JSONL (events) | `~/.copilot/session-state/{id}/events.jsonl` |
 
 ## Repository Structure
 
@@ -68,12 +77,32 @@ code-insights reset --confirm          # Delete all Firestore data
 
 ### Data Flow
 ```
-~/.claude/projects/**/*.jsonl → CLI Parser → Firestore → Web Dashboard (separate repo)
+Source tool session files → Provider (discover + parse) → Firestore → Web Dashboard (separate repo)
 ```
+
+### Provider Architecture
+
+All source tools are integrated via the `SessionProvider` interface (`providers/types.ts`):
+
+```typescript
+interface SessionProvider {
+  getProviderName(): string;                                    // e.g. 'claude-code', 'cursor'
+  discover(options?: { projectFilter?: string }): Promise<string[]>;  // Find session files
+  parse(filePath: string): Promise<ParsedSession | null>;       // Parse into common format
+}
+```
+
+Providers are registered in `providers/registry.ts`. To add a new source tool:
+1. Create `providers/<name>.ts` implementing `SessionProvider`
+2. Register it in `providers/registry.ts`
+3. Update web dashboard (see "Adding a new source tool" in web CLAUDE.md)
 
 ### Directory Structure (`/cli/src/`)
 - `commands/` - CLI commands (init, sync, status, connect, reset, install-hook)
-- `parser/jsonl.ts` - JSONL file parsing and session metadata extraction
+- `providers/` - Source tool providers (claude-code, cursor, codex, copilot-cli)
+- `providers/types.ts` - `SessionProvider` interface
+- `providers/registry.ts` - Provider registration and lookup
+- `parser/jsonl.ts` - JSONL file parsing (used by ClaudeCodeProvider)
 - `parser/titles.ts` - Smart session title generation (5-tier fallback strategy)
 - `firebase/client.ts` - Firebase Admin SDK for Firestore reads/writes
 - `utils/config.ts` - Configuration management (~/.code-insights/config.json)

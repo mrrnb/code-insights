@@ -1,7 +1,7 @@
 {
   "name": "@code-insights/cli",
   "version": "1.2.0",
-  "description": "Sync your AI coding sessions to Firebase for analysis",
+  "description": "Parse and sync AI coding sessions (Claude Code, Cursor, Codex, Copilot) to Firebase for analysis",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -24,6 +24,10 @@
   "keywords": [
     "claude",
     "claude-code",
+    "cursor",
+    "codex",
+    "copilot",
+    "ai-coding",
     "insights",
     "analytics",
     "firestore"
