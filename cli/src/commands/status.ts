@@ -15,7 +15,7 @@ export async function statusCommand(): Promise<void> {
     console.log(chalk.green(`  ✓ Configured at ${getConfigDir()}`));
     const config = loadConfig();
     if (config) {
-      console.log(chalk.gray(`    Project: ${config.firebase.projectId}`));
+      console.log(chalk.gray(`    Project: ${config.firebase?.projectId}`));
     }
   } else {
     console.log(chalk.red('  ✗ Not configured'));

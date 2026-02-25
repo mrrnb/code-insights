@@ -42,6 +42,11 @@ export const resetCommand = new Command('reset')
       process.exit(1);
     }
 
+    if (!config.firebase) {
+      console.error(chalk.red('Firebase not configured. Nothing to reset.'));
+      process.exit(1);
+    }
+
     // Initialize Firebase
     if (admin.apps.length === 0) {
       admin.initializeApp({

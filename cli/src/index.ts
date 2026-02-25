@@ -8,6 +8,7 @@ import { installHookCommand, uninstallHookCommand } from './commands/install-hoo
 import { connectCommand } from './commands/connect.js';
 import { resetCommand } from './commands/reset.js';
 import { statsCommand } from './commands/stats/index.js';
+import { configCommand } from './commands/config.js';
 
 const program = new Command();
 
@@ -56,5 +57,6 @@ program
 
 program.addCommand(resetCommand);
 program.addCommand(statsCommand);
+program.addCommand(configCommand);
 
 program.parse();
