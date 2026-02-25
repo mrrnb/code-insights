@@ -6,6 +6,7 @@ import { syncCommand } from './commands/sync.js';
 import { statusCommand } from './commands/status.js';
 import { installHookCommand, uninstallHookCommand } from './commands/install-hook.js';
 import { connectCommand } from './commands/connect.js';
+import { openCommand } from './commands/open.js';
 import { resetCommand } from './commands/reset.js';
 import { statsCommand } from './commands/stats/index.js';
 import { configCommand } from './commands/config.js';
@@ -19,7 +20,7 @@ program
 
 program
   .command('init')
-  .description('Configure Code Insights with your Firebase credentials')
+  .description('Configure Code Insights (local or Firebase)')
   .option('--from-json <path>', 'Path to Firebase service account JSON file')
   .option('--web-config <path>', 'Path to Firebase web SDK config JSON file')
   .action(initCommand);
@@ -55,6 +56,12 @@ program
   .command('connect')
   .description('Generate a URL to connect the web dashboard to your Firebase')
   .action(connectCommand);
+
+program
+  .command('open')
+  .description('Open the web dashboard in your browser')
+  .option('--project', 'Open filtered to the current project')
+  .action(openCommand);
 
 program.addCommand(resetCommand);
 program.addCommand(statsCommand);

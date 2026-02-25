@@ -17,6 +17,7 @@ import {
 import { sparkline, sparklineLabels } from '../render/charts.js';
 import { barChart } from '../render/charts.js';
 import { sectionHeader, metricGrid, getBarWidth } from '../render/layout.js';
+import { showTip } from '../../../utils/tips.js';
 
 export async function costAction(flags: StatsFlags): Promise<void> {
   try {
@@ -153,6 +154,7 @@ export async function costAction(flags: StatsFlags): Promise<void> {
     console.log(colors.hint(`Run stats cost --period 30d for monthly trends`));
     console.log(colors.hint('Run stats models for detailed model analysis'));
     console.log();
+    showTip('stats cost');
   } catch (err) {
     handleStatsError(err);
   }

@@ -20,6 +20,7 @@ import {
   formatCount,
 } from '../render/format.js';
 import { sectionHeader, metricGrid, getTerminalWidth } from '../render/layout.js';
+import { showTip } from '../../../utils/tips.js';
 
 export async function todayAction(flags: StatsFlags): Promise<void> {
   try {
@@ -131,6 +132,7 @@ export async function todayAction(flags: StatsFlags): Promise<void> {
     console.log();
     console.log(colors.hint('Run stats cost --period 7d for weekly cost trends'));
     console.log();
+    showTip('stats today');
   } catch (err) {
     handleStatsError(err);
   }

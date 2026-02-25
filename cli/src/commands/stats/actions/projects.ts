@@ -22,6 +22,7 @@ import {
 } from '../render/format.js';
 import { sparkline } from '../render/charts.js';
 import { sectionHeader, metricGrid, projectCardHeader } from '../render/layout.js';
+import { showTip } from '../../../utils/tips.js';
 
 export async function projectsAction(flags: StatsFlags): Promise<void> {
   try {
@@ -103,6 +104,7 @@ export async function projectsAction(flags: StatsFlags): Promise<void> {
       console.log(colors.hint(`Run stats cost --project "${projects[0].projectName}" for project cost breakdown`));
     }
     console.log();
+    showTip('stats projects');
   } catch (err) {
     handleStatsError(err);
   }

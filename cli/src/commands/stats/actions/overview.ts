@@ -24,6 +24,9 @@ import {
 import { sparkline, sparklineLabels } from '../render/charts.js';
 import { barChart } from '../render/charts.js';
 import { sectionHeader, metricGrid, getBarWidth } from '../render/layout.js';
+import { showWelcomeIfFirstRun } from '../../../utils/welcome.js';
+import { showTip } from '../../../utils/tips.js';
+import { isConfigured } from '../../../utils/config.js';
 
 export async function overviewAction(flags: StatsFlags): Promise<void> {
   try {
@@ -35,6 +38,11 @@ export async function overviewAction(flags: StatsFlags): Promise<void> {
       spinner.succeed(prepResult.message);
     } catch {
       spinner.warn('Sync failed (showing cached data)');
+    }
+
+    // Show welcome message on first ever run (no config file)
+    if (!isConfigured()) {
+      showWelcomeIfFirstRun();
     }
 
     // Resolve project filter
@@ -56,6 +64,7 @@ export async function overviewAction(flags: StatsFlags): Promise<void> {
       console.log(`    1. Use Claude Code, Cursor, or Codex on a project`);
       console.log(`    2. Run ${colors.value('code-insights sync')} to upload your sessions`);
       console.log(`    3. Run ${colors.value('code-insights stats')} to see your analytics\n`);
+      showTip('stats');
       return;
     }
 
@@ -158,6 +167,7 @@ export async function overviewAction(flags: StatsFlags): Promise<void> {
     console.log(colors.hint("Run stats today for today's sessions"));
     console.log(colors.hint('Run stats projects for project details'));
     console.log();
+    showTip('stats');
   } catch (err) {
     handleStatsError(err);
   }

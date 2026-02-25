@@ -34,8 +34,12 @@ export async function installHookCommand(): Promise<void> {
 
   // Check if configured
   if (!isConfigured()) {
-    console.log(chalk.red('Not configured. Run `code-insights init` first.'));
-    process.exit(1);
+    console.log(chalk.yellow('\n  The auto-sync hook requires Firebase to be configured.\n'));
+    console.log(chalk.white('  To set up Firebase:'));
+    console.log(chalk.gray('    code-insights init\n'));
+    console.log(chalk.white('  For local-only analytics (no hook needed):'));
+    console.log(chalk.gray('    code-insights stats\n'));
+    return;
   }
 
   const preference = resolveDataSourcePreference();

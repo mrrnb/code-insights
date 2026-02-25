@@ -18,6 +18,7 @@ import {
 import { sparkline } from '../render/charts.js';
 import { barChart } from '../render/charts.js';
 import { sectionHeader, metricGrid, getBarWidth, projectCardHeader } from '../render/layout.js';
+import { showTip } from '../../../utils/tips.js';
 
 export async function modelsAction(flags: StatsFlags): Promise<void> {
   try {
@@ -113,6 +114,7 @@ export async function modelsAction(flags: StatsFlags): Promise<void> {
     console.log();
     console.log(colors.hint('Run stats cost for time-based cost analysis'));
     console.log();
+    showTip('stats models');
   } catch (err) {
     handleStatsError(err);
   }
