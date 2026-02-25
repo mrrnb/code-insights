@@ -9,7 +9,11 @@ import type { FirebaseWebConfig } from '../types.js';
 export async function connectCommand(): Promise<void> {
   if (!isConfigured()) {
     console.log(chalk.red('\n❌ Code Insights is not configured.'));
-    console.log(chalk.gray('Run "code-insights init" first.\n'));
+    console.log(chalk.gray('The connect command requires Firebase setup.\n'));
+    console.log(chalk.white('  To set up Firebase:'));
+    console.log(chalk.gray('    code-insights init\n'));
+    console.log(chalk.white('  For local-only analytics (no setup needed):'));
+    console.log(chalk.gray('    code-insights stats\n'));
     return;
   }
 

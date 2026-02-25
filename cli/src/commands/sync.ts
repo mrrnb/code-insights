@@ -50,7 +50,10 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
   // Load config
   const config = loadConfig();
   if (!config) {
-    throw new Error('Not configured. Run `code-insights init` first.');
+    throw new Error(
+      'Sync requires Firebase. Run `code-insights init` to set up.\n' +
+      '  For local-only analytics: code-insights stats'
+    );
   }
 
   // Initialize Firebase

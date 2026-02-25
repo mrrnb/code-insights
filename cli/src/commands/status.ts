@@ -20,9 +20,9 @@ export async function statusCommand(): Promise<void> {
     }
     console.log(chalk.gray(`    Data source: ${preference}`));
   } else {
-    console.log(chalk.red('  ✗ Not configured'));
-    console.log(chalk.gray('    Run `code-insights init` to set up'));
-    return;
+    console.log(chalk.yellow('  ○ Not configured (running in zero-config mode)'));
+    console.log(chalk.gray('    Stats work without config: code-insights stats'));
+    console.log(chalk.gray('    To configure Firebase: code-insights init'));
   }
 
   // Check Claude directory
