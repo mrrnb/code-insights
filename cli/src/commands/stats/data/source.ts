@@ -37,9 +37,11 @@ export async function resolveDataSource(flags: StatsFlags): Promise<StatsDataSou
   }
 
   // Explicit dataSource preference or backward-compat inference
+  // Cast through unknown to access optional dataSource field (added in Phase 9)
+  const configAny = config as unknown as Record<string, unknown>;
   const useFirebase =
-    (config as Record<string, unknown>).dataSource === 'firebase' ||
-    (!(config as Record<string, unknown>).dataSource && config.firebase?.projectId);
+    configAny.dataSource === 'firebase' ||
+    (!configAny.dataSource && config.firebase?.projectId);
 
   if (useFirebase && config.firebase) {
     const { FirestoreDataSource } = await import('./firestore.js');
