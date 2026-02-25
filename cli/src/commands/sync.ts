@@ -3,6 +3,7 @@ import * as path from 'path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { loadConfig, loadSyncState, saveSyncState, resolveDataSourcePreference } from '../utils/config.js';
+import { trackEvent } from '../utils/telemetry.js';
 import { initializeFirebase, uploadSession, uploadMessages, sessionExists, recalculateUsageStats } from '../firebase/client.js';
 import { getAllProviders, getProvider } from '../providers/registry.js';
 import type { SessionProvider } from '../providers/types.js';
@@ -214,6 +215,7 @@ export async function syncCommand(options: SyncOptions = {}): Promise<void> {
     // Summary (only if not quiet)
     if (result.syncedCount === 0 && result.errorCount === 0) {
       log(chalk.green('\n\u2705 Already up to date!'));
+      trackEvent('sync', true);
       return;
     }
     log(chalk.cyan('\n\uD83D\uDCCA Sync Summary'));
@@ -223,7 +225,9 @@ export async function syncCommand(options: SyncOptions = {}): Promise<void> {
       log(chalk.red(`  Errors: ${result.errorCount}`));
     }
     log(chalk.green('\n\u2705 Sync complete!'));
+    trackEvent('sync', true);
   } catch (error) {
+    trackEvent('sync', false);
     if (!options.quiet) {
       console.error(chalk.red(error instanceof Error ? error.message : 'Sync failed'));
     }

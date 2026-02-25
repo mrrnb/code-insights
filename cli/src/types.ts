@@ -199,6 +199,7 @@ export interface ClaudeInsightConfig {
   };
   dashboardUrl?: string;
   dataSource?: DataSourcePreference;
+  telemetry?: boolean;              // default true (opt-out)
 }
 
 export interface SyncState {

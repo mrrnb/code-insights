@@ -1,6 +1,7 @@
 import { execFile } from 'child_process';
 import chalk from 'chalk';
 import { loadConfig } from '../utils/config.js';
+import { trackEvent } from '../utils/telemetry.js';
 
 const DEFAULT_DASHBOARD_URL = 'https://code-insights.app';
 
@@ -29,9 +30,11 @@ export async function openCommand(options: OpenOptions): Promise<void> {
 
   try {
     openInBrowser(url);
+    trackEvent('open', true);
   } catch {
     console.log(chalk.yellow('  Could not open browser automatically.'));
     console.log(chalk.white(`  Visit: ${chalk.bold.underline(url)}\n`));
+    trackEvent('open', false);
   }
 }
 
