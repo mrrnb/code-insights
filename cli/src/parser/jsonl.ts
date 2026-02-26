@@ -353,6 +353,7 @@ function extractProjectPath(filePath: string): string {
  * Extract project name from project path
  */
 function extractProjectName(projectPath: string): string {
-  const parts = projectPath.split('/').filter(Boolean);
-  return parts[parts.length - 1] || 'unknown';
+  // projectPath comes from Claude's encoded format (always forward slashes)
+  // path.basename handles both separators cross-platform
+  return path.basename(projectPath) || 'unknown';
 }
