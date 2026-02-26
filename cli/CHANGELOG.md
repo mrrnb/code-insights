@@ -2,7 +2,7 @@
 
 All notable changes to `@code-insights/cli` will be documented in this file.
 
-## [1.2.0] - 2026-02-26
+## [2.0.0] - 2026-02-26
 
 ### Added
 - **Terminal analytics suite** — `stats`, `stats cost`, `stats projects`, `stats today`, `stats models` commands
