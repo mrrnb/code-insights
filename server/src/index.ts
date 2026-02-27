@@ -2,7 +2,7 @@ import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { existsSync, readFileSync } from 'fs';
-import { relative } from 'path';
+import { relative, join } from 'path';
 import { openUrl } from '@code-insights/cli/utils/browser';
 import projectsRouter from './routes/projects.js';
 import sessionsRouter from './routes/sessions.js';
@@ -64,14 +64,16 @@ export async function startServer(options: ServerOptions): Promise<void> {
     const relativeStaticDir = relative(process.cwd(), staticDir);
     app.use('/*', serveStatic({ root: relativeStaticDir }));
 
+    // Cache index.html at startup — avoids a readFileSync on every SPA navigation
+    // request, which would be a pointless disk read for a file that never changes
+    // while the server is running.
+    const indexPath = join(staticDir, 'index.html');
+    const indexHtml = existsSync(indexPath) ? readFileSync(indexPath, 'utf-8') : null;
+
     // SPA fallback: any non-API route not matched by serveStatic serves index.html
     // so react-router can handle client-side routing.
     app.get('*', (c) => {
-      const indexPath = `${staticDir}/index.html`;
-      if (existsSync(indexPath)) {
-        const html = readFileSync(indexPath, 'utf-8');
-        return c.html(html);
-      }
+      if (indexHtml) return c.html(indexHtml);
       return c.text('Dashboard not found. Run pnpm build first.', 404);
     });
   } else {
@@ -81,7 +83,7 @@ export async function startServer(options: ServerOptions): Promise<void> {
         <html><body style="font-family:monospace;padding:2rem">
           <h2>Code Insights Dashboard</h2>
           <p>The dashboard has not been built yet.</p>
-          <pre>pnpm build</pre>
+          <pre>pnpm install &amp;&amp; pnpm build</pre>
           <p>Then restart the server.</p>
         </body></html>
       `),

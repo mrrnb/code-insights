@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import LandingPage from '@/pages/LandingPage';
 import DashboardPage from '@/pages/DashboardPage';
 import SessionsPage from '@/pages/SessionsPage';
@@ -22,6 +22,7 @@ export default function App() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/export" element={<ExportPage />} />
         <Route path="/journal" element={<JournalPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

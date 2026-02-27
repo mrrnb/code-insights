@@ -1,5 +1,5 @@
 import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { existsSync } from 'fs';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -12,14 +12,20 @@ interface DashboardOptions {
 
 /**
  * Check if a port is already in use.
+ * - Checks only EADDRINUSE, not other errors (e.g. EACCES for privileged ports).
+ * - Waits for the test socket to fully close before resolving, avoiding a TOCTOU
+ *   race where the real server tries to bind before the OS releases the port.
  */
 function isPortInUse(port: number): Promise<boolean> {
   return new Promise((resolvePromise) => {
     const server = net.createServer();
-    server.once('error', () => resolvePromise(true));
-    server.once('listening', () => {
+    server.once('error', (err: NodeJS.ErrnoException) => {
       server.close();
-      resolvePromise(false);
+      resolvePromise(err.code === 'EADDRINUSE');
+    });
+    server.once('listening', () => {
+      // Wait for close callback before resolving so the OS fully releases the port
+      server.close(() => resolvePromise(false));
     });
     server.listen(port, '127.0.0.1');
   });
@@ -28,11 +34,11 @@ function isPortInUse(port: number): Promise<boolean> {
 /**
  * Start the Code Insights local dashboard server.
  *
- * Loads server/dist/index.js by resolved filesystem path rather than
- * package name to avoid a circular workspace dependency: the server package
- * depends on @code-insights/cli, so CLI cannot list @code-insights/server
- * as a build-time dependency. At runtime the server dist is always present
- * after `pnpm build`.
+ * Loads server/dist/index.js by file URL rather than package name to avoid a
+ * circular workspace dependency (server depends on @code-insights/cli, so CLI
+ * cannot list @code-insights/server as a build-time dep). pathToFileURL ensures
+ * the import works on Windows where absolute paths like C:\... are not valid
+ * ESM import specifiers.
  */
 export async function dashboardCommand(options: DashboardOptions): Promise<void> {
   const port = parseInt(options.port, 10);
@@ -62,21 +68,22 @@ export async function dashboardCommand(options: DashboardOptions): Promise<void>
     const staticDir = resolve(workspaceRoot, 'dashboard', 'dist');
 
     // Guard: server must be built before the dashboard command can start.
-    // In a published npm package this would always be present; in a local
-    // dev checkout users must run `pnpm build` first.
+    // Running `npm install -g @code-insights/cli` does not include server/dist
+    // because the package is structured for local workspace use only.
     if (!existsSync(serverEntryPath)) {
       spinner.fail('Dashboard server not found.');
       console.error(chalk.dim(
-        '  The dashboard requires a local build of the server package.\n' +
-        '  Run: pnpm build\n' +
-        '  See: https://github.com/melagiri/code-insights#local-development',
+        '  The dashboard requires a full workspace checkout.\n' +
+        '  Clone the repo and run: pnpm install && pnpm build\n' +
+        '  See: https://github.com/melagiri/code-insights#development',
       ));
       process.exit(1);
     }
 
-    // Dynamic path-based import avoids build-time circular dep
+    // Use pathToFileURL so the import specifier is valid on all platforms,
+    // including Windows where resolve() returns C:\...\index.js.
     type ServerModule = { startServer: (opts: { port: number; staticDir: string; openBrowser: boolean }) => Promise<void> };
-    const { startServer } = await import(serverEntryPath) as ServerModule;
+    const { startServer } = await import(pathToFileURL(serverEntryPath).href) as ServerModule;
 
     spinner.stop();
 

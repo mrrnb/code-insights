@@ -5,6 +5,8 @@ import { parseIntParam } from '../utils.js';
 
 const app = new Hono();
 
+const VALID_TYPES = ['summary', 'decision', 'learning', 'technique', 'prompt_quality'] as const;
+
 app.get('/', (c) => {
   const db = getDb();
   const { projectId, sessionId, type, limit, offset } = c.req.query();
@@ -44,13 +46,13 @@ app.post('/', async (c) => {
   const body = await c.req.json<{
     sessionId: string;
     projectId: string;
-    projectName: string;
+    projectName?: string;   // optional — defaults to ''
     type: string;
     title: string;
     content: string;
-    summary: string;
+    summary?: string;       // optional — defaults to ''
     bullets?: string[];
-    confidence: number;
+    confidence?: number;    // optional — defaults to 0
     metadata?: Record<string, unknown>;
   }>();
 
@@ -60,6 +62,11 @@ app.post('/', async (c) => {
     if (!body[field] || typeof body[field] !== 'string') {
       return c.json({ error: `Missing or invalid field: ${field}` }, 400);
     }
+  }
+
+  // Validate type is one of the known insight types
+  if (!VALID_TYPES.includes(body.type as typeof VALID_TYPES[number])) {
+    return c.json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` }, 400);
   }
 
   // Validate confidence is a finite number if provided
