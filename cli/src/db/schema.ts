@@ -5,14 +5,6 @@
 
 export const SCHEMA_SQL = `
 -- ============================================================
--- Schema version tracking
--- ============================================================
-CREATE TABLE IF NOT EXISTS schema_version (
-  version    INTEGER PRIMARY KEY,
-  applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
--- ============================================================
 -- Projects
 -- ============================================================
 CREATE TABLE IF NOT EXISTS projects (

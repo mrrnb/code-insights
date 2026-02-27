@@ -133,13 +133,91 @@ export function getSessions(opts: SessionQueryOptions = {}): SessionRow[] {
 
 /**
  * Get the most recent session matching optional filters.
+ * Uses LIMIT 1 to avoid scanning all rows.
  */
 export function getLastSession(opts?: { sourceTool?: string; projectId?: string }): SessionRow | null {
-  const rows = getSessions({
-    sourceTool: opts?.sourceTool,
-    projectId: opts?.projectId,
-  });
-  return rows.length > 0 ? rows[0] : null;
+  const db = getDb();
+
+  const conditions: string[] = [];
+  const params: (string | number)[] = [];
+
+  if (opts?.sourceTool) {
+    conditions.push('source_tool = ?');
+    params.push(opts.sourceTool);
+  }
+  if (opts?.projectId) {
+    conditions.push('project_id = ?');
+    params.push(opts.projectId);
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const sql = `
+    SELECT
+      id, project_id, project_name,
+      started_at, ended_at,
+      message_count, user_message_count, assistant_message_count, tool_call_count,
+      estimated_cost_usd, total_input_tokens, total_output_tokens,
+      cache_creation_tokens, cache_read_tokens,
+      primary_model, models_used,
+      generated_title, custom_title, summary, session_character,
+      source_tool, usage_source
+    FROM sessions
+    ${where}
+    ORDER BY started_at DESC
+    LIMIT 1
+  `;
+
+  const row = db.prepare(sql).get(...params) as {
+    id: string;
+    project_id: string;
+    project_name: string;
+    started_at: string;
+    ended_at: string;
+    message_count: number;
+    user_message_count: number;
+    assistant_message_count: number;
+    tool_call_count: number;
+    estimated_cost_usd: number | null;
+    total_input_tokens: number | null;
+    total_output_tokens: number | null;
+    cache_creation_tokens: number | null;
+    cache_read_tokens: number | null;
+    primary_model: string | null;
+    models_used: string | null;
+    generated_title: string | null;
+    custom_title: string | null;
+    summary: string | null;
+    session_character: string | null;
+    source_tool: string;
+    usage_source: string | null;
+  } | undefined;
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    projectName: row.project_name,
+    startedAt: new Date(row.started_at),
+    endedAt: new Date(row.ended_at),
+    messageCount: row.message_count,
+    userMessageCount: row.user_message_count,
+    assistantMessageCount: row.assistant_message_count,
+    toolCallCount: row.tool_call_count,
+    estimatedCostUsd: row.estimated_cost_usd ?? undefined,
+    totalInputTokens: row.total_input_tokens ?? undefined,
+    totalOutputTokens: row.total_output_tokens ?? undefined,
+    cacheCreationTokens: row.cache_creation_tokens ?? undefined,
+    cacheReadTokens: row.cache_read_tokens ?? undefined,
+    primaryModel: row.primary_model ?? undefined,
+    modelsUsed: row.models_used ? (JSON.parse(row.models_used) as string[]) : undefined,
+    generatedTitle: row.generated_title ?? undefined,
+    customTitle: row.custom_title ?? undefined,
+    summary: row.summary ?? undefined,
+    sessionCharacter: row.session_character ?? undefined,
+    sourceTool: row.source_tool,
+    usageSource: row.usage_source ?? undefined,
+  };
 }
 
 /**
