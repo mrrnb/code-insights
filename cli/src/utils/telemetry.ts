@@ -274,15 +274,12 @@ function getSessionCountBucket(): string {
 }
 
 /**
- * Determine the configured data source preference.
- * Returns 'none' if no config exists at all.
+ * Determine the configured data source.
+ * Always 'local' in Phase 2+ (SQLite-only).
  */
 function getDataSource(): string {
   const config = loadConfig();
   if (!config) return 'none';
-  if (config.dataSource) return config.dataSource;
-  // Infer from credentials: if Firebase is configured, they're likely using it
-  if (config.firebase?.projectId) return 'firebase';
   return 'local';
 }
 
