@@ -2,6 +2,7 @@ import { getDb } from './client.js';
 import { sessionExists } from './read.js';
 import { generateStableProjectId, getDeviceInfo } from '../utils/device.js';
 import type { ParsedSession, ParsedMessage } from '../types.js';
+import type BetterSqlite3 from 'better-sqlite3';
 
 const CONTENT_MAX = 10000;
 const THINKING_MAX = 5000;
@@ -11,6 +12,149 @@ const TOOL_INPUT_MAX = 1000;
 function truncate(s: string, max: number): string {
   if (s.length <= max) return s;
   return s.slice(0, max - 20) + '\n... [truncated]';
+}
+
+// ──────────────────────────────────────────────────────
+// Module-level lazy-initialized prepared statements.
+//
+// We can't prepare at module load time because the DB isn't open yet.
+// Instead, we lazy-init on first use — a statement is compiled once and
+// reused on every subsequent call, avoiding repeated parse overhead during
+// batch syncs that write hundreds of sessions.
+// ──────────────────────────────────────────────────────
+
+let _lastDb: BetterSqlite3.Database | null = null;
+
+// All cached statements below — reset when DB instance changes (e.g., test teardown)
+let _stmtUpsertProjectBase: BetterSqlite3.Statement | null = null;
+let _stmtUpdateProjectWithUsage: BetterSqlite3.Statement | null = null;
+let _stmtUpdateProjectCountOnly: BetterSqlite3.Statement | null = null;
+let _stmtUpsertSession: BetterSqlite3.Statement | null = null;
+let _stmtInsertMessage: BetterSqlite3.Statement | null = null;
+let _stmtUpsertUsageStatsIncrement: BetterSqlite3.Statement | null = null;
+
+function getStmts() {
+  const db = getDb();
+  // If the DB instance changed (test isolation, reset), rebuild all statements
+  if (db !== _lastDb) {
+    _lastDb = db;
+    _stmtUpsertProjectBase = null;
+    _stmtUpdateProjectWithUsage = null;
+    _stmtUpdateProjectCountOnly = null;
+    _stmtUpsertSession = null;
+    _stmtInsertMessage = null;
+    _stmtUpsertUsageStatsIncrement = null;
+  }
+
+  if (!_stmtUpsertProjectBase) {
+    _stmtUpsertProjectBase = db.prepare(`
+      INSERT INTO projects (id, name, path, git_remote_url, project_id_source, last_activity)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        path = excluded.path,
+        git_remote_url = excluded.git_remote_url,
+        last_activity = MAX(last_activity, excluded.last_activity),
+        updated_at = datetime('now')
+    `);
+  }
+
+  if (!_stmtUpdateProjectWithUsage) {
+    _stmtUpdateProjectWithUsage = db.prepare(`
+      UPDATE projects SET
+        session_count         = session_count + 1,
+        total_input_tokens    = total_input_tokens + ?,
+        total_output_tokens   = total_output_tokens + ?,
+        cache_creation_tokens = cache_creation_tokens + ?,
+        cache_read_tokens     = cache_read_tokens + ?,
+        estimated_cost_usd    = estimated_cost_usd + ?,
+        updated_at            = datetime('now')
+      WHERE id = ?
+    `);
+  }
+
+  if (!_stmtUpdateProjectCountOnly) {
+    _stmtUpdateProjectCountOnly = db.prepare(`
+      UPDATE projects SET session_count = session_count + 1, updated_at = datetime('now')
+      WHERE id = ?
+    `);
+  }
+
+  if (!_stmtUpsertSession) {
+    _stmtUpsertSession = db.prepare(`
+      INSERT INTO sessions (
+        id, project_id, project_name, project_path, git_remote_url,
+        summary, generated_title, title_source, session_character,
+        started_at, ended_at,
+        message_count, user_message_count, assistant_message_count, tool_call_count,
+        git_branch, claude_version, source_tool,
+        device_id, device_hostname, device_platform,
+        total_input_tokens, total_output_tokens, cache_creation_tokens, cache_read_tokens,
+        estimated_cost_usd, models_used, primary_model, usage_source
+      ) VALUES (
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?,
+        ?, ?,
+        ?, ?, ?, ?,
+        ?, ?, ?,
+        ?, ?, ?,
+        ?, ?, ?, ?,
+        ?, ?, ?, ?
+      )
+      ON CONFLICT(id) DO UPDATE SET
+        generated_title         = excluded.generated_title,
+        title_source            = excluded.title_source,
+        session_character       = excluded.session_character,
+        ended_at                = excluded.ended_at,
+        summary                 = excluded.summary,
+        message_count           = excluded.message_count,
+        user_message_count      = excluded.user_message_count,
+        assistant_message_count = excluded.assistant_message_count,
+        tool_call_count         = excluded.tool_call_count,
+        total_input_tokens      = excluded.total_input_tokens,
+        total_output_tokens     = excluded.total_output_tokens,
+        cache_creation_tokens   = excluded.cache_creation_tokens,
+        cache_read_tokens       = excluded.cache_read_tokens,
+        estimated_cost_usd      = excluded.estimated_cost_usd,
+        models_used             = excluded.models_used,
+        primary_model           = excluded.primary_model,
+        usage_source            = excluded.usage_source,
+        synced_at               = datetime('now')
+    `);
+  }
+
+  if (!_stmtInsertMessage) {
+    _stmtInsertMessage = db.prepare(`
+      INSERT OR IGNORE INTO messages (
+        id, session_id, type, content, thinking,
+        tool_calls, tool_results, usage, timestamp, parent_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+  }
+
+  if (!_stmtUpsertUsageStatsIncrement) {
+    _stmtUpsertUsageStatsIncrement = db.prepare(`
+      INSERT INTO usage_stats (id, total_input_tokens, total_output_tokens, cache_creation_tokens, cache_read_tokens, estimated_cost_usd, sessions_with_usage, last_updated_at)
+      VALUES (1, ?, ?, ?, ?, ?, 1, datetime('now'))
+      ON CONFLICT(id) DO UPDATE SET
+        total_input_tokens    = total_input_tokens + excluded.total_input_tokens,
+        total_output_tokens   = total_output_tokens + excluded.total_output_tokens,
+        cache_creation_tokens = cache_creation_tokens + excluded.cache_creation_tokens,
+        cache_read_tokens     = cache_read_tokens + excluded.cache_read_tokens,
+        estimated_cost_usd    = estimated_cost_usd + excluded.estimated_cost_usd,
+        sessions_with_usage   = sessions_with_usage + 1,
+        last_updated_at       = datetime('now')
+    `);
+  }
+
+  return {
+    upsertProjectBase: _stmtUpsertProjectBase,
+    updateProjectWithUsage: _stmtUpdateProjectWithUsage,
+    updateProjectCountOnly: _stmtUpdateProjectCountOnly,
+    upsertSession: _stmtUpsertSession,
+    insertMessage: _stmtInsertMessage,
+    upsertUsageStatsIncrement: _stmtUpsertUsageStatsIncrement,
+  };
 }
 
 /**
@@ -47,19 +191,10 @@ function upsertProject(
   isNewSession: boolean,
   isForce: boolean,
 ): void {
-  const db = getDb();
+  const stmts = getStmts();
 
   // Insert project if it doesn't exist
-  db.prepare(`
-    INSERT INTO projects (id, name, path, git_remote_url, project_id_source, last_activity)
-    VALUES (?, ?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET
-      name = excluded.name,
-      path = excluded.path,
-      git_remote_url = excluded.git_remote_url,
-      last_activity = MAX(last_activity, excluded.last_activity),
-      updated_at = datetime('now')
-  `).run(
+  stmts.upsertProjectBase.run(
     projectId,
     session.projectName,
     session.projectPath,
@@ -70,17 +205,7 @@ function upsertProject(
 
   // Increment session count and usage only for genuinely new sessions
   if (isNewSession && !isForce && session.usage) {
-    db.prepare(`
-      UPDATE projects SET
-        session_count         = session_count + 1,
-        total_input_tokens    = total_input_tokens + ?,
-        total_output_tokens   = total_output_tokens + ?,
-        cache_creation_tokens = cache_creation_tokens + ?,
-        cache_read_tokens     = cache_read_tokens + ?,
-        estimated_cost_usd    = estimated_cost_usd + ?,
-        updated_at            = datetime('now')
-      WHERE id = ?
-    `).run(
+    stmts.updateProjectWithUsage.run(
       session.usage.totalInputTokens,
       session.usage.totalOutputTokens,
       session.usage.cacheCreationTokens,
@@ -89,10 +214,7 @@ function upsertProject(
       projectId,
     );
   } else if (isNewSession) {
-    db.prepare(`
-      UPDATE projects SET session_count = session_count + 1, updated_at = datetime('now')
-      WHERE id = ?
-    `).run(projectId);
+    stmts.updateProjectCountOnly.run(projectId);
   }
 }
 
@@ -102,45 +224,8 @@ function upsertSession(
   gitRemoteUrl: string | null,
   deviceInfo: { deviceId: string; hostname: string; platform: string },
 ): void {
-  const db = getDb();
-  db.prepare(`
-    INSERT INTO sessions (
-      id, project_id, project_name, project_path, git_remote_url,
-      summary, generated_title, title_source, session_character,
-      started_at, ended_at,
-      message_count, user_message_count, assistant_message_count, tool_call_count,
-      git_branch, claude_version, source_tool,
-      device_id, device_hostname, device_platform,
-      total_input_tokens, total_output_tokens, cache_creation_tokens, cache_read_tokens,
-      estimated_cost_usd, models_used, primary_model, usage_source
-    ) VALUES (
-      ?, ?, ?, ?, ?,
-      ?, ?, ?, ?,
-      ?, ?,
-      ?, ?, ?, ?,
-      ?, ?, ?,
-      ?, ?, ?,
-      ?, ?, ?, ?,
-      ?, ?, ?, ?
-    )
-    ON CONFLICT(id) DO UPDATE SET
-      generated_title         = excluded.generated_title,
-      title_source            = excluded.title_source,
-      session_character       = excluded.session_character,
-      message_count           = excluded.message_count,
-      user_message_count      = excluded.user_message_count,
-      assistant_message_count = excluded.assistant_message_count,
-      tool_call_count         = excluded.tool_call_count,
-      total_input_tokens      = excluded.total_input_tokens,
-      total_output_tokens     = excluded.total_output_tokens,
-      cache_creation_tokens   = excluded.cache_creation_tokens,
-      cache_read_tokens       = excluded.cache_read_tokens,
-      estimated_cost_usd      = excluded.estimated_cost_usd,
-      models_used             = excluded.models_used,
-      primary_model           = excluded.primary_model,
-      usage_source            = excluded.usage_source,
-      synced_at               = datetime('now')
-  `).run(
+  const stmts = getStmts();
+  stmts.upsertSession.run(
     session.id,
     projectId,
     session.projectName,
@@ -181,17 +266,11 @@ export function insertMessages(session: ParsedSession): void {
   if (session.messages.length === 0) return;
 
   const db = getDb();
-
-  const stmt = db.prepare(`
-    INSERT OR IGNORE INTO messages (
-      id, session_id, type, content, thinking,
-      tool_calls, tool_results, usage, timestamp, parent_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+  const stmts = getStmts();
 
   const tx = db.transaction((messages: ParsedMessage[]) => {
     for (const msg of messages) {
-      stmt.run(
+      stmts.insertMessage.run(
         msg.id,
         msg.sessionId,
         msg.type,
@@ -344,19 +423,8 @@ export function recalculateUsageStats(): { sessionsWithUsage: number; totalToken
 function updateGlobalUsageStats(session: ParsedSession, isForce: boolean): void {
   if (isForce || !session.usage) return;
 
-  const db = getDb();
-  db.prepare(`
-    INSERT INTO usage_stats (id, total_input_tokens, total_output_tokens, cache_creation_tokens, cache_read_tokens, estimated_cost_usd, sessions_with_usage, last_updated_at)
-    VALUES (1, ?, ?, ?, ?, ?, 1, datetime('now'))
-    ON CONFLICT(id) DO UPDATE SET
-      total_input_tokens    = total_input_tokens + excluded.total_input_tokens,
-      total_output_tokens   = total_output_tokens + excluded.total_output_tokens,
-      cache_creation_tokens = cache_creation_tokens + excluded.cache_creation_tokens,
-      cache_read_tokens     = cache_read_tokens + excluded.cache_read_tokens,
-      estimated_cost_usd    = estimated_cost_usd + excluded.estimated_cost_usd,
-      sessions_with_usage   = sessions_with_usage + 1,
-      last_updated_at       = datetime('now')
-  `).run(
+  const stmts = getStmts();
+  stmts.upsertUsageStatsIncrement.run(
     session.usage.totalInputTokens,
     session.usage.totalOutputTokens,
     session.usage.cacheCreationTokens,

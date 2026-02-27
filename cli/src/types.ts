@@ -207,11 +207,3 @@ export interface FileSyncState {
   syncedSessionIds?: string[];  // For providers where 1 file = N sessions (e.g., Cursor SQLite)
 }
 
-export interface Project {
-  id: string;
-  name: string;
-  path: string;
-  sessionCount: number;
-  lastActivity: Date;
-  createdAt: Date;
-}

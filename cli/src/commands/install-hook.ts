@@ -2,7 +2,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import chalk from 'chalk';
-import { isConfigured } from '../utils/config.js';
 import { trackEvent } from '../utils/telemetry.js';
 
 const CLAUDE_SETTINGS_DIR = path.join(os.homedir(), '.claude');

@@ -32,11 +32,25 @@ export function loadConfig(): ClaudeInsightConfig | null {
 }
 
 /**
- * Save configuration to file
+ * Save configuration to file.
+ *
+ * Only the known fields of ClaudeInsightConfig are written. This strips any
+ * stale keys (e.g. `firebase`, `webConfig`, `dataSource`, `dashboardUrl`)
+ * that may have been persisted by earlier versions of the CLI, so they don't
+ * accumulate in the config file across upgrades.
  */
 export function saveConfig(config: ClaudeInsightConfig): void {
   ensureConfigDir();
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), { mode: 0o600 });
+  const clean: ClaudeInsightConfig = {
+    sync: config.sync,
+  };
+  if (config.dashboard !== undefined) {
+    clean.dashboard = config.dashboard;
+  }
+  if (config.telemetry !== undefined) {
+    clean.telemetry = config.telemetry;
+  }
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(clean, null, 2), { mode: 0o600 });
 }
 
 /**
@@ -59,7 +73,7 @@ export function loadSyncState(): SyncState {
  */
 export function saveSyncState(state: SyncState): void {
   ensureConfigDir();
-  fs.writeFileSync(SYNC_STATE_FILE, JSON.stringify(state, null, 2));
+  fs.writeFileSync(SYNC_STATE_FILE, JSON.stringify(state, null, 2), { mode: 0o600 });
 }
 
 /**

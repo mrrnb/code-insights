@@ -21,7 +21,7 @@ export interface TelemetryEvent {
   arch: string;               // process.arch
   providers: string[];        // detected from filesystem (which AI tool dirs exist)
   sessionCountBucket: string; // '0' | '1-10' | '11-50' | '51-200' | '200+'
-  dataSource: string;         // 'local' | 'firebase' | 'none'
+  dataSource: string;         // 'local' | 'none'
   hasHook: boolean;
   timestamp: string;          // YYYY-MM-DD only (day precision — no time, no timezone)
 }

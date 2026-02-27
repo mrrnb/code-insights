@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { loadSyncState, isConfigured, getConfigDir } from '../utils/config.js';
+import { loadSyncState } from '../utils/config.js';
 import { getDb, getDbPath } from '../db/client.js';
 import { getProjects } from '../db/read.js';
 import { getAllProviders } from '../providers/registry.js';

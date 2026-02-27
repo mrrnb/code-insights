@@ -2,6 +2,24 @@ import { getDb } from './client.js';
 import type { SessionRow } from '../commands/stats/data/types.js';
 
 // ──────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────
+
+/**
+ * Safely parse the models_used JSON column.
+ * Returns undefined on any parse failure rather than throwing — a corrupt
+ * value in one row should not break the entire query.
+ */
+function parseModelsUsed(raw: string | null): string[] | undefined {
+  if (!raw) return undefined;
+  try {
+    return JSON.parse(raw) as string[];
+  } catch {
+    return undefined;
+  }
+}
+
+// ──────────────────────────────────────────────────────
 // Session existence check (used by sync)
 // ──────────────────────────────────────────────────────
 
@@ -121,7 +139,7 @@ export function getSessions(opts: SessionQueryOptions = {}): SessionRow[] {
     cacheCreationTokens: r.cache_creation_tokens ?? undefined,
     cacheReadTokens: r.cache_read_tokens ?? undefined,
     primaryModel: r.primary_model ?? undefined,
-    modelsUsed: r.models_used ? (JSON.parse(r.models_used) as string[]) : undefined,
+    modelsUsed: parseModelsUsed(r.models_used),
     generatedTitle: r.generated_title ?? undefined,
     customTitle: r.custom_title ?? undefined,
     summary: r.summary ?? undefined,
@@ -210,7 +228,7 @@ export function getLastSession(opts?: { sourceTool?: string; projectId?: string 
     cacheCreationTokens: row.cache_creation_tokens ?? undefined,
     cacheReadTokens: row.cache_read_tokens ?? undefined,
     primaryModel: row.primary_model ?? undefined,
-    modelsUsed: row.models_used ? (JSON.parse(row.models_used) as string[]) : undefined,
+    modelsUsed: parseModelsUsed(row.models_used),
     generatedTitle: row.generated_title ?? undefined,
     customTitle: row.custom_title ?? undefined,
     summary: row.summary ?? undefined,
@@ -218,6 +236,37 @@ export function getLastSession(opts?: { sourceTool?: string; projectId?: string 
     sourceTool: row.source_tool,
     usageSource: row.usage_source ?? undefined,
   };
+}
+
+/**
+ * Count sessions matching optional filters without loading row data.
+ * Use this instead of getSessions({}).length to avoid full-table scans
+ * when only a count is needed.
+ */
+export function getSessionCount(opts: SessionQueryOptions = {}): number {
+  const db = getDb();
+
+  const conditions: string[] = [];
+  const params: (string | number)[] = [];
+
+  if (opts.periodStart) {
+    conditions.push('started_at >= ?');
+    params.push(opts.periodStart.toISOString());
+  }
+  if (opts.projectId) {
+    conditions.push('project_id = ?');
+    params.push(opts.projectId);
+  }
+  if (opts.sourceTool) {
+    conditions.push('source_tool = ?');
+    params.push(opts.sourceTool);
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const sql = `SELECT COUNT(*) AS cnt FROM sessions ${where}`;
+
+  const row = db.prepare(sql).get(...params) as { cnt: number };
+  return row.cnt;
 }
 
 /**

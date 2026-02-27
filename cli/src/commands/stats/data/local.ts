@@ -16,7 +16,7 @@ import type {
 } from './types.js';
 import { ProjectNotFoundError } from './types.js';
 import { findSimilarNames } from './fuzzy-match.js';
-import { getSessions, getLastSession, getProjectList } from '../../../db/read.js';
+import { getSessions, getSessionCount, getLastSession, getProjectList } from '../../../db/read.js';
 import { getDb } from '../../../db/client.js';
 
 // ──────────────────────────────────────────────────────
@@ -31,8 +31,8 @@ export class LocalDataSource implements StatsDataSource {
     getDb();
 
     if (flags.noSync) {
-      const rows = getSessions({});
-      return { message: `${rows.length} sessions in database`, dataChanged: false };
+      const count = getSessionCount();
+      return { message: `${count} sessions in database`, dataChanged: false };
     }
 
     // Auto-sync before showing stats
@@ -45,10 +45,10 @@ export class LocalDataSource implements StatsDataSource {
           dataChanged: true,
         };
       }
-      const total = getSessions({}).length;
+      const total = getSessionCount();
       return { message: `${total} sessions`, dataChanged: false };
     } catch {
-      const total = getSessions({}).length;
+      const total = getSessionCount();
       return { message: `${total} sessions (sync failed)`, dataChanged: false };
     }
   }

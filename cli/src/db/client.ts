@@ -33,11 +33,20 @@ export function getDb(): Database.Database {
   runMigrations(db);
 
   _db = db;
+
+  // Ensure WAL checkpoint runs on process exit so no data is left in the WAL file.
+  // Registered here (on first open) so it fires whether process exits normally or
+  // via an unhandled exception that reaches the exit handler.
+  process.on('exit', () => {
+    closeDb();
+  });
+
   return _db;
 }
 
 /**
  * Close the database connection. Used in tests and graceful shutdown.
+ * Also called by the process 'exit' handler to ensure WAL checkpointing.
  */
 export function closeDb(): void {
   if (_db) {
