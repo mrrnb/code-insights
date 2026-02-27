@@ -87,8 +87,6 @@ export interface StatsFlags {
   project?: string;
   source?: string;
   noSync: boolean;
-  local: boolean;
-  remote: boolean;
 }
 
 /**
@@ -271,17 +269,6 @@ export class ProjectNotFoundError extends StatsError {
     this.projectName = projectName;
     this.availableProjects = availableProjects;
     this.suggestions = suggestions;
-  }
-}
-
-/** Thrown when a Firestore composite index is required but missing */
-export class FirestoreIndexError extends StatsError {
-  public readonly indexUrl: string;
-
-  constructor(message: string, indexUrl: string) {
-    super(message);
-    this.name = 'FirestoreIndexError';
-    this.indexUrl = indexUrl;
   }
 }
 

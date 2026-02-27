@@ -1,12 +1,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import type { ClaudeInsightConfig, SyncState, FirebaseWebConfig, DataSourcePreference } from '../types.js';
+import type { ClaudeInsightConfig, SyncState } from '../types.js';
 
 const CONFIG_DIR = path.join(os.homedir(), '.code-insights');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 const SYNC_STATE_FILE = path.join(CONFIG_DIR, 'sync-state.json');
-const WEB_CONFIG_FILE = path.join(CONFIG_DIR, 'web-config.json');
 
 /**
  * Ensure config directory exists
@@ -85,51 +84,8 @@ export function getConfigDir(): string {
 }
 
 /**
- * Load web config from file
+ * Get the sync state file path (used by reset command)
  */
-export function loadWebConfig(): Record<string, unknown> | null {
-  try {
-    if (!fs.existsSync(WEB_CONFIG_FILE)) {
-      return null;
-    }
-    const content = fs.readFileSync(WEB_CONFIG_FILE, 'utf-8');
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Save web config to file
- */
-export function saveWebConfig(config: FirebaseWebConfig): void {
-  ensureConfigDir();
-  fs.writeFileSync(WEB_CONFIG_FILE, JSON.stringify(config, null, 2), { mode: 0o600 });
-}
-
-/**
- * Check if web config exists
- */
-export function hasWebConfig(): boolean {
-  return fs.existsSync(WEB_CONFIG_FILE);
-}
-
-/**
- * Determine the effective data source preference.
- * Resolution: config.dataSource > infer from Firebase creds > 'local'
- */
-export function resolveDataSourcePreference(): DataSourcePreference {
-  const config = loadConfig();
-  if (!config) return 'local';
-  if (config.dataSource) return config.dataSource;
-  if (config.firebase?.projectId) return 'firebase';
-  return 'local';
-}
-
-/**
- * Check if Firebase is configured (has credentials).
- */
-export function isFirebaseConfigured(): boolean {
-  const config = loadConfig();
-  return config !== null && config.firebase !== undefined && !!config.firebase.projectId;
+export function getSyncStatePath(): string {
+  return SYNC_STATE_FILE;
 }
