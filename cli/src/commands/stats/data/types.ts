@@ -245,14 +245,6 @@ export class StatsError extends Error {
   }
 }
 
-/** Thrown when required configuration is missing */
-export class ConfigNotFoundError extends StatsError {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ConfigNotFoundError';
-  }
-}
-
 /** Thrown when a project name cannot be resolved */
 export class ProjectNotFoundError extends StatsError {
   public readonly projectName: string;

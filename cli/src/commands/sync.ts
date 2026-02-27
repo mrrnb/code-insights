@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import chalk from 'chalk';
 import ora from 'ora';
-import { loadConfig, loadSyncState, saveSyncState } from '../utils/config.js';
+import { loadSyncState, saveSyncState } from '../utils/config.js';
 import { trackEvent } from '../utils/telemetry.js';
 import { insertSessionWithProject, insertMessages, recalculateUsageStats } from '../db/write.js';
 import { sessionExists } from '../db/read.js';

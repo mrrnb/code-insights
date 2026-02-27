@@ -1,4 +1,5 @@
 import { getDb } from './client.js';
+import { sessionExists } from './read.js';
 import { generateStableProjectId, getDeviceInfo } from '../utils/device.js';
 import type { ParsedSession, ParsedMessage } from '../types.js';
 
@@ -37,11 +38,6 @@ export function insertSessionWithProject(session: ParsedSession, isForce = false
   tx();
 }
 
-function sessionExists(sessionId: string): boolean {
-  const db = getDb();
-  const row = db.prepare('SELECT 1 FROM sessions WHERE id = ?').get(sessionId) as { 1: number } | undefined;
-  return row !== undefined;
-}
 
 function upsertProject(
   projectId: string,
