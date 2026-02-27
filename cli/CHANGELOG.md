@@ -5,7 +5,7 @@ All notable changes to `@code-insights/cli` will be documented in this file.
 ## [2.1.0] - 2026-02-27
 
 ### Added
-- **CopilotProvider** — VS Code Copilot Chat session support (`sourceTool: 'copilot-cli'`)
+- **CopilotProvider** — VS Code Copilot Chat session support (`sourceTool: 'copilot'`)
 - **`status` command multi-tool summary** — displays session counts broken down by source tool (Claude Code, Cursor, Codex CLI, Copilot)
 - **`reset` now clears `stats` collection** — ensures the `stats/usage` document is wiped on full reset
 
