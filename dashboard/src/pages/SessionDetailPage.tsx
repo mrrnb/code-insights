@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams } from 'react-router';
 import { useSession, useSessionMutation } from '@/hooks/useSessions';
 import { useInsights } from '@/hooks/useInsights';
@@ -61,7 +61,7 @@ export default function SessionDetailPage() {
   const loadingMore = messagesQuery.isFetchingNextPage;
   const hasMore = messagesQuery.hasNextPage ?? false;
 
-  const allInsightIds = new Set(insights.map((i) => i.id));
+  const allInsightIds = useMemo(() => new Set(insights.map((i) => i.id)), [insights]);
 
   if (loading) {
     return (

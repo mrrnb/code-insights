@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useSessions } from '@/hooks/useSessions';
@@ -28,7 +28,7 @@ export default function ExportPage() {
   const [previewContent, setPreviewContent] = useState<string | null>(null);
 
   // Compute counts for the current config
-  const getFilteredCounts = () => {
+  const { filteredSessions, filteredInsights } = useMemo(() => {
     let filteredSessions = sessions;
     let filteredInsights = insights;
 
@@ -44,9 +44,7 @@ export default function ExportPage() {
     }
 
     return { filteredSessions, filteredInsights };
-  };
-
-  const { filteredSessions, filteredInsights } = getFilteredCounts();
+  }, [sessions, insights, exportType, projectId, dailyDate]);
 
   const getFilename = (): string => {
     const today = format(new Date(), 'yyyy-MM-dd');
