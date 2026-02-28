@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sparkles, Target, Lightbulb, GitBranch, Clock } from 'lucide-react';
 import { Link } from 'react-router';
+import { ErrorCard } from '@/components/ErrorCard';
 import type { Insight } from '@/lib/types';
 
 function getWeekKey(dateStr: string): string {
@@ -32,7 +33,7 @@ function getWeekLabel(weekKey: string): string {
 }
 
 export default function JournalPage() {
-  const { data: insights = [], isLoading } = useInsights();
+  const { data: insights = [], isLoading, isError, refetch } = useInsights();
   const { data: llmConfig } = useLlmConfig();
 
   const llmConfigured = !!(llmConfig?.provider && llmConfig?.model);
@@ -64,6 +65,10 @@ export default function JournalPage() {
           A chronological timeline of your learnings and decisions
         </p>
       </div>
+
+      {isError && (
+        <ErrorCard message="Failed to load journal data" onRetry={refetch} />
+      )}
 
       <Tabs defaultValue="timeline">
         <TabsList>
