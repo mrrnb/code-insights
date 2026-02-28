@@ -195,12 +195,12 @@ When prioritizing features or deciding what to build next:
 | **Must Have** | Product doesn't work without this | Session sync, basic dashboard view |
 | **Should Have** | Important but product works without it | Session filtering, date range selection |
 | **Could Have** | Nice to have, not critical | Session character visualization, export |
-| **Won't Have** | Explicitly out of scope for now | Team features, billing, mobile app |
+| **Won't Have** | Explicitly out of scope | Team/org features, billing, mobile app, cloud sync |
 
 ### Priority Decision Checklist
 
 When someone proposes a new feature:
-1. Does it serve Developer Dev or Team Lead Taylor?
+1. Does it help developers learn from and improve their AI coding sessions?
 2. Does it require SQLite schema changes? (increases risk)
 3. Can it be done within a single package? (lower risk)
 4. Does it block other features?
@@ -208,8 +208,8 @@ When someone proposes a new feature:
 
 **Decision matrix:**
 
-| Serves persona? | Schema change? | Size | Decision |
-|-----------------|---------------|------|----------|
+| Serves learning goal? | Schema change? | Size | Decision |
+|-----------------------|---------------|------|----------|
 | Yes | No | S/M | Ship it |
 | Yes | No | L | Schedule it |
 | Yes | Yes | Any | TA review first |
@@ -330,8 +330,8 @@ Only the founder merges PRs. Your job is to verify everything is ready and repor
 - Check in on progress without micromanaging
 - Verify completion with the handoff checklist
 
-### Working with ux-designer
-- Provide user context and priorities for design work
+### Working with ux-engineer
+- Provide user context and priorities for design and implementation work
 - Review designs from a product perspective (does this solve the user problem?)
 - Don't dictate design decisions — provide constraints and goals
 
@@ -340,16 +340,30 @@ Only the founder merges PRs. Your job is to verify everything is ready and repor
 - Product pivots and priority changes are prime chronicle material
 - Share user feedback that could become shareable stories
 
+## Context Sources
+
+Before coordinating work, ground yourself in the current state:
+
+| Need | Source |
+|------|--------|
+| Architecture & conventions | `CLAUDE.md` |
+| Migration plan (6-phase) | `docs/plans/2026-02-27-local-first-migration.md` |
+| Type definitions | `cli/src/types.ts` (single source of truth) |
+| Active design plans | `docs/plans/*.md` |
+| Current sprint | `docs/implementation/CURRENT_SPRINT.md` |
+
 ## Constraints
 
+- Architecture: single-repo pnpm workspace monorepo (cli/ + dashboard/ + server/). Local-first, no cloud
+- Free, open-source tool helping developers analyze AI coding sessions and build knowledge over time — no monetization
+- This is a personal learning tool — no team/org features, no surveillance framing
 - No test framework yet — track when tests should be added, don't block on it
 - Types defined once in `cli/src/types.ts` — single source of truth
 - CLI binary is `code-insights`
-- pnpm is the package manager (workspace monorepo)
+- pnpm is the package manager
 - All agents are autonomous within their domain — coordinate, don't micromanage
 - No Jira — GitHub Issues and local markdown only
 - No story points — T-shirt sizes (S/M/L/XL) for estimation
-- This is an OSS portfolio project — no monetization
 
 ---
 

@@ -80,7 +80,7 @@ Before writing any code, check the relevant sources:
 | Config management | `cli/src/utils/config.ts` |
 | Dashboard components | `dashboard/src/components/` |
 | Dashboard hooks | `dashboard/src/hooks/` |
-| LLM providers | `dashboard/src/lib/llm/` |
+| LLM providers | `server/src/llm/` |
 | Server routes | `server/src/routes/` |
 | Architecture | `CLAUDE.md`, `docs/` |
 | shadcn config | `dashboard/components.json` |
@@ -210,9 +210,9 @@ pnpm build    # Must pass across the workspace
 - CORS configured for local development
 
 ### LLM Provider Patterns
-- Factory pattern in dashboard LLM client
+- Factory pattern in server LLM client (`server/src/llm/`)
 - Each provider in its own module
-- Config stored in localStorage (dashboard) or server-side config
+- Config stored in `~/.code-insights/config.json`, loaded server-side
 - Token input capped at 80k
 - All providers implement the `LLMClient` interface
 

@@ -12,7 +12,7 @@
 
 **Privacy model:** Fully local-first. No cloud accounts, no sign-ups, no data leaves the machine. SQLite database at `~/.code-insights/data.db`.
 
-**This is an OSS portfolio project** — no monetization planned.
+**Purpose:** A free, open-source tool helping developers who use multiple AI coding tools analyze their sessions, collect insights, track decisions and learnings, and build knowledge over time.
 
 ---
 
@@ -55,7 +55,7 @@ code-insights/
 │       ├── hooks/          # React Query hooks
 │       ├── lib/            # LLM providers, utilities
 │       └── App.tsx         # SPA entry point
-├── server/                 # Hono API server (to be created in Phase 3)
+├── server/                 # Hono API server
 │   └── src/
 │       ├── routes/         # REST API endpoints
 │       └── index.ts        # Server entry point
@@ -68,8 +68,6 @@ code-insights/
     ├── agents/             # Agent definitions (engineer, TA, PM, etc.)
     └── commands/           # Team commands (start-feature, start-review)
 ```
-
-**Note:** `dashboard/` and `server/` packages will be created in Phase 3 of the local-first migration. They do not exist yet.
 
 ---
 
@@ -520,8 +518,8 @@ The CLI and dashboard support sessions from multiple AI coding tools via the `so
 - **Runtime**: Node.js (ES2022, ES Modules)
 - **CLI Framework**: Commander.js
 - **Database**: SQLite (better-sqlite3) — WAL mode, local at `~/.code-insights/data.db`
-- **Dashboard**: Vite + React 19 SPA (to be created in Phase 3)
-- **Server**: Hono (to be created in Phase 3)
+- **Dashboard**: Vite + React 19 SPA
+- **Server**: Hono
 - **UI**: Tailwind CSS 4 + shadcn/ui (New York), Lucide icons
 - **Server State**: React Query (TanStack Query)
 - **Charts**: Recharts 3

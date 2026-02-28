@@ -27,13 +27,13 @@ When creating shareable versions, replace specific references:
 
 | Internal Term | Shareable Term |
 |--------------|----------------|
-| Code Insights | "the tool" or "our developer analytics tool" |
+| Code Insights | "the tool" or "our developer learning tool" |
 | Claude Code sessions | "AI coding sessions" or "AI-assisted development sessions" |
 | SQLite sync | "local database sync" or "data pipeline" |
-| CLI-to-dashboard pipeline | "CLI to embedded dashboard pipeline" |
+| CLI-to-dashboard pipeline | "CLI to embedded local dashboard pipeline" |
 | JSONL parsing | "session history parsing" or "conversation log parsing" |
 | code-insights CLI | "the CLI tool" |
-| Dashboard SPA | "the web dashboard" |
+| Dashboard SPA | "the embedded local dashboard" |
 | ParsedSession, Insight types | "session metadata", "insight categories" |
 
 The goal is that a reader unfamiliar with Code Insights can still learn from the story.
@@ -155,6 +155,14 @@ Building an open-source developer tool while using it yourself. Dogfooding, cont
 - How do you write docs for a tool that doesn't fully exist yet?
 - What makes a CLI tool feel "right"?
 - How do you balance feature velocity with documentation quality?
+
+### 6. Feature Parity — Porting a Web App to an Embedded Local Dashboard
+The journey of porting a Next.js cloud dashboard to a Vite SPA served by a local Hono server. What ports cleanly, what needs rethinking, and what gets dropped.
+
+**Key questions:**
+- What assumptions does a cloud-hosted web app make that break in a local-first context?
+- How do you replace real-time Firestore subscriptions with local polling?
+- What's the right level of feature parity — port everything or curate?
 
 ## Suggest + Approve Pattern
 

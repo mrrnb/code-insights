@@ -58,17 +58,9 @@ Data types are in `cli/src/types.ts` (single source of truth). Data arrives via 
 
 Mid-to-senior developer, 3-8 years experience, uses AI coding tools daily.
 
-**Goals:** Understand AI usage patterns, improve prompting effectiveness, reduce wasted turns, track learning moments.
-**Frustrations:** Session history buried in logs, no way to compare sessions or see trends, can't recall past decisions.
-**Key quote:** "I want to be a better AI collaborator, but I can't improve what I can't measure."
-
-### "Team Lead Taylor" — Secondary User
-
-Engineering manager, 8-15 years experience, manages 4-10 developers using AI tools.
-
-**Goals:** Team-level AI usage insights, identify coaching opportunities, understand ROI.
-**Frustrations:** No visibility into team AI usage, can't quantify productivity gains.
-**Key quote:** "I need to know if our AI tools are helping or just adding noise. Show me the signal."
+**Goals:** Learn from AI coding sessions, collect insights and decisions, track learning moments, improve prompting effectiveness over time.
+**Frustrations:** Session history buried in logs, no way to compare sessions or see trends, can't recall past decisions or learnings.
+**Key quote:** "I want to build knowledge from every AI session — decisions, insights, and learnings I can look back on."
 
 ## UX Principles
 
