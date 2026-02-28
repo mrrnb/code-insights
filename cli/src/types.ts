@@ -184,6 +184,31 @@ export interface InsightMetadata {
   applicability?: string;
 }
 
+export type LLMProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama';
+
+export interface LLMProviderConfig {
+  provider: LLMProvider;
+  apiKey?: string;       // not required for Ollama
+  model: string;
+  baseUrl?: string;      // for Ollama or custom endpoints
+}
+
+export interface ProviderModelOption {
+  id: string;
+  name: string;
+  description?: string;
+  inputCostPer1M?: number;
+  outputCostPer1M?: number;
+}
+
+export interface ProviderInfo {
+  id: LLMProvider;
+  name: string;
+  models: ProviderModelOption[];
+  requiresApiKey: boolean;
+  apiKeyLink?: string;
+}
+
 export interface ClaudeInsightConfig {
   sync: {
     claudeDir: string;
@@ -191,6 +216,7 @@ export interface ClaudeInsightConfig {
   };
   dashboard?: {
     port?: number;
+    llm?: LLMProviderConfig;
   };
   telemetry?: boolean;              // default true (opt-out)
 }
