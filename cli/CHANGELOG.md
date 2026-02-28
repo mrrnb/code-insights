@@ -2,6 +2,18 @@
 
 All notable changes to `@code-insights/cli` will be documented in this file.
 
+## [3.0.3] - 2026-02-28
+
+### Fixed
+
+- **`--version` now reads from package.json** — Previously hardcoded as `3.0.0`, causing `code-insights --version` to always report `3.0.0` regardless of installed version.
+
+## [3.0.2] - 2026-02-28
+
+### Fixed
+
+- **Added missing server runtime dependencies** — `hono` and `@hono/node-server` added to CLI package.json so `code-insights dashboard` works for npm-installed users.
+
 ## [3.0.0] - 2026-02-28
 
 See [MIGRATION.md](../MIGRATION.md) for the full upgrade guide from v2.

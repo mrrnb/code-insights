@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { readFileSync } from 'fs';
 import { Command } from 'commander';
 import { initCommand } from './commands/init.js';
 import { syncCommand } from './commands/sync.js';
@@ -13,12 +14,14 @@ import { configCommand } from './commands/config.js';
 import { telemetryCommand } from './commands/telemetry.js';
 import { showTelemetryNoticeIfNeeded } from './utils/telemetry.js';
 
+const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
+
 const program = new Command();
 
 program
   .name('code-insights')
   .description('AI coding session analytics — sync, stats, and insights')
-  .version('3.0.0');
+  .version(pkg.version);
 
 program
   .command('init')
