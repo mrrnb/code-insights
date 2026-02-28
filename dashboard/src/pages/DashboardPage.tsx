@@ -9,6 +9,7 @@ import { DashboardActivityChart } from '@/components/dashboard/DashboardActivity
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
 import { BulkAnalyzeButton } from '@/components/analysis/BulkAnalyzeButton';
 import { StatsHeroSkeleton } from '@/components/skeletons/StatsHeroSkeleton';
+import { ErrorCard } from '@/components/ErrorCard';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDurationMinutes } from '@/lib/utils';
@@ -26,13 +27,14 @@ function getGreeting(): string {
 export default function DashboardPage() {
   const [range, setRange] = useState<DashboardRange>('30d');
 
-  const { data: dashStats, isLoading: statsLoading } = useDashboardStats(range);
+  const { data: dashStats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useDashboardStats(range);
   const { data: usageStats } = useUsageStats();
-  const { data: sessions = [], isLoading: sessionsLoading } = useSessions({ limit: 20 });
+  const { data: sessions = [], isLoading: sessionsLoading, isError: sessionsError, refetch: refetchSessions } = useSessions({ limit: 20 });
   const { data: insights = [], isLoading: insightsLoading } = useInsights();
   const { data: projects = [] } = useProjects();
 
   const loading = statsLoading || sessionsLoading || insightsLoading;
+  const hasError = statsError || sessionsError;
 
   const todayLabel = new Date().toLocaleDateString(undefined, {
     month: 'long',
@@ -86,6 +88,14 @@ export default function DashboardPage() {
         </div>
         <span className="text-sm text-muted-foreground">{todayLabel}</span>
       </div>
+
+      {/* Error state */}
+      {hasError && !loading && (
+        <ErrorCard
+          message="Failed to load dashboard data"
+          onRetry={() => { refetchStats(); refetchSessions(); }}
+        />
+      )}
 
       {/* All-time stats hero */}
       {loading ? (

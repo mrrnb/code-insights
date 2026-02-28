@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SessionCardSkeleton } from '@/components/skeletons/SessionCardSkeleton';
+import { ErrorCard } from '@/components/ErrorCard';
 import {
   MessageSquare,
   Wrench,
@@ -66,6 +67,7 @@ export default function SessionsPage() {
 
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
 
+
   const sessionParams = useMemo(() => {
     const params: { projectId?: string; sourceTool?: string; limit?: number } = { limit: 200 };
     if (projectFilter !== 'all') params.projectId = projectFilter;
@@ -73,7 +75,7 @@ export default function SessionsPage() {
     return params;
   }, [projectFilter, sourceFilter]);
 
-  const { data: sessions = [], isLoading: sessionsLoading } = useSessions(sessionParams);
+  const { data: sessions = [], isLoading: sessionsLoading, isError: sessionsError, refetch: refetchSessions } = useSessions(sessionParams);
   const { data: insights = [], isLoading: insightsLoading } = useInsights();
 
   const analyzedSessionIds = useMemo(
@@ -197,7 +199,9 @@ export default function SessionsPage() {
       </div>
 
       {/* Session groups */}
-      {loading ? (
+      {sessionsError && !loading ? (
+        <ErrorCard message="Failed to load sessions" onRetry={refetchSessions} />
+      ) : loading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <SessionCardSkeleton key={i} />

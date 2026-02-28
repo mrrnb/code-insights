@@ -5,6 +5,7 @@ import { InsightCard } from '@/components/insights/InsightCard';
 import { InsightListItem } from '@/components/insights/InsightListItem';
 import { PromptQualityCard } from '@/components/insights/PromptQualityCard';
 import { InsightCardSkeleton } from '@/components/skeletons/InsightCardSkeleton';
+import { ErrorCard } from '@/components/ErrorCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,7 +34,7 @@ export default function InsightsPage() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   const { data: projects = [] } = useProjects();
-  const { data: insights = [], isLoading } = useInsights(
+  const { data: insights = [], isLoading, isError, refetch } = useInsights(
     projectFilter !== 'all' ? { projectId: projectFilter } : undefined
   );
 
@@ -141,7 +142,9 @@ export default function InsightsPage() {
       </div>
 
       {/* Content */}
-      {isLoading ? (
+      {isError && !isLoading ? (
+        <ErrorCard message="Failed to load insights" onRetry={refetch} />
+      ) : isLoading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => (
             <InsightCardSkeleton key={i} />

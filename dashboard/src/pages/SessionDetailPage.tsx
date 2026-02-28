@@ -14,6 +14,7 @@ import {
 import { SESSION_CHARACTER_COLORS, SESSION_CHARACTER_LABELS, SOURCE_TOOL_COLORS } from '@/lib/constants/colors';
 import { parseJsonField } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
+import { ErrorCard } from '@/components/ErrorCard';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -107,11 +108,9 @@ export default function SessionDetailPage() {
   if (error || !session) {
     return (
       <div className="p-6">
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">
-            {error instanceof Error ? error.message : 'Session not found'}
-          </p>
-        </div>
+        <ErrorCard
+          message={error instanceof Error ? error.message : 'Session not found'}
+        />
       </div>
     );
   }
