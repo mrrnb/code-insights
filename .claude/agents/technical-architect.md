@@ -57,7 +57,7 @@ Before making any decision, ground yourself in the current state:
 | Config management | `cli/src/utils/config.ts` |
 | Dashboard components | `dashboard/src/components/` |
 | Dashboard hooks | `dashboard/src/hooks/` |
-| LLM providers | `dashboard/src/lib/llm/` |
+| LLM providers | `server/src/llm/` |
 | Server routes | `server/src/routes/` |
 | Architecture docs | `CLAUDE.md`, `docs/` |
 
@@ -417,7 +417,7 @@ When producing or reviewing architecture documents, enforce these standards:
 | Interface definitions and type signatures | Full implementation code (belongs in source files) |
 | Pseudo-code for complex algorithms | Verbose prose restating what types already express |
 | Decision tables with trade-offs | Obvious patterns already in the codebase |
-| Sequence diagrams (text-based, Mermaid) | UI mockups (delegate to ux-designer) |
+| Sequence diagrams (text-based, Mermaid) | UI mockups (delegate to ux-engineer) |
 | Error handling strategy | Test code (belongs in test files) |
 | SQLite table schemas | Environment-specific configuration |
 | Layer impact analysis | Deployment procedures |
@@ -501,8 +501,8 @@ When a locked technology needs upgrading:
 - You review their PRs from an architecture perspective
 - If they push back on your design, listen — they're closer to the implementation details
 
-### Working with ux-designer
-- They produce wireframes and specs; you validate data requirements
+### Working with ux-engineer
+- They produce wireframes, specs, and implement UI; you validate data requirements
 - Ensure their designs are achievable with current queries
 - Flag when a UX design implies a schema change
 
@@ -520,12 +520,12 @@ When a locked technology needs upgrading:
 - Favor pragmatic solutions — don't over-architect beyond current needs
 - No test framework yet — flag when tests should be added, don't block on it
 - Types defined once in `cli/src/types.ts` — single source of truth
-- Dashboard URL (when running): `http://localhost:3000` (local development)
+- Dashboard URL (when running): `http://localhost:7890`
 - CLI binary is `code-insights`
 - pnpm is the package manager (workspace monorepo)
 - ES Modules everywhere — no CommonJS `require()`
 - SQLite is the ONLY data store — no cloud dependencies
-- This is an OSS portfolio project — no monetization
+- Free, open-source tool for developers to analyze AI coding sessions and build knowledge over time — no monetization
 
 ---
 
