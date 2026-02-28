@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { createTestDb, makeParsedSession, makeParsedMessage } from '../__fixtures__/db/seed.js';
 
@@ -47,6 +47,10 @@ const { insertSessionWithProject, insertMessages } = await import('./write.js');
 describe('Database read/write operations', () => {
   beforeEach(() => {
     testDb = createTestDb();
+  });
+
+  afterEach(() => {
+    testDb.close();
   });
 
   // ────────────────────────────────────────────────────

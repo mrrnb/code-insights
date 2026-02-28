@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { SCHEMA_SQL } from '@code-insights/cli/db/schema';
+import { runMigrations } from '@code-insights/cli/db/schema';
 
 // ──────────────────────────────────────────────────────
 // Module-scoped mutable DB reference for mocking.
@@ -25,8 +25,7 @@ const { createApp } = await import('../index.js');
 
 function initTestDb(): Database.Database {
   const db = new Database(':memory:');
-  db.pragma('foreign_keys = ON');
-  db.exec(SCHEMA_SQL);
+  runMigrations(db);
   return db;
 }
 
