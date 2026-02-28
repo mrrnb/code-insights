@@ -179,9 +179,15 @@ export interface InsightMetadata {
   // Decision-specific
   alternatives?: string[];
   reasoning?: string;
-  // Technique-specific
+  evidence?: string[];
+  // Technique/learning-specific
   context?: string;
   applicability?: string;
+  // Prompt quality-specific
+  efficiencyScore?: number;
+  wastedTurns?: Array<{ messageIndex: number; reason: string; suggestedRewrite: string }>;
+  antiPatterns?: Array<{ name: string; count: number; examples: string[] }>;
+  potentialMessageReduction?: number;
 }
 
 export type LLMProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama';
