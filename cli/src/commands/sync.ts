@@ -196,7 +196,7 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
           ? `${providerSyncedCount} synced (${providerMessageCount.toLocaleString()} messages)`
           : `0 synced`;
         const skippedPart = providerSkippedCount > 0
-          ? `, ${providerSkippedCount} skipped`
+          ? `, ${providerSkippedCount} empty conversations`
           : '';
         log(chalk.gray(`  ${syncedPart}${skippedPart}`));
       }
