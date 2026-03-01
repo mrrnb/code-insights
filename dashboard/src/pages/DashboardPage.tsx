@@ -12,7 +12,6 @@ import { StatsHeroSkeleton } from '@/components/skeletons/StatsHeroSkeleton';
 import { ErrorCard } from '@/components/ErrorCard';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatDurationMinutes } from '@/lib/utils';
 import type { DailyStats } from '@/lib/types';
 import { Sparkles, ArrowRight } from 'lucide-react';
 
@@ -30,7 +29,7 @@ export default function DashboardPage() {
 
   const { data: dashStats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useDashboardStats(range);
   const { data: usageStats } = useUsageStats();
-  const { data: sessions = [], isLoading: sessionsLoading, isError: sessionsError, refetch: refetchSessions } = useSessions();
+  const { data: sessions = [], isLoading: sessionsLoading, isError: sessionsError, refetch: refetchSessions } = useSessions({ limit: 500 });
   const { data: insights = [], isLoading: insightsLoading } = useInsights();
   const { data: projects = [] } = useProjects();
 
