@@ -2,6 +2,7 @@
 // Ported from web repo (src/lib/llm/prompts.ts) with SQLite-aware message formatting.
 
 import { jsonrepair } from 'jsonrepair';
+import type { SessionCharacter } from '@code-insights/cli/types';
 
 // SQLite row format for messages — snake_case with JSON-encoded arrays.
 // This matches the shape returned by server/src/routes/messages.ts.
@@ -210,14 +211,12 @@ Evidence should reference the labeled turns in the conversation (e.g., "User#2",
 Respond with valid JSON only, wrapped in <json>...</json> tags. Do not include any other text.`;
 }
 
-export type SessionCharacterType = 'deep_focus' | 'bug_hunt' | 'feature_build' | 'exploration' | 'refactor' | 'learning' | 'quick_task';
-
 const VALID_SESSION_CHARACTERS = new Set<string>([
   'deep_focus', 'bug_hunt', 'feature_build', 'exploration', 'refactor', 'learning', 'quick_task',
 ]);
 
 export interface AnalysisResponse {
-  session_character?: SessionCharacterType;
+  session_character?: SessionCharacter;
   summary: {
     title: string;
     content: string;

@@ -116,8 +116,15 @@ export function InsightListItem({ insight, showProject = false, allInsightIds }:
             <span>Confidence: {Math.round(insight.confidence * 100)}%</span>
             {Array.isArray(metadata.alternatives) && (metadata.alternatives as unknown[]).length > 0 && (
               <span>
-                Alternatives: {(metadata.alternatives as Array<string | { option: string; rejected_because: string }>)
-                  .map(a => typeof a === 'string' ? a : `${a.option} (${a.rejected_because})`)
+                Alternatives: {(metadata.alternatives as Array<unknown>)
+                  .map(a => {
+                    if (typeof a === 'string') return a;
+                    if (a && typeof a === 'object' && 'option' in a) {
+                      const alt = a as { option: string; rejected_because?: string };
+                      return alt.rejected_because ? `${alt.option} (${alt.rejected_because})` : alt.option;
+                    }
+                    return String(a);
+                  })
                   .join(', ')}
               </span>
             )}

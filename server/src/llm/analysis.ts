@@ -599,9 +599,9 @@ function convertToInsightRows(response: AnalysisResponse, session: SessionData):
       ? `${decision.situation} → ${decision.choice}`
       : decision.choice || decision.situation || decision.title;
 
-    const altBullets = (decision.alternatives || []).map(
-      a => `${a.option}: ${a.rejected_because}`
-    );
+    const altBullets = (decision.alternatives || [])
+      .filter(a => a && typeof a === 'object' && a.option)
+      .map(a => `${a.option}: ${a.rejected_because || 'no reason given'}`);
 
     insights.push({
       id: randomUUID(),

@@ -176,17 +176,29 @@ export interface Insight {
 }
 
 export interface InsightMetadata {
-  // Decision-specific
-  alternatives?: string[];
+  // Decision-specific (v3.0.0 decomposed schema)
+  situation?: string;
+  choice?: string;
   reasoning?: string;
+  alternatives?: Array<string | { option: string; rejected_because: string }>;
+  trade_offs?: string;
+  revisit_when?: string;
   evidence?: string[];
-  // Technique/learning-specific
+  // Learning-specific (v3.0.0 decomposed schema)
+  symptom?: string;
+  root_cause?: string;
+  takeaway?: string;
+  applies_when?: string;
+  // Summary-specific
+  outcome?: 'success' | 'partial' | 'abandoned' | 'blocked';
+  // Technique/learning-specific (legacy v2)
   context?: string;
   applicability?: string;
   // Prompt quality-specific
   efficiencyScore?: number;
-  wastedTurns?: Array<{ messageIndex: number; reason: string; suggestedRewrite: string }>;
-  antiPatterns?: Array<{ name: string; count: number; examples: string[] }>;
+  wastedTurns?: Array<{ messageIndex: number; whatWentWrong?: string; reason?: string; originalMessage?: string; suggestedRewrite?: string; turnsWasted?: number }>;
+  antiPatterns?: Array<{ name: string; description?: string; count: number; examples: string[]; fix?: string }>;
+  sessionTraits?: Array<{ trait: string; severity: string; description: string; evidence?: string; suggestion?: string }>;
   potentialMessageReduction?: number;
 }
 

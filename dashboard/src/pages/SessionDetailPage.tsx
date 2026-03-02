@@ -91,7 +91,7 @@ export default function SessionDetailPage() {
       }
     }
     return [...linkSet];
-  }, [messages]);
+  }, [messagesQuery.data]);
 
   if (loading) {
     return (

@@ -19,6 +19,7 @@ interface AntiPattern {
 interface WastedTurn {
   messageIndex: number;
   whatWentWrong?: string;
+  reason?: string;           // legacy v2 field
   originalMessage?: string;
   suggestedRewrite?: string;
   turnsWasted?: number;
@@ -156,8 +157,12 @@ export function PromptQualityCard({ insight }: PromptQualityCardProps) {
                 <div key={i} className="text-sm rounded-md border p-2 space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{TRAIT_LABELS[t.trait] || t.trait}</span>
-                    <Badge variant="outline" className={`text-xs ${SEVERITY_COLORS[t.severity] || ''}`}>
-                      {t.severity}
+                    <Badge variant="outline" className={`text-xs ${
+                      t.trait === 'good_structure'
+                        ? 'text-green-500 bg-green-500/10 border-green-500/20'
+                        : SEVERITY_COLORS[t.severity] || ''
+                    }`}>
+                      {t.trait === 'good_structure' ? 'positive' : t.severity}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">{t.description}</p>
@@ -186,7 +191,7 @@ export function PromptQualityCard({ insight }: PromptQualityCardProps) {
                       Msg #{turn.messageIndex + 1}
                       {turn.turnsWasted && turn.turnsWasted > 1 ? ` (${turn.turnsWasted} turns)` : ''}
                     </Badge>
-                    <span className="text-muted-foreground">{turn.whatWentWrong}</span>
+                    <span className="text-muted-foreground">{turn.whatWentWrong || turn.reason}</span>
                   </div>
                   {turn.originalMessage && (
                     <p className="text-xs text-muted-foreground italic line-clamp-2">
