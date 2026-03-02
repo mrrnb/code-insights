@@ -9,7 +9,7 @@ import { parseJsonField } from '@/lib/types';
 import { ThinkingBlock } from './ThinkingBlock';
 import { AssistantMarkdown } from './markdown/AssistantMarkdown';
 import { UserMarkdown } from './markdown/UserMarkdown';
-import { isAgentMessage, parseAgentMessage } from './preprocess';
+import { parseAgentMessage } from './preprocess';
 import { AgentMessageBubble } from './AgentMessageBubble';
 
 interface MessageBubbleProps {
@@ -54,12 +54,14 @@ export function MessageBubble({ message, showHeader = true, nextToolResults = []
   // Use dark code style — dashboard uses light background but code blocks look good dark
   const codeStyle = oneDark;
 
-  // Detect and delegate agent coordination messages (task notifications, teammate messages)
-  if (isUser && hasContent) {
-    const agentMessage = parseAgentMessage(message.content);
-    if (agentMessage) {
-      return <AgentMessageBubble parsed={agentMessage} timestamp={message.timestamp} />;
-    }
+  // Detect and delegate agent coordination messages (task notifications, teammate messages).
+  // Memoized to match the resultMap pattern — parse cost is non-trivial for large tool outputs.
+  const agentMessage = useMemo(
+    () => (isUser && hasContent) ? parseAgentMessage(message.content) : null,
+    [isUser, hasContent, message.content]
+  );
+  if (agentMessage) {
+    return <AgentMessageBubble parsed={agentMessage} timestamp={message.timestamp} />;
   }
 
   if (isSystem) {

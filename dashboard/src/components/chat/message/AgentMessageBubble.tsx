@@ -77,6 +77,7 @@ function TaskNotificationCard({
         <div className="mt-2">
           <button
             onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             {expanded ? (
@@ -137,10 +138,10 @@ function TeammateMessageCard({
         </span>
       </div>
 
-      {/* Message body */}
-      {(parsed.summary ?? parsed.rawContent) && (
+      {/* Message body — prefer summary, then content, then raw */}
+      {(parsed.summary ?? parsed.content ?? parsed.rawContent) && (
         <div className="mt-1.5 text-sm text-foreground/80 whitespace-pre-wrap break-words">
-          {parsed.summary ?? parsed.rawContent}
+          {parsed.summary ?? parsed.content ?? parsed.rawContent}
         </div>
       )}
     </div>

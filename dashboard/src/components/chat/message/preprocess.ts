@@ -28,6 +28,7 @@ export interface ParsedTeammateMessage {
   from?: string;
   type?: string;
   summary?: string;
+  content?: string;
   rawContent: string;
 }
 
@@ -55,6 +56,13 @@ export function parseAgentMessage(content: string): ParsedAgentMessage | null {
   return null;
 }
 
+/**
+ * Extract the text content of an XML-like tag from a string.
+ * Uses a lazy quantifier (*?) so it matches up to the FIRST closing tag.
+ * This means nested same-name tags would cause truncation — acceptable
+ * because Claude Code's agent message format does not produce nested
+ * same-name tags, and the same pattern is used by preprocessUserContent.
+ */
 function extractTag(content: string, tag: string): string | undefined {
   const re = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`);
   const match = re.exec(content);
@@ -104,7 +112,7 @@ function parseTeammateMessage(content: string): ParsedTeammateMessage {
   const innerMatch = /<teammate-message[^>]*>([\s\S]*?)<\/teammate-message>/.exec(content);
   const rawContent = innerMatch ? innerMatch[1].trim() : content;
 
-  // Try to parse as JSON for type, from, summary fields
+  // Try to parse as JSON for type, from, summary, content fields
   try {
     const parsed = JSON.parse(rawContent) as Record<string, unknown>;
     return {
@@ -114,6 +122,7 @@ function parseTeammateMessage(content: string): ParsedTeammateMessage {
       from: typeof parsed.from === 'string' ? parsed.from : undefined,
       type: typeof parsed.type === 'string' ? parsed.type : undefined,
       summary: typeof parsed.summary === 'string' ? parsed.summary : undefined,
+      content: typeof parsed.content === 'string' ? parsed.content : undefined,
       rawContent,
     };
   } catch {
