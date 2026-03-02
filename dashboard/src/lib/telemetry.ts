@@ -14,7 +14,7 @@
 
 import posthog from 'posthog-js';
 
-const POSTHOG_API_KEY = 'phc_rNWNOSBvCmZL8GqfOpOLFWOHbWMgpI2HBJQVLGi5Hhq';
+const POSTHOG_API_KEY = 'phc_552ZSApq5xuagswylfdw2vx8nckm31jn6LCpTVyVn8j';
 const POSTHOG_HOST = 'https://us.i.posthog.com';
 
 let initialized = false;
