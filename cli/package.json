@@ -1,6 +1,6 @@
 {
   "name": "@code-insights/cli",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "description": "AI coding session analytics with built-in dashboard",
   "type": "module",
   "main": "dist/index.js",
@@ -73,6 +73,7 @@
     "hono": "^4.7.4",
     "inquirer": "^12.6.1",
     "ora": "^8.2.0",
+    "jsonrepair": "^3.13.2",
     "posthog-node": "^4.18.0"
   },
   "devDependencies": {

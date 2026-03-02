@@ -2,6 +2,12 @@
 
 All notable changes to `@code-insights/cli` will be documented in this file.
 
+## [3.4.1] - 2026-03-02
+
+### Fixed
+
+- **Missing `jsonrepair` runtime dependency** — `code-insights dashboard` failed for npm-installed users because `jsonrepair` (used by server LLM response parsing) was in `server/package.json` but not `cli/package.json`.
+
 ## [3.4.0] - 2026-03-02
 
 ### Fixed

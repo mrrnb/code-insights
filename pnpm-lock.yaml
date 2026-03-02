@@ -35,6 +35,9 @@ importers:
       inquirer:
         specifier: ^12.6.1
         version: 12.11.1(@types/node@22.19.13)
+      jsonrepair:
+        specifier: ^3.13.2
+        version: 3.13.2
       ora:
         specifier: ^8.2.0
         version: 8.2.0
