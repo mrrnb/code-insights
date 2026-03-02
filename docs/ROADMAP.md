@@ -193,7 +193,7 @@ This roadmap outlines the development phases for Code Insights. Timelines are fl
   - Theme support
 
 ### Deliverables
-- ✅ Published npm package (v3.0.0 – v3.3.0)
+- ✅ Published npm package (v3.0.0 – v3.4.0)
 - ✅ Landing page and documentation site
 - Plugin architecture (deferred)
 
@@ -213,6 +213,7 @@ This roadmap outlines the development phases for Code Insights. Timelines are fl
 | 3.1.0 | 6 | Server runtime deps fix, dashboard path fallback | ✅ Done |
 | 3.2.0 | 4 | Dashboard polish — skeletons, ErrorCard, toasts, bundle audit | ✅ Done |
 | 3.3.0 | 5 | PostHog anonymous telemetry (opt-in) | ✅ Done |
+| 3.4.0 | — | Multi-source parser fixes (Codex, Cursor, Copilot), agent message rendering | ✅ Done |
 
 ---
 

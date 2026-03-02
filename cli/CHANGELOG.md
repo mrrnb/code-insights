@@ -2,6 +2,23 @@
 
 All notable changes to `@code-insights/cli` will be documented in this file.
 
+## [3.4.0] - 2026-03-02
+
+### Fixed
+
+- **Codex CLI parser rewrite** — Complete rewrite of the Codex CLI provider to handle the current JSONL format (v0.104.0+). Previously produced 0 assistant messages and 0 tool calls for all sessions. Now correctly parses `function_call`, `function_call_output`, `custom_tool_call`, `agent_message`, and `task_complete` events. Also adds support for the legacy single-JSON format (pre-2025 `.json` files).
+- **Cursor provider data quality** — Three fixes: (1) project path inference from code block URIs when workspace.json is unavailable, (2) Lexical JSON rich text extraction with proper paragraph separators, (3) VSCode URI object unwrapping for file paths in tool calls.
+- **Copilot VS Code metadata** — `models_used` and `primary_model` were always NULL (307 sessions affected). Provider now collects model IDs from session and per-request fields into a `SessionUsage` object.
+- **Copilot CLI timestamps** — `started_at` and `ended_at` were identical (collapsed to file mtime). Event timestamps live at the event root level, not inside `event.data` — parser now extracts from the correct location.
+- **Copilot CLI tool call IDs** — Were synthetic (`copilot-tool-N`) instead of using the original `toolCallId` from events. Also extracts tool calls from `assistant.message` `toolRequests` array.
+- **Copilot CLI model extraction** — Model field was always empty. Now extracted from `tool.execution_complete` events.
+
+### Added
+
+- **Provider-agnostic session character detection** — `detectSessionCharacter` now recognizes tool names from all providers (Claude Code, Copilot VS Code, Copilot CLI, Codex CLI, Cursor) instead of only Claude Code tool names (`Edit`, `Write`, `Read`, `Grep`, `Glob`). Uses `EDIT_TOOLS` and `READ_TOOLS` sets with provider-agnostic file path extraction.
+- **Dashboard agent message rendering** — Agent team coordination messages (`<task-notification>`, `<teammate-message>`) previously rendered as "You" bubbles. Now displayed as distinct notification cards with amber borders (task notifications) and colored borders (teammate messages).
+- **`usageSource: 'session'` type** — New usage source value for providers that have model info but no token data.
+
 ## [3.3.2] - 2026-03-02
 
 ### Added
