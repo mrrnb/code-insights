@@ -4,8 +4,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { loadSyncState, saveSyncState } from '../utils/config.js';
 import { trackEvent } from '../utils/telemetry.js';
-import { insertSessionWithProject, insertMessages, recalculateUsageStats } from '../db/write.js';
-import { sessionExists } from '../db/read.js';
+import { insertSessionWithProjectAndReturnIsNew, insertMessages, recalculateUsageStats } from '../db/write.js';
 import { getDb } from '../db/client.js';
 import { getAllProviders, getProvider } from '../providers/registry.js';
 import { setProviderVerbose } from '../providers/context.js';
@@ -27,6 +26,7 @@ export interface SyncResult {
   syncedCount: number;
   messageCount: number;
   errorCount: number;
+  updatedExistingCount: number;
 }
 
 /**
@@ -111,6 +111,7 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
   let totalSyncedCount = 0;
   let totalMessageCount = 0;
   let totalErrorCount = 0;
+  let totalUpdatedExisting = 0;
 
   for (const provider of providers) {
     const providerName = provider.getProviderName();
@@ -141,6 +142,7 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
 
       // Process files — accumulate per-provider counts, show one summary line after
       let providerSyncedCount = 0;
+      let providerUpdatedCount = 0;
       let providerSkippedCount = 0;
       let providerMessageCount = 0;
 
@@ -156,25 +158,19 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
             continue;
           }
 
-          // Check if already exists in SQLite (unless force)
-          if (!options.force) {
-            const exists = sessionExists(session.id);
-            if (exists) {
-              updateSyncState(syncState, filePath, session.id);
-              saveSyncState(syncState);
-              providerSkippedCount++;
-              continue;
-            }
-          }
-
           // Write session and messages to SQLite
-          insertSessionWithProject(session, !!options.force);
+          const isNew = insertSessionWithProjectAndReturnIsNew(session, !!options.force);
           insertMessages(session);
 
           // Update and persist sync state after each file
           // so progress survives crashes
           updateSyncState(syncState, filePath, session.id);
           saveSyncState(syncState);
+
+          if (!isNew && !options.force) {
+            providerUpdatedCount++;
+            totalUpdatedExisting++;
+          }
 
           providerSyncedCount++;
           providerMessageCount += session.messages.length;
@@ -192,9 +188,12 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
       // One summary line per provider instead of per-file noise
       spinner.stop();
       if (providerSyncedCount > 0 || providerSkippedCount > 0) {
-        const syncedPart = providerSyncedCount > 0
-          ? `${providerSyncedCount} synced (${providerMessageCount.toLocaleString()} messages)`
-          : `0 synced`;
+        const providerNewCount = providerSyncedCount - providerUpdatedCount;
+        const parts: string[] = [];
+        if (providerNewCount > 0) parts.push(`${providerNewCount} new`);
+        if (providerUpdatedCount > 0) parts.push(`${providerUpdatedCount} updated`);
+        if (parts.length === 0) parts.push('0 synced');
+        const syncedPart = `${parts.join(', ')}${providerMessageCount > 0 ? ` (${providerMessageCount.toLocaleString()} messages)` : ''}`;
         const skippedPart = providerSkippedCount > 0
           ? `, ${providerSkippedCount} empty`
           : '';
@@ -210,7 +209,11 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
   }
 
   // Reconcile usage stats after force sync (skip if nothing changed)
-  if (options.force && (totalSyncedCount > 0 || totalErrorCount > 0)) {
+  const shouldRecalculateUsageStats = options.force
+    ? (totalSyncedCount > 0 || totalErrorCount > 0)
+    : totalUpdatedExisting > 0;
+
+  if (shouldRecalculateUsageStats) {
     spinner.start('Recalculating usage stats...');
     try {
       const result = recalculateUsageStats();
@@ -231,6 +234,7 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
     syncedCount: totalSyncedCount,
     messageCount: totalMessageCount,
     errorCount: totalErrorCount,
+    updatedExistingCount: totalUpdatedExisting,
   };
 }
 
@@ -250,7 +254,11 @@ export async function syncCommand(options: SyncOptions = {}): Promise<void> {
       return;
     }
     log(chalk.cyan('\n  Sync Summary'));
-    log(chalk.white(`  Sessions synced: ${result.syncedCount}`));
+    const newCount = Math.max(result.syncedCount - result.updatedExistingCount, 0);
+    log(chalk.white(`  Sessions new: ${newCount}`));
+    if (result.updatedExistingCount > 0) {
+      log(chalk.white(`  Sessions updated: ${result.updatedExistingCount}`));
+    }
     log(chalk.white(`  Messages synced: ${result.messageCount}`));
     if (result.errorCount > 0) {
       log(chalk.red(`  Errors: ${result.errorCount}`));
@@ -281,17 +289,21 @@ function filterFilesToSync(files: string[], syncState: SyncState, force?: boolea
     // If file was never synced, sync it
     if (!fileState) return true;
 
-    // For virtual paths (multi-session files), check if this specific session was synced
-    if (sessionFragment && fileState.syncedSessionIds) {
-      return !fileState.syncedSessionIds.includes(sessionFragment);
-    }
-
-    // For regular files, check if modified since last sync
     if (sessionFragment) {
+      // Virtual path (multi-session DB).
+      // If the DB file changed, re-sync all sessions from it.
+      if (fileState.lastModified !== lastModified) return true;
+
+      // Otherwise only sync sessions we haven't seen yet.
+      if (fileState.syncedSessionIds) {
+        return !fileState.syncedSessionIds.includes(sessionFragment);
+      }
+
       // Virtual path but no syncedSessionIds tracked yet — needs sync
       return true;
     }
 
+    // For regular files, check if modified since last sync
     return fileState.lastModified !== lastModified;
   });
 }
