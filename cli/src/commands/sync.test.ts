@@ -150,4 +150,34 @@ describe('runSync', () => {
     );
     expect(recalculateUsageStats).toHaveBeenCalledTimes(1);
   });
+
+  it('does not recalculate usage stats for purely new sessions', async () => {
+    const filePath = path.join(tempDir, 'new-session.jsonl');
+    fs.writeFileSync(filePath, '{}');
+
+    const session = makeParsedSession({
+      id: 'session-new',
+      messageCount: 1,
+      userMessageCount: 1,
+      assistantMessageCount: 0,
+      messages: [
+        makeParsedMessage({ id: 'msg-new', sessionId: 'session-new' }),
+      ],
+    });
+
+    getAllProviders.mockReturnValue([
+      {
+        getProviderName: () => 'mock',
+        discover: async () => [filePath],
+        parse: async () => session,
+      },
+    ]);
+
+    sessionExists.mockReturnValue(false);
+
+    await runSync({ quiet: true });
+
+    expect(insertSessionWithProject).toHaveBeenCalledTimes(1);
+    expect(recalculateUsageStats).not.toHaveBeenCalled();
+  });
 });
