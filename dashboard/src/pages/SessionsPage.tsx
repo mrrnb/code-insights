@@ -288,10 +288,18 @@ function InsightCountBadge({ counts }: { counts: Record<string, number> | undefi
     );
   }
 
-  const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  // Build compact breakdown string like "2L 1D"
-  const breakdown = Object.entries(counts)
-    .filter(([type]) => type !== 'summary') // Don't show summary in breakdown
+  // Exclude summary from count — it renders as its own section, not an insight card
+  const countEntries = Object.entries(counts).filter(([type]) => type !== 'summary');
+  const total = countEntries.reduce((sum, [, n]) => sum + n, 0);
+  if (total === 0) {
+    return (
+      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+        <Sparkles className="h-3 w-3" />
+        Not analyzed
+      </span>
+    );
+  }
+  const breakdown = countEntries
     .sort(([, a], [, b]) => b - a)
     .map(([type, count]) => `${count}${INSIGHT_TYPE_ABBREV[type] || type[0].toUpperCase()}`)
     .join(' ');
