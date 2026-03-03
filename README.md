@@ -10,6 +10,10 @@ Parses session history from Claude Code, Cursor, Codex CLI, and Copilot CLI. Sto
 
 **No accounts. No cloud. No data leaves your machine.**
 
+<p align="center">
+  <img src="docs/assets/screenshots/dashboard-light.png" alt="Dashboard — activity chart, session stats, recent insights" width="800" />
+</p>
+
 ## Quick Start
 
 ```bash
@@ -60,6 +64,10 @@ code-insights config llm               # Configure LLM provider (interactive)
 code-insights install-hook             # Auto-sync when Claude Code sessions end
 code-insights reset --confirm          # Delete all local data
 ```
+
+<p align="center">
+  <img src="docs/assets/screenshots/stats.png" alt="Terminal stats — sessions, cost, activity chart, top projects" width="500" />
+</p>
 
 ## Architecture
 
