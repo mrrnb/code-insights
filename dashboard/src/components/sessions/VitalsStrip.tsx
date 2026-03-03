@@ -69,17 +69,9 @@ export function VitalsStrip({ session }: VitalsStripProps) {
               ? `$${session.estimated_cost_usd.toFixed(2)}`
               : '--'
           }
+          sublabel={modelsUsed.length > 0 ? modelsUsed.map(formatModelName).join(', ') : undefined}
         />
       </div>
-
-      {/* Model badge */}
-      {modelsUsed.length > 0 && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="bg-muted px-1.5 py-0.5 rounded text-[11px]">
-            {modelsUsed.map(formatModelName).join(', ')}
-          </span>
-        </div>
-      )}
     </div>
   );
 }
