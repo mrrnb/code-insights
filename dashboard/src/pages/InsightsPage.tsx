@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useInsights } from '@/hooks/useInsights';
+import { useFilterParams } from '@/hooks/useFilterParams';
 import { useProjects } from '@/hooks/useProjects';
 import { InsightCard } from '@/components/insights/InsightCard';
 import { InsightListItem } from '@/components/insights/InsightListItem';
@@ -28,38 +29,34 @@ const INSIGHT_TYPE_LABELS: Record<InsightType, string> = {
 };
 
 export default function InsightsPage() {
-  const [search, setSearch] = useState('');
-  const [projectFilter, setProjectFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState<InsightType | 'all'>('all');
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [filters, setFilter, clearFilters] = useFilterParams({
+    q: '',
+    project: 'all',
+    type: 'all',
+    view: 'list',
+  });
 
   const { data: projects = [] } = useProjects();
   const { data: insights = [], isLoading, isError, refetch } = useInsights(
-    projectFilter !== 'all' ? { projectId: projectFilter } : undefined
+    filters.project !== 'all' ? { projectId: filters.project } : undefined
   );
 
   const allInsightIds = useMemo(() => new Set(insights.map((i) => i.id)), [insights]);
 
   const filtered = useMemo(() => {
     return insights.filter((i) => {
-      if (typeFilter !== 'all' && i.type !== typeFilter) return false;
-      if (search) {
-        const q = search.toLowerCase();
+      if (filters.type !== 'all' && i.type !== filters.type) return false;
+      if (filters.q) {
+        const q = filters.q.toLowerCase();
         if (!i.title.toLowerCase().includes(q) && !i.content.toLowerCase().includes(q)) {
           return false;
         }
       }
       return true;
     });
-  }, [insights, typeFilter, search]);
+  }, [insights, filters.type, filters.q]);
 
-  const hasFilters = !!search || typeFilter !== 'all' || projectFilter !== 'all';
-
-  const clearFilters = () => {
-    setSearch('');
-    setTypeFilter('all');
-    setProjectFilter('all');
-  };
+  const hasFilters = !!filters.q || filters.type !== 'all' || filters.project !== 'all';
 
   const promptQuality = filtered.filter((i) => i.type === 'prompt_quality');
   const other = filtered.filter((i) => i.type !== 'prompt_quality');
@@ -79,19 +76,19 @@ export default function InsightsPage() {
         </div>
         <div className="flex items-center gap-1">
           <Button
-            variant={viewMode === 'list' ? 'default' : 'ghost'}
+            variant={filters.view === 'list' ? 'default' : 'ghost'}
             size="icon"
             className="h-8 w-8"
-            onClick={() => setViewMode('list')}
+            onClick={() => setFilter('view', 'list')}
           >
             <List className="h-4 w-4" />
             <span className="sr-only">List view</span>
           </Button>
           <Button
-            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+            variant={filters.view === 'grid' ? 'default' : 'ghost'}
             size="icon"
             className="h-8 w-8"
-            onClick={() => setViewMode('grid')}
+            onClick={() => setFilter('view', 'grid')}
           >
             <LayoutGrid className="h-4 w-4" />
             <span className="sr-only">Grid view</span>
@@ -103,12 +100,12 @@ export default function InsightsPage() {
       <div className="space-y-2">
         <Input
           placeholder="Search insights..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={filters.q}
+          onChange={(e) => setFilter('q', e.target.value)}
           className="max-w-sm"
         />
         <div className="flex flex-wrap gap-2">
-          <Select value={projectFilter} onValueChange={setProjectFilter}>
+          <Select value={filters.project} onValueChange={(v) => setFilter('project', v)}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="All Projects" />
             </SelectTrigger>
@@ -123,8 +120,8 @@ export default function InsightsPage() {
           </Select>
 
           <Select
-            value={typeFilter}
-            onValueChange={(v) => setTypeFilter(v as InsightType | 'all')}
+            value={filters.type}
+            onValueChange={(v) => setFilter('type', v)}
           >
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="All Types" />
@@ -171,7 +168,7 @@ export default function InsightsPage() {
             </p>
           </div>
         )
-      ) : viewMode === 'grid' ? (
+      ) : filters.view === 'grid' ? (
         <div className="space-y-6">
           {promptQuality.map((insight) => (
             <PromptQualityCard key={insight.id} insight={insight} />

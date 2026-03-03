@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { formatDistanceToNow } from 'date-fns';
 import { useSessions } from '@/hooks/useSessions';
@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useFilterParams } from '@/hooks/useFilterParams';
 import { SessionCardSkeleton } from '@/components/skeletons/SessionCardSkeleton';
 import { ErrorCard } from '@/components/ErrorCard';
 import { OutcomeBadge } from '@/components/insights/InsightCard';
@@ -77,21 +78,23 @@ function getCostColor(cost: number): string {
 }
 
 export default function SessionsPage() {
-  const [search, setSearch] = useState('');
-  const [projectFilter, setProjectFilter] = useState('all');
-  const [sourceFilter, setSourceFilter] = useState('all');
-  const [characterFilter, setCharacterFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [filters, setFilter, clearFilters] = useFilterParams({
+    q: '',
+    project: 'all',
+    source: 'all',
+    character: 'all',
+    status: 'all',
+  });
 
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
 
 
   const sessionParams = useMemo(() => {
     const params: { projectId?: string; sourceTool?: string; limit?: number } = { limit: 200 };
-    if (projectFilter !== 'all') params.projectId = projectFilter;
-    if (sourceFilter !== 'all') params.sourceTool = sourceFilter;
+    if (filters.project !== 'all') params.projectId = filters.project;
+    if (filters.source !== 'all') params.sourceTool = filters.source;
     return params;
-  }, [projectFilter, sourceFilter]);
+  }, [filters.project, filters.source]);
 
   const { data: sessions = [], isLoading: sessionsLoading, isError: sessionsError, refetch: refetchSessions } = useSessions(sessionParams);
   const { data: insights = [], isLoading: insightsLoading } = useInsights();
@@ -128,17 +131,17 @@ export default function SessionsPage() {
 
   const filteredSessions = useMemo(() => {
     return sessions.filter((s) => {
-      if (characterFilter !== 'all' && s.session_character !== characterFilter) return false;
-      if (statusFilter === 'analyzed' && !analyzedSessionIds.has(s.id)) return false;
-      if (statusFilter === 'unanalyzed' && analyzedSessionIds.has(s.id)) return false;
-      if (search) {
-        const q = search.toLowerCase();
+      if (filters.character !== 'all' && s.session_character !== filters.character) return false;
+      if (filters.status === 'analyzed' && !analyzedSessionIds.has(s.id)) return false;
+      if (filters.status === 'unanalyzed' && analyzedSessionIds.has(s.id)) return false;
+      if (filters.q) {
+        const q = filters.q.toLowerCase();
         const title = getSessionTitle(s).toLowerCase();
         if (!title.includes(q) && !s.project_name.toLowerCase().includes(q)) return false;
       }
       return true;
     });
-  }, [sessions, characterFilter, statusFilter, search, analyzedSessionIds]);
+  }, [sessions, filters.character, filters.status, filters.q, analyzedSessionIds]);
 
   const groupedSessions = useMemo(() => {
     const groups: Record<string, Session[]> = {};
@@ -151,16 +154,8 @@ export default function SessionsPage() {
   }, [filteredSessions]);
 
   const loading = sessionsLoading || projectsLoading || insightsLoading;
-  const hasClientFilters = characterFilter !== 'all' || statusFilter !== 'all' || !!search;
-  const hasAnyFilter = hasClientFilters || projectFilter !== 'all' || sourceFilter !== 'all';
-
-  const clearFilters = () => {
-    setSearch('');
-    setProjectFilter('all');
-    setSourceFilter('all');
-    setCharacterFilter('all');
-    setStatusFilter('all');
-  };
+  const hasClientFilters = filters.character !== 'all' || filters.status !== 'all' || !!filters.q;
+  const hasAnyFilter = hasClientFilters || filters.project !== 'all' || filters.source !== 'all';
 
   return (
     <div className="p-6 space-y-4">
@@ -181,12 +176,12 @@ export default function SessionsPage() {
       <div className="space-y-2">
         <Input
           placeholder="Search sessions..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={filters.q}
+          onChange={(e) => setFilter('q', e.target.value)}
           className="max-w-sm"
         />
         <div className="flex flex-wrap gap-2">
-          <Select value={projectFilter} onValueChange={setProjectFilter}>
+          <Select value={filters.project} onValueChange={(v) => setFilter('project', v)}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="All Projects" />
             </SelectTrigger>
@@ -200,7 +195,7 @@ export default function SessionsPage() {
             </SelectContent>
           </Select>
 
-          <Select value={characterFilter} onValueChange={setCharacterFilter}>
+          <Select value={filters.character} onValueChange={(v) => setFilter('character', v)}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
@@ -214,7 +209,7 @@ export default function SessionsPage() {
             </SelectContent>
           </Select>
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={filters.status} onValueChange={(v) => setFilter('status', v)}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
@@ -225,7 +220,7 @@ export default function SessionsPage() {
             </SelectContent>
           </Select>
 
-          <Select value={sourceFilter} onValueChange={setSourceFilter}>
+          <Select value={filters.source} onValueChange={(v) => setFilter('source', v)}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="All Sources" />
             </SelectTrigger>
