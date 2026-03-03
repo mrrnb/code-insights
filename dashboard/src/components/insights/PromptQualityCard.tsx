@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ProgressRing } from '@/components/shared/ProgressRing';
 import { Target, AlertTriangle, Lightbulb, TrendingDown, Compass } from 'lucide-react';
 import type { Insight } from '@/lib/types';
 import { parseJsonField } from '@/lib/types';
@@ -90,10 +91,8 @@ export function PromptQualityCard({ insight }: PromptQualityCardProps) {
       <CardContent className="space-y-4">
         <div className="flex items-center gap-4">
           <div className="text-center">
-            <p className={`text-3xl font-bold ${getScoreColor(score)}`}>
-              {score}
-            </p>
-            <p className="text-xs text-muted-foreground">/100</p>
+            <ProgressRing value={score} />
+            <p className="text-xs text-muted-foreground mt-1">/100</p>
           </div>
           <div>
             <p className={`text-sm font-medium ${getScoreColor(score)}`}>
