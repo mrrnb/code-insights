@@ -13,12 +13,13 @@ import {
 } from '@/lib/utils';
 import { SESSION_CHARACTER_COLORS, SESSION_CHARACTER_LABELS, SOURCE_TOOL_COLORS } from '@/lib/constants/colors';
 import { parseJsonField } from '@/lib/types';
+import type { InsightMetadata } from '@/lib/types';
+import { OutcomeBadge } from '@/components/insights/InsightCard';
 import { Badge } from '@/components/ui/badge';
 import { ErrorCard } from '@/components/ErrorCard';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   DropdownMenu,
@@ -45,7 +46,6 @@ import {
   GitCommit,
   GitPullRequest,
   BarChart2,
-  ChevronRight,
   Cpu,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -150,6 +150,10 @@ export default function SessionDetailPage() {
   const hasPromptQuality = insights.some((i) => i.type === 'prompt_quality');
 
   const summaryInsight = insights.find((i) => i.type === 'summary');
+  const summaryMetadata = summaryInsight
+    ? parseJsonField<InsightMetadata>(summaryInsight.metadata, {})
+    : {};
+  const sessionOutcome = summaryMetadata.outcome;
   const summaryText = session.summary || summaryInsight?.content;
   const summaryBulletsRaw = summaryInsight
     ? parseJsonField<string[]>(summaryInsight.bullets, [])
@@ -241,6 +245,7 @@ export default function SessionDetailPage() {
               {characterLabel}
             </Badge>
           )}
+          {sessionOutcome && <OutcomeBadge outcome={sessionOutcome} />}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -480,52 +485,47 @@ export default function SessionDetailPage() {
           {/* Usage Stats */}
           {session.total_input_tokens != null && (
             <div>
-              <Collapsible>
-                <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium group w-full">
-                  <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90" />
-                  <Cpu className="h-4 w-4 text-muted-foreground" />
-                  Usage Stats
-                  {session.estimated_cost_usd != null && (
-                    <span className="text-muted-foreground font-normal ml-1">
-                      (${session.estimated_cost_usd.toFixed(2)})
-                    </span>
-                  )}
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pl-6 pt-3">
-                  <div className="rounded-lg border bg-muted/20 p-4 space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Input tokens</span>
-                      <span>{session.total_input_tokens?.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Output tokens</span>
-                      <span>{session.total_output_tokens?.toLocaleString()}</span>
-                    </div>
-                    {(session.cache_read_tokens ?? 0) > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Cache read tokens</span>
-                        <span>{session.cache_read_tokens?.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {(session.cache_creation_tokens ?? 0) > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Cache creation tokens</span>
-                        <span>{session.cache_creation_tokens?.toLocaleString()}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between font-medium pt-2 border-t">
-                      <span>Estimated cost</span>
-                      <span>${session.estimated_cost_usd?.toFixed(4)}</span>
-                    </div>
-                    {modelsUsed.length > 0 && (
-                      <div className="flex justify-between pt-1">
-                        <span className="text-muted-foreground">Models</span>
-                        <span>{modelsUsed.map(formatModelName).join(', ')}</span>
-                      </div>
-                    )}
+              <div className="flex items-center gap-2 text-sm font-medium mb-2">
+                <Cpu className="h-4 w-4 text-muted-foreground" />
+                Usage Stats
+                {session.estimated_cost_usd != null && (
+                  <span className="text-muted-foreground font-normal ml-1">
+                    (${session.estimated_cost_usd.toFixed(2)})
+                  </span>
+                )}
+              </div>
+              <div className="rounded-lg border bg-muted/20 p-4 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Input tokens</span>
+                  <span>{session.total_input_tokens?.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Output tokens</span>
+                  <span>{session.total_output_tokens?.toLocaleString()}</span>
+                </div>
+                {(session.cache_read_tokens ?? 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Cache read tokens</span>
+                    <span>{session.cache_read_tokens?.toLocaleString()}</span>
                   </div>
-                </CollapsibleContent>
-              </Collapsible>
+                )}
+                {(session.cache_creation_tokens ?? 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Cache creation tokens</span>
+                    <span>{session.cache_creation_tokens?.toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-medium pt-2 border-t">
+                  <span>Estimated cost</span>
+                  <span>${session.estimated_cost_usd?.toFixed(4)}</span>
+                </div>
+                {modelsUsed.length > 0 && (
+                  <div className="flex justify-between pt-1">
+                    <span className="text-muted-foreground">Models</span>
+                    <span>{modelsUsed.map(formatModelName).join(', ')}</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
