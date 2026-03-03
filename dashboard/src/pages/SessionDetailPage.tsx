@@ -8,7 +8,6 @@ import {
   formatDuration,
   formatDurationMinutes,
   formatDateRange,
-  formatModelName,
   cn,
 } from '@/lib/utils';
 import { SESSION_CHARACTER_COLORS, SESSION_CHARACTER_LABELS, SOURCE_TOOL_COLORS } from '@/lib/constants/colors';
@@ -33,6 +32,7 @@ import { AnalyzeDropdown } from '@/components/analysis/AnalyzeDropdown';
 import { AnalyzeButton } from '@/components/analysis/AnalyzeButton';
 import { useAnalysis } from '@/components/analysis/AnalysisContext';
 import { RenameSessionDialog } from '@/components/sessions/RenameSessionDialog';
+import { SessionSidebar } from '@/components/sessions/SessionSidebar';
 import { ChatConversation } from '@/components/chat/conversation/ChatConversation';
 import {
   MessageSquare,
@@ -46,7 +46,6 @@ import {
   GitCommit,
   GitPullRequest,
   BarChart2,
-  Cpu,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -183,8 +182,6 @@ export default function SessionDetailPage() {
   const characterLabel = session.session_character
     ? SESSION_CHARACTER_LABELS[session.session_character]
     : null;
-
-  const modelsUsed = parseJsonField<string[]>(session.models_used, []);
 
   function handleExport(format: 'plain' | 'obsidian' | 'notion') {
     const title = getSessionTitle(session!);
@@ -377,255 +374,171 @@ export default function SessionDetailPage() {
         </div>
       )}
 
-      {/* Tabs */}
-      <Tabs defaultValue="overview" className="flex flex-col flex-1 overflow-hidden">
-        <TabsList className="shrink-0 bg-transparent border-b rounded-none h-auto w-full justify-start gap-4 px-6">
-          <TabsTrigger
-            value="overview"
-            className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-2 font-medium text-muted-foreground shadow-none data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none"
-          >
-            Overview
-          </TabsTrigger>
-          <TabsTrigger
-            value="conversation"
-            className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-2 font-medium text-muted-foreground shadow-none data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none"
-          >
-            Conversation ({session.message_count})
-          </TabsTrigger>
-        </TabsList>
+      {/* Sidebar + Tabs */}
+      <div className="flex flex-1 overflow-hidden">
+        <SessionSidebar session={session} insights={insights} />
 
-        <TabsContent value="overview" className="flex-1 overflow-y-auto mt-0 p-6 space-y-6">
-          {/* Summary */}
-          {summaryText && (
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <FileText className="h-4 w-4 text-purple-500 shrink-0" />
-                <h3 className="text-sm font-medium">Summary</h3>
-              </div>
-              <div className="rounded-md bg-muted/20 px-4 py-3">
-                <p className="font-medium text-sm mb-1.5">{summaryTitle}</p>
-                {summaryBullets.length > 0 ? (
-                  <ul className="list-disc list-inside space-y-0.5 text-sm text-muted-foreground">
-                    {summaryBullets.map((bullet, i) => (
-                      <li key={i}>{bullet}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-muted-foreground">{summaryText}</p>
-                )}
-              </div>
-            </div>
-          )}
+        <Tabs defaultValue="overview" className="flex flex-col flex-1 overflow-hidden">
+          <TabsList className="shrink-0 bg-transparent border-b rounded-none h-auto w-full justify-start gap-4 px-6">
+            <TabsTrigger
+              value="overview"
+              className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-2 font-medium text-muted-foreground shadow-none data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none"
+            >
+              Overview
+            </TabsTrigger>
+            <TabsTrigger
+              value="conversation"
+              className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-2 font-medium text-muted-foreground shadow-none data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none"
+            >
+              Conversation ({session.message_count})
+            </TabsTrigger>
+          </TabsList>
 
-          {/* PR Links */}
-          {prLinks.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <GitPullRequest className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-sm font-medium">Pull Requests</h3>
+          <TabsContent value="overview" className="flex-1 overflow-y-auto mt-0 p-6 space-y-6">
+            {/* Summary */}
+            {summaryText && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="h-4 w-4 text-purple-500 shrink-0" />
+                  <h3 className="text-sm font-medium">Summary</h3>
+                </div>
+                <div className="rounded-md bg-muted/20 px-4 py-3">
+                  <p className="font-medium text-sm mb-1.5">{summaryTitle}</p>
+                  {summaryBullets.length > 0 ? (
+                    <ul className="list-disc list-inside space-y-0.5 text-sm text-muted-foreground">
+                      {summaryBullets.map((bullet, i) => (
+                        <li key={i}>{bullet}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{summaryText}</p>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {prLinks.map((url) => {
-                  const match = url.match(/github\.com\/([\w.-]+)\/([\w.-]+)\/pull\/(\d+)/);
-                  const label = match ? `${match[2]}#${match[3]}` : url;
-                  return (
-                    <a key={url} href={url} target="_blank" rel="noopener noreferrer">
-                      <Badge variant="outline" className="text-xs hover:bg-accent cursor-pointer gap-1">
-                        <GitPullRequest className="h-3 w-3" />
-                        {label}
-                      </Badge>
-                    </a>
+            )}
+
+            {/* PR Links */}
+            {prLinks.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <GitPullRequest className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-sm font-medium">Pull Requests</h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {prLinks.map((url) => {
+                    const match = url.match(/github\.com\/([\w.-]+)\/([\w.-]+)\/pull\/(\d+)/);
+                    const label = match ? `${match[2]}#${match[3]}` : url;
+                    return (
+                      <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                        <Badge variant="outline" className="text-xs hover:bg-accent cursor-pointer gap-1">
+                          <GitPullRequest className="h-3 w-3" />
+                          {label}
+                        </Badge>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Insights */}
+            {insights.filter((i) => i.type !== 'summary').length === 0 ? (
+              <div className="rounded-lg border border-dashed">
+                <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
+                  <BarChart2 className="h-8 w-8 text-muted-foreground" />
+                  <p className="font-medium text-sm">This session hasn't been analyzed yet</p>
+                  <p className="text-xs text-muted-foreground">
+                    Generate AI insights to extract learnings, decisions, and a session summary.
+                  </p>
+                  <div className="pt-2">
+                    <AnalyzeButton
+                      session={session}
+                      hasExistingInsights={false}
+                      insightCount={0}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                {insights
+                  .filter((i) => i.type === 'prompt_quality')
+                  .map((insight) => (
+                    <PromptQualityCard key={insight.id} insight={insight} />
+                  ))}
+
+                {(() => {
+                  const learningInsights = insights.filter(
+                    (i) => i.type === 'learning' || i.type === 'technique'
                   );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Session Vitals */}
-          <div>
-            <h3 className="text-sm font-medium mb-2">Session Vitals</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="rounded-lg border bg-muted/20 px-3 py-2.5 text-center">
-                <div className="text-lg font-semibold">
-                  {formatDurationMinutes(durationMinutes)}
-                </div>
-                <div className="text-xs text-muted-foreground mt-0.5">Duration</div>
-              </div>
-              <div className="rounded-lg border bg-muted/20 px-3 py-2.5 text-center">
-                <div className="text-lg font-semibold">{session.message_count}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">Messages</div>
-              </div>
-              <div className="rounded-lg border bg-muted/20 px-3 py-2.5 text-center">
-                <div className="text-lg font-semibold">{session.tool_call_count}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">Tool calls</div>
-              </div>
-              <div className="rounded-lg border bg-muted/20 px-3 py-2.5 text-center">
-                {characterLabel && characterColor ? (
-                  <>
-                    <div
-                      className={cn(
-                        'text-sm font-semibold',
-                        characterColor.split(' ').find((c) => c.startsWith('text-'))
-                      )}
-                    >
-                      {characterLabel}
+                  if (learningInsights.length === 0) return null;
+                  return (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <BookOpen className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="text-sm font-medium">Learnings</h3>
+                        <Badge variant="secondary" className="text-xs">
+                          {learningInsights.length}
+                        </Badge>
+                      </div>
+                      <div className="space-y-3">
+                        {learningInsights.map((insight) => (
+                          <InsightCard
+                            key={insight.id}
+                            insight={insight}
+                            showProject={false}
+                            allInsightIds={allInsightIds}
+                          />
+                        ))}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground mt-0.5">Character</div>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-sm font-semibold text-muted-foreground">—</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">Character</div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
+                  );
+                })()}
 
-          {/* Usage Stats */}
-          {session.total_input_tokens != null && (
-            <div>
-              <div className="flex items-center gap-2 text-sm font-medium mb-2">
-                <Cpu className="h-4 w-4 text-muted-foreground" />
-                Usage Stats
-                {session.estimated_cost_usd != null && (
-                  <span className="text-muted-foreground font-normal ml-1">
-                    (${session.estimated_cost_usd.toFixed(2)})
-                  </span>
-                )}
-              </div>
-              <div className="rounded-lg border bg-muted/20 p-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Input tokens</span>
-                  <span>{session.total_input_tokens?.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Output tokens</span>
-                  <span>{session.total_output_tokens?.toLocaleString()}</span>
-                </div>
-                {(session.cache_read_tokens ?? 0) > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Cache read tokens</span>
-                    <span>{session.cache_read_tokens?.toLocaleString()}</span>
-                  </div>
-                )}
-                {(session.cache_creation_tokens ?? 0) > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Cache creation tokens</span>
-                    <span>{session.cache_creation_tokens?.toLocaleString()}</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-medium pt-2 border-t">
-                  <span>Estimated cost</span>
-                  <span>${session.estimated_cost_usd?.toFixed(4)}</span>
-                </div>
-                {modelsUsed.length > 0 && (
-                  <div className="flex justify-between pt-1">
-                    <span className="text-muted-foreground">Models</span>
-                    <span>{modelsUsed.map(formatModelName).join(', ')}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Insights */}
-          {insights.filter((i) => i.type !== 'summary').length === 0 ? (
-            <div className="rounded-lg border border-dashed">
-              <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
-                <BarChart2 className="h-8 w-8 text-muted-foreground" />
-                <p className="font-medium text-sm">This session hasn't been analyzed yet</p>
-                <p className="text-xs text-muted-foreground">
-                  Generate AI insights to extract learnings, decisions, and a session summary.
-                </p>
-                <div className="pt-2">
-                  <AnalyzeButton
-                    session={session}
-                    hasExistingInsights={false}
-                    insightCount={0}
-                  />
-                </div>
-              </div>
-            </div>
-          ) : (
-            <>
-              {insights
-                .filter((i) => i.type === 'prompt_quality')
-                .map((insight) => (
-                  <PromptQualityCard key={insight.id} insight={insight} />
-                ))}
-
-              {(() => {
-                const learningInsights = insights.filter(
-                  (i) => i.type === 'learning' || i.type === 'technique'
-                );
-                if (learningInsights.length === 0) return null;
-                return (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <BookOpen className="h-4 w-4 text-muted-foreground" />
-                      <h3 className="text-sm font-medium">Learnings</h3>
-                      <Badge variant="secondary" className="text-xs">
-                        {learningInsights.length}
-                      </Badge>
+                {(() => {
+                  const decisionInsights = insights.filter((i) => i.type === 'decision');
+                  if (decisionInsights.length === 0) return null;
+                  return (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <GitCommit className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="text-sm font-medium">Decisions</h3>
+                        <Badge variant="secondary" className="text-xs">
+                          {decisionInsights.length}
+                        </Badge>
+                      </div>
+                      <div className="space-y-3">
+                        {decisionInsights.map((insight) => (
+                          <InsightCard
+                            key={insight.id}
+                            insight={insight}
+                            showProject={false}
+                            allInsightIds={allInsightIds}
+                          />
+                        ))}
+                      </div>
                     </div>
-                    <div className="space-y-3">
-                      {learningInsights.map((insight) => (
-                        <InsightCard
-                          key={insight.id}
-                          insight={insight}
-                          showProject={false}
-                          allInsightIds={allInsightIds}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
+              </>
+            )}
+          </TabsContent>
 
-              {(() => {
-                const decisionInsights = insights.filter((i) => i.type === 'decision');
-                if (decisionInsights.length === 0) return null;
-                return (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <GitCommit className="h-4 w-4 text-muted-foreground" />
-                      <h3 className="text-sm font-medium">Decisions</h3>
-                      <Badge variant="secondary" className="text-xs">
-                        {decisionInsights.length}
-                      </Badge>
-                    </div>
-                    <div className="space-y-3">
-                      {decisionInsights.map((insight) => (
-                        <InsightCard
-                          key={insight.id}
-                          insight={insight}
-                          showProject={false}
-                          allInsightIds={allInsightIds}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-            </>
-          )}
-        </TabsContent>
-
-        <TabsContent
-          value="conversation"
-          className="flex-1 overflow-y-auto mt-0 bg-muted/40 dark:bg-muted/20"
-        >
-          <ChatConversation
-            messages={messages}
-            loading={loadingMessages}
-            loadingMore={loadingMore}
-            hasMore={hasMore}
-            onLoadMore={() => messagesQuery.fetchNextPage()}
-            sourceTool={session.source_tool}
-          />
-        </TabsContent>
-      </Tabs>
+          <TabsContent
+            value="conversation"
+            className="flex-1 overflow-y-auto mt-0 bg-muted/40 dark:bg-muted/20"
+          >
+            <ChatConversation
+              messages={messages}
+              loading={loadingMessages}
+              loadingMore={loadingMore}
+              hasMore={hasMore}
+              onLoadMore={() => messagesQuery.fetchNextPage()}
+              sourceTool={session.source_tool}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {/* Rename dialog */}
       <RenameSessionDialog
