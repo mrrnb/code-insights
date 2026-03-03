@@ -79,6 +79,19 @@ export function SessionListPanel({
     return map;
   }, [insights]);
 
+  const promptQualityScores = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const insight of insights) {
+      if (insight.type === 'prompt_quality') {
+        const metadata = parseJsonField<Record<string, unknown>>(insight.metadata, {});
+        if (typeof metadata.efficiencyScore === 'number') {
+          map.set(insight.session_id, metadata.efficiencyScore);
+        }
+      }
+    }
+    return map;
+  }, [insights]);
+
   const filteredSessions = useMemo(() => {
     return sessions.filter((s) => {
       if (filters.character !== 'all' && s.session_character !== filters.character) return false;
@@ -200,6 +213,7 @@ export function SessionListPanel({
                     showProject={showProject}
                     insightCounts={insightCountsBySession.get(session.id)}
                     outcome={sessionOutcomes.get(session.id)}
+                    promptQualityScore={promptQualityScores.get(session.id)}
                     onClick={() => onSelectSession(session.id)}
                   />
                 ))}

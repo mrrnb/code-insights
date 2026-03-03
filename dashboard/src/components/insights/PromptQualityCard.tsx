@@ -48,18 +48,17 @@ const SEVERITY_COLORS: Record<string, string> = {
   low: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
 };
 
-function getScoreColor(score: number): string {
-  if (score >= 80) return 'text-green-500';
-  if (score >= 60) return 'text-yellow-500';
-  if (score >= 40) return 'text-orange-500';
-  return 'text-red-500';
-}
+import { getScoreTier, getScoreLabel } from '@/lib/score-utils';
 
-function getScoreLabel(score: number): string {
-  if (score >= 80) return 'Excellent';
-  if (score >= 60) return 'Good';
-  if (score >= 40) return 'Needs Improvement';
-  return 'Poor';
+const SCORE_COLORS: Record<string, string> = {
+  excellent: 'text-green-500',
+  good: 'text-yellow-500',
+  fair: 'text-orange-500',
+  poor: 'text-red-500',
+};
+
+function getScoreColor(score: number): string {
+  return SCORE_COLORS[getScoreTier(score)];
 }
 
 export function PromptQualityCard({ insight }: PromptQualityCardProps) {

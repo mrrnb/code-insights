@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { getScoreTier } from '@/lib/score-utils';
 
 interface ProgressRingProps {
   value: number;
@@ -8,19 +9,19 @@ interface ProgressRingProps {
   className?: string;
 }
 
-function getStrokeColor(score: number): string {
-  if (score >= 80) return 'stroke-green-500';
-  if (score >= 60) return 'stroke-yellow-500';
-  if (score >= 40) return 'stroke-orange-500';
-  return 'stroke-red-500';
-}
+const STROKE_COLORS: Record<string, string> = {
+  excellent: 'stroke-green-500',
+  good: 'stroke-yellow-500',
+  fair: 'stroke-orange-500',
+  poor: 'stroke-red-500',
+};
 
-function getTextColor(score: number): string {
-  if (score >= 80) return 'fill-green-500';
-  if (score >= 60) return 'fill-yellow-500';
-  if (score >= 40) return 'fill-orange-500';
-  return 'fill-red-500';
-}
+const FILL_COLORS: Record<string, string> = {
+  excellent: 'fill-green-500',
+  good: 'fill-yellow-500',
+  fair: 'fill-orange-500',
+  poor: 'fill-red-500',
+};
 
 export function ProgressRing({
   value,
@@ -62,14 +63,14 @@ export function ProgressRing({
         strokeDashoffset={offset}
         strokeLinecap="round"
         transform={`rotate(-90 ${center} ${center})`}
-        className={cn('transition-all duration-500', getStrokeColor(value))}
+        className={cn('transition-all duration-500', STROKE_COLORS[getScoreTier(value)])}
       />
       <text
         x={center}
         y={center}
         textAnchor="middle"
         dominantBaseline="central"
-        className={cn('text-lg font-bold', getTextColor(value))}
+        className={cn('text-lg font-bold', FILL_COLORS[getScoreTier(value)])}
         style={{ fontSize: size * 0.3 }}
       >
         {value}
