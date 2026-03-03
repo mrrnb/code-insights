@@ -2,6 +2,17 @@
 
 All notable changes to `@code-insights/cli` will be documented in this file.
 
+## [3.5.1] - 2026-03-03
+
+### Changed
+
+- **Product tagline** — Updated tagline to "Turn your AI coding sessions into knowledge" across package description, README, and product docs ahead of ProductHunt launch.
+
+### Improved
+
+- **Insights page UX polish** — Aligned Insights page layout, filters, and empty states with the Sessions page for a consistent dashboard experience.
+- **README screenshots** — Added 5 screenshots (dashboard, sessions, insights, analytics, terminal stats) to the root README for better first impressions on GitHub.
+
 ## [3.4.1] - 2026-03-02
 
 ### Fixed
