@@ -1,10 +1,22 @@
 import { Hono } from 'hono';
+import { streamSSE } from 'hono/streaming';
 import { getDb } from '@code-insights/cli/db/client';
-import { trackEvent } from '@code-insights/cli/utils/telemetry';
+import { trackEvent, captureError } from '@code-insights/cli/utils/telemetry';
 import type { ExportTemplate } from '@code-insights/cli/types';
 import { formatKnowledgeBase } from '../export/knowledge-base.js';
 import { formatAgentRules } from '../export/agent-rules.js';
 import type { SessionRow, InsightRow } from '../export/knowledge-base.js';
+import { createLLMClient, isLLMConfigured, loadLLMConfig } from '../llm/client.js';
+import {
+  applyDepthCap,
+  buildInsightContext,
+  getExportSystemPrompt,
+  buildExportUserPrompt,
+  type ExportFormat,
+  type ExportScope,
+  type ExportDepth,
+  type ExportInsightRow,
+} from '../llm/export-prompts.js';
 
 const app = new Hono();
 
@@ -96,6 +108,320 @@ app.post('/markdown', async (c) => {
 
   c.header('Content-Type', 'text/markdown');
   return c.body(markdown);
+});
+
+// ─── LLM-powered export types (co-located, not in cli/src/types.ts) ──────────
+
+interface ExportGenerateBody {
+  scope: ExportScope;
+  projectId?: string;
+  format: ExportFormat;
+  depth?: ExportDepth;
+}
+
+interface ExportGenerateMetadata {
+  insightCount: number;    // insights actually sent to LLM
+  totalInsights: number;   // total insights available for scope
+  sessionCount: number;
+  projectCount: number;
+  scope: ExportScope;
+  depth: ExportDepth;
+}
+
+// Fetch scoped insights ordered by confidence DESC, timestamp DESC.
+// Excludes 'summary' type — per-session summaries aren't cross-session knowledge.
+function fetchScopedInsights(
+  db: ReturnType<typeof getDb>,
+  scope: ExportScope,
+  projectId: string | undefined
+): ExportInsightRow[] {
+  if (scope === 'project') {
+    if (!projectId) return [];
+    return db.prepare(`
+      SELECT id, type, title, content, summary, confidence, project_name, timestamp
+      FROM insights
+      WHERE project_id = ? AND type != 'summary'
+      ORDER BY confidence DESC, timestamp DESC
+    `).all(projectId) as ExportInsightRow[];
+  }
+
+  return db.prepare(`
+    SELECT id, type, title, content, summary, confidence, project_name, timestamp
+    FROM insights
+    WHERE type != 'summary'
+    ORDER BY confidence DESC, timestamp DESC
+  `).all() as ExportInsightRow[];
+}
+
+function fetchSessionContext(
+  db: ReturnType<typeof getDb>,
+  scope: ExportScope,
+  projectId: string | undefined
+): { sessionCount: number; projectCount: number; projectName: string | undefined; dateFrom: string; dateTo: string } {
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (scope === 'project' && projectId) {
+    const row = db.prepare(`
+      SELECT COUNT(*) as cnt, MIN(started_at) as min_date, MAX(ended_at) as max_date, project_name
+      FROM sessions WHERE project_id = ?
+    `).get(projectId) as { cnt: number; min_date: string; max_date: string; project_name: string } | undefined;
+    return {
+      sessionCount: row?.cnt ?? 0,
+      projectCount: 1,
+      projectName: row?.project_name,
+      dateFrom: row?.min_date?.slice(0, 10) ?? today,
+      dateTo: row?.max_date?.slice(0, 10) ?? today,
+    };
+  }
+
+  const row = db.prepare(`
+    SELECT COUNT(*) as session_cnt,
+           COUNT(DISTINCT project_id) as project_cnt,
+           MIN(started_at) as min_date,
+           MAX(ended_at) as max_date
+    FROM sessions
+  `).get() as { session_cnt: number; project_cnt: number; min_date: string; max_date: string } | undefined;
+
+  return {
+    sessionCount: row?.session_cnt ?? 0,
+    projectCount: row?.project_cnt ?? 0,
+    projectName: undefined,
+    dateFrom: row?.min_date?.slice(0, 10) ?? today,
+    dateTo: row?.max_date?.slice(0, 10) ?? today,
+  };
+}
+
+// POST /api/export/generate
+// Synchronous LLM export — returns full result when complete.
+app.post('/generate', async (c) => {
+  if (!isLLMConfigured()) {
+    return c.json({
+      success: false,
+      error: 'LLM not configured. Run `code-insights config llm` to configure a provider.',
+    }, 400);
+  }
+
+  const body = await c.req.json<ExportGenerateBody>();
+  const { scope, projectId, format, depth = 'standard' } = body;
+
+  if (scope !== 'project' && scope !== 'all') {
+    return c.json({ error: 'scope must be "project" or "all"' }, 400);
+  }
+  if (scope === 'project' && !projectId) {
+    return c.json({ error: 'projectId is required when scope is "project"' }, 400);
+  }
+  if (!['agent-rules', 'knowledge-brief', 'obsidian', 'notion'].includes(format)) {
+    return c.json({ error: 'format must be one of: agent-rules, knowledge-brief, obsidian, notion' }, 400);
+  }
+  if (!['essential', 'standard', 'comprehensive'].includes(depth)) {
+    return c.json({ error: 'depth must be one of: essential, standard, comprehensive' }, 400);
+  }
+
+  const db = getDb();
+  const llmConfig = loadLLMConfig();
+  const startTime = Date.now();
+
+  try {
+    const rawInsights = fetchScopedInsights(db, scope, projectId);
+    const { capped, totalInsights } = applyDepthCap(rawInsights, depth);
+    const sessionCtx = fetchSessionContext(db, scope, projectId);
+
+    const ctx = {
+      scope,
+      format,
+      depth,
+      projectName: sessionCtx.projectName,
+      sessionCount: sessionCtx.sessionCount,
+      projectCount: sessionCtx.projectCount,
+      dateRange: { from: sessionCtx.dateFrom, to: sessionCtx.dateTo },
+      exportDate: new Date().toISOString().slice(0, 10),
+    };
+
+    const systemPrompt = getExportSystemPrompt(ctx);
+    const insightContext = buildInsightContext(capped);
+    const userPrompt = buildExportUserPrompt(ctx, insightContext);
+
+    const client = createLLMClient();
+    const response = await client.chat([
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ], { signal: c.req.raw.signal });
+
+    const metadata: ExportGenerateMetadata = {
+      insightCount: capped.length,
+      totalInsights,
+      sessionCount: sessionCtx.sessionCount,
+      projectCount: sessionCtx.projectCount,
+      scope,
+      depth,
+    };
+
+    trackEvent('export_run', {
+      format: `llm-${format}`,
+      scope,
+      depth,
+      insight_count: capped.length,
+      session_count: sessionCtx.sessionCount,
+      llm_provider: llmConfig?.provider,
+      llm_model: llmConfig?.model,
+      duration_ms: Date.now() - startTime,
+      success: true,
+    });
+
+    return c.json({ content: response.content, metadata }, 200);
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      // Client disconnected — 422 is the closest Hono allows; client ignores this on abort
+      return c.json({ error: 'Export cancelled' }, 422);
+    }
+    const message = error instanceof Error ? error.message : 'Export generation failed';
+    captureError(error, { format, scope, depth, llm_provider: llmConfig?.provider, llm_model: llmConfig?.model });
+    trackEvent('export_run', {
+      format: `llm-${format}`,
+      scope,
+      depth,
+      llm_provider: llmConfig?.provider,
+      llm_model: llmConfig?.model,
+      duration_ms: Date.now() - startTime,
+      success: false,
+      error_message: message,
+    });
+    return c.json({ error: message }, 422);
+  }
+});
+
+// GET /api/export/generate/stream?scope=project&projectId=xxx&format=agent-rules&depth=standard
+// SSE endpoint — streams progress events during LLM export generation.
+// onProgress is implicit (no chunked analysis here); stream.writeSSE is fire-and-forget
+// for progress events (non-fatal if missed).
+app.get('/generate/stream', async (c) => {
+  if (!isLLMConfigured()) {
+    return c.json({
+      success: false,
+      error: 'LLM not configured. Run `code-insights config llm` to configure a provider.',
+    }, 400);
+  }
+
+  const scope = c.req.query('scope') as ExportScope | undefined;
+  const projectId = c.req.query('projectId');
+  const format = c.req.query('format') as ExportFormat | undefined;
+  const depth = (c.req.query('depth') ?? 'standard') as ExportDepth;
+
+  if (scope !== 'project' && scope !== 'all') {
+    return c.json({ error: 'scope must be "project" or "all"' }, 400);
+  }
+  if (scope === 'project' && !projectId) {
+    return c.json({ error: 'projectId is required when scope is "project"' }, 400);
+  }
+  if (!format || !['agent-rules', 'knowledge-brief', 'obsidian', 'notion'].includes(format)) {
+    return c.json({ error: 'format must be one of: agent-rules, knowledge-brief, obsidian, notion' }, 400);
+  }
+  if (!['essential', 'standard', 'comprehensive'].includes(depth)) {
+    return c.json({ error: 'depth must be one of: essential, standard, comprehensive' }, 400);
+  }
+
+  const db = getDb();
+  const llmConfig = loadLLMConfig();
+
+  return streamSSE(c, async (stream) => {
+    const streamStart = Date.now();
+    try {
+      const abortSignal = c.req.raw.signal;
+
+      // Phase 1: load and count insights, emit counts before LLM call
+      const rawInsights = fetchScopedInsights(db, scope, projectId);
+      const { capped, totalInsights } = applyDepthCap(rawInsights, depth);
+
+      await stream.writeSSE({
+        event: 'progress',
+        data: JSON.stringify({
+          phase: 'loading_insights',
+          insightCount: capped.length,
+          totalInsights,
+        }),
+      });
+
+      if (capped.length === 0) {
+        await stream.writeSSE({
+          event: 'error',
+          data: JSON.stringify({ error: 'No insights found for the selected scope. Run analysis on some sessions first.' }),
+        });
+        return;
+      }
+
+      // Phase 2: synthesizing
+      void stream.writeSSE({
+        event: 'progress',
+        data: JSON.stringify({ phase: 'synthesizing', progress: 'Sending to LLM...' }),
+      }).catch(() => {});
+
+      const sessionCtx = fetchSessionContext(db, scope, projectId);
+      const ctx = {
+        scope,
+        format,
+        depth,
+        projectName: sessionCtx.projectName,
+        sessionCount: sessionCtx.sessionCount,
+        projectCount: sessionCtx.projectCount,
+        dateRange: { from: sessionCtx.dateFrom, to: sessionCtx.dateTo },
+        exportDate: new Date().toISOString().slice(0, 10),
+      };
+
+      const systemPrompt = getExportSystemPrompt(ctx);
+      const insightContext = buildInsightContext(capped);
+      const userPrompt = buildExportUserPrompt(ctx, insightContext);
+
+      const client = createLLMClient();
+      const response = await client.chat([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ], { signal: abortSignal });
+
+      const metadata: ExportGenerateMetadata = {
+        insightCount: capped.length,
+        totalInsights,
+        sessionCount: sessionCtx.sessionCount,
+        projectCount: sessionCtx.projectCount,
+        scope,
+        depth,
+      };
+
+      trackEvent('export_run', {
+        format: `llm-${format}`,
+        scope,
+        depth,
+        insight_count: capped.length,
+        session_count: sessionCtx.sessionCount,
+        llm_provider: llmConfig?.provider,
+        llm_model: llmConfig?.model,
+        duration_ms: Date.now() - streamStart,
+        success: true,
+      });
+
+      // Phase 3: complete — send full content + metadata
+      await stream.writeSSE({
+        event: 'complete',
+        data: JSON.stringify({ content: response.content, metadata }),
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      captureError(err, { format, scope, depth, llm_provider: llmConfig?.provider, llm_model: llmConfig?.model });
+      trackEvent('export_run', {
+        format: `llm-${format}`,
+        scope,
+        depth,
+        llm_provider: llmConfig?.provider,
+        llm_model: llmConfig?.model,
+        duration_ms: Date.now() - streamStart,
+        success: false,
+        error_message: message,
+      });
+      await stream.writeSSE({
+        event: 'error',
+        data: JSON.stringify({ error: message }),
+      }).catch(() => {});
+    }
+  });
 });
 
 export default app;

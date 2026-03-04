@@ -117,7 +117,7 @@ describe('runMigrations', () => {
     runMigrations(db);
 
     const rows = db.prepare('SELECT * FROM schema_version').all();
-    expect(rows).toHaveLength(1);
+    expect(rows).toHaveLength(CURRENT_SCHEMA_VERSION);
 
     db.close();
   });
