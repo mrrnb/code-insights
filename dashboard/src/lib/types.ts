@@ -2,6 +2,8 @@
 // The server returns SQLite rows as-is — snake_case keys, ISO 8601 date strings.
 // Convert to Date objects only at the component boundary when needed.
 
+export type ExportTemplate = 'knowledge-base' | 'agent-rules';
+
 export interface Project {
   id: string;
   name: string;

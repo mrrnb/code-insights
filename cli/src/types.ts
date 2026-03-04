@@ -239,6 +239,8 @@ export interface ClaudeInsightConfig {
   telemetry?: boolean;              // default true (opt-out)
 }
 
+export type ExportTemplate = 'knowledge-base' | 'agent-rules';
+
 export interface SyncState {
   lastSync: string;
   files: Record<string, FileSyncState>;

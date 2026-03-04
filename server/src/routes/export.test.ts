@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import Database from 'better-sqlite3';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { runMigrations } from '@code-insights/cli/db/schema';
@@ -44,6 +45,20 @@ function seedProjectAndSession(projectId: string, sessionId: string) {
   `).run(sessionId, projectId);
 }
 
+function seedInsight(
+  sessionId: string,
+  projectId: string,
+  type: string,
+  title: string,
+  content: string,
+  metadata: Record<string, unknown>,
+) {
+  testDb.prepare(`
+    INSERT INTO insights (id, session_id, project_id, project_name, type, title, content, summary, confidence, source, metadata, timestamp)
+    VALUES (?, ?, ?, 'test', ?, ?, ?, ?, 0.9, 'llm', ?, datetime('now'))
+  `).run(randomUUID(), sessionId, projectId, type, title, content, content, JSON.stringify(metadata));
+}
+
 // ──────────────────────────────────────────────────────
 // Tests
 // ──────────────────────────────────────────────────────
@@ -74,16 +89,19 @@ describe('Export routes', () => {
       expect(text).toContain('Test Session');
     });
 
-    it('returns 400 when neither sessionIds nor projectId provided', async () => {
+    it('returns 200 with markdown when neither sessionIds nor projectId provided ("everything" export)', async () => {
+      seedProjectAndSession('proj-1', 'sess-1');
+
       const app = createApp();
       const res = await app.request('/api/export/markdown', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
-      expect(res.status).toBe(400);
-      const body = await res.json();
-      expect(body.error).toContain('sessionIds or projectId required');
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      expect(text).toContain('# Code Insights Export');
+      expect(text).toContain('Test Session');
     });
 
     it('returns 400 when sessionIds is not an array', async () => {
@@ -125,6 +143,107 @@ describe('Export routes', () => {
       expect(text).toContain('# Code Insights Export');
       // No session sections — just the header
       expect(text).not.toContain('## ');
+    });
+
+    it('returns 400 when template is invalid', async () => {
+      seedProjectAndSession('proj-1', 'sess-1');
+
+      const app = createApp();
+      const res = await app.request('/api/export/markdown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionIds: ['sess-1'], template: 'invalid' }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toContain('template must be');
+    });
+
+    it('knowledge-base template includes structured insight content', async () => {
+      seedProjectAndSession('proj-1', 'sess-1');
+      seedInsight('sess-1', 'proj-1', 'decision', 'Use SQLite over Postgres', 'Chose SQLite for local-first simplicity.', {
+        reasoning: 'No network overhead, zero-config, works offline',
+        choice: 'SQLite',
+        situation: 'local-first data storage',
+        alternatives: [{ option: 'Postgres', rejected_because: 'too slow to set up locally' }],
+        revisit_when: 'multi-user collaboration is needed',
+      });
+      seedInsight('sess-1', 'proj-1', 'learning', 'WAL mode prevents read locks', 'WAL mode allows concurrent reads during writes.', {
+        symptom: 'CLI sync blocked dashboard reads',
+        root_cause: 'default journal mode locks the entire database during writes',
+        takeaway: 'Always enable WAL mode for local SQLite databases with concurrent access',
+        applies_when: 'running CLI sync while dashboard is open',
+      });
+
+      const app = createApp();
+      const res = await app.request('/api/export/markdown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionIds: ['sess-1'], template: 'knowledge-base' }),
+      });
+      expect(res.status).toBe(200);
+      const text = await res.text();
+
+      // Session present
+      expect(text).toContain('Test Session');
+      // Decision insight
+      expect(text).toContain('Use SQLite over Postgres');
+      expect(text).toContain('**Reasoning:**');
+      // Verifies the rejected_because fix — must appear in output
+      expect(text).toContain('rejected because too slow to set up locally');
+      // Learning insight
+      expect(text).toContain('WAL mode prevents read locks');
+      expect(text).toContain('**What Happened:**');
+      expect(text).toContain('**Root Cause:**');
+      expect(text).toContain('**Takeaway:**');
+    });
+
+    it('agent-rules template produces imperative format', async () => {
+      seedProjectAndSession('proj-1', 'sess-1');
+      seedInsight('sess-1', 'proj-1', 'decision', 'Use SQLite over Postgres', 'Chose SQLite for local-first simplicity.', {
+        reasoning: 'No network overhead, zero-config, works offline',
+        choice: 'SQLite',
+        situation: 'local-first data storage',
+        alternatives: [{ option: 'Postgres', rejected_because: 'too slow to set up locally' }],
+        revisit_when: 'multi-user collaboration is needed',
+      });
+      seedInsight('sess-1', 'proj-1', 'learning', 'WAL mode prevents read locks', 'WAL mode allows concurrent reads during writes.', {
+        symptom: 'CLI sync blocked dashboard reads',
+        root_cause: 'default journal mode locks the entire database during writes',
+        takeaway: 'Always enable WAL mode for local SQLite databases with concurrent access',
+        applies_when: 'running CLI sync while dashboard is open',
+      });
+
+      const app = createApp();
+      const res = await app.request('/api/export/markdown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionIds: ['sess-1'], template: 'agent-rules' }),
+      });
+      expect(res.status).toBe(200);
+      const text = await res.text();
+
+      expect(text).toContain('# Agent Rules Export');
+      expect(text).toContain('## Decisions');
+      expect(text).toContain('- USE SQLite');
+      expect(text).toContain('- DO NOT use Postgres');
+      expect(text).toContain('## Learnings');
+      expect(text).toContain('- WHEN ');
+    });
+
+    it('sessions with no insights show graceful note', async () => {
+      seedProjectAndSession('proj-1', 'sess-1');
+      // No insights seeded
+
+      const app = createApp();
+      const res = await app.request('/api/export/markdown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionIds: ['sess-1'], template: 'knowledge-base' }),
+      });
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      expect(text).toContain('*No insights for this session.*');
     });
   });
 });

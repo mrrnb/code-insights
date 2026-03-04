@@ -2,7 +2,7 @@
 // Base URL is relative in production (SPA served by the same server).
 // In Vite dev mode, the proxy forwards /api -> localhost:7890.
 
-import type { Project, Session, Message, Insight, DashboardStats, LLMConfig } from '@/lib/types';
+import type { Project, Session, Message, Insight, DashboardStats, LLMConfig, ExportTemplate } from '@/lib/types';
 
 const BASE = '/api';
 
@@ -172,6 +172,7 @@ export function findRecurringInsights(body?: { projectId?: string; limit?: numbe
 export async function exportMarkdown(body: {
   sessionIds?: string[];
   projectId?: string;
+  template?: ExportTemplate;
 }): Promise<string> {
   const res = await fetch(`${BASE}/export/markdown`, {
     method: 'POST',
