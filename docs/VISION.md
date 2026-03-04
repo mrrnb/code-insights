@@ -70,10 +70,16 @@ Code Insights is a utility, not a product. It should:
 - Landing page and docs at `code-insights.app`
 - README, CONTRIBUTING.md, MIGRATION.md, CHANGELOG.md
 
+### Phase 7: Export & Knowledge Pipeline (In Progress)
+- Session-level export with Knowledge Base and Agent Rules templates (v3.5.1) ✅
+- Prompt quality analysis insight type (efficiency scores, anti-patterns, wasted turns) ✅
+- LLM-powered Export Page: cross-session synthesis into agent rules, Obsidian, Notion formats
+- Export Page uses the multi-provider LLM abstraction (same as session analysis)
+
 ### What's Next
+- LLM-powered Export Page (cross-session insight synthesis → agent rules)
 - Cross-session pattern detection and learning journal
-- Markdown export (session, day, week, project)
-- Test suite (Vitest)
+- Test suite expansion (Vitest)
 - Slash commands for quick insights from the terminal
 
 ## Non-Goals

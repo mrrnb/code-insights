@@ -55,9 +55,23 @@ LLM analysis uses your own API key, stored in `~/.code-insights/config.json` (mo
 | Category | What It Captures |
 |----------|------------------|
 | **Summary** | High-level narrative of what was accomplished |
-| **Decision** | Architecture choices, trade-offs, reasoning, alternatives |
+| **Decision** | Architecture choices, trade-offs, reasoning, alternatives considered |
 | **Learning** | Technical discoveries, mistakes, transferable knowledge |
 | **Technique** | Problem-solving approaches and debugging strategies |
+| **Prompt Quality** | Efficiency scores, wasted turns, anti-patterns, improvement suggestions |
+
+### Export
+
+Two-tier export system for turning session knowledge into shareable and actionable artifacts:
+
+**Session-level export** — per-session export of insights with two templates:
+- **Knowledge Base** — Human-readable markdown with full insight content (summaries, decisions with alternatives/reasoning, learnings with root causes/takeaways, techniques, prompt quality analysis)
+- **Agent Rules** — Imperative instructions formatted for CLAUDE.md/.cursorrules (`USE X`, `DO NOT use Y`, `WHEN Z, check W`)
+
+**Export Page** (planned) — LLM-powered cross-session synthesis:
+- Reads across multiple sessions' insights to deduplicate, merge, and synthesize
+- Generates agent rules via LLM (not just template formatting)
+- Multiple output formats: Agent Rules, Markdown, Obsidian (YAML frontmatter), Notion
 
 ### Dashboard Views
 

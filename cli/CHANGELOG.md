@@ -2,6 +2,23 @@
 
 All notable changes to `@code-insights/cli` will be documented in this file.
 
+## [3.6.0] - 2026-03-04
+
+### Added
+
+- **LLM-Powered Export Page** — The standalone Export Page is now a 4-step wizard that uses LLM synthesis to read across multiple sessions' insights and produce curated, deduplicated output. Instead of listing learnings verbatim, the LLM deduplicates overlapping insights, resolves conflicting decisions, prioritizes by confidence, and adds contextual "WHEN" conditions.
+- **4 export formats** — Agent Rules (CLAUDE.md/.cursorrules), Knowledge Brief (markdown handoff), Obsidian (YAML frontmatter + wikilinks), Notion (toggle blocks + callouts + tables).
+- **2 scope modes** — Project mode (single project, rules implicitly scoped) and All Projects mode (cross-project, LLM classifies rules as UNIVERSAL or PROJECT-SPECIFIC with project labels).
+- **3 depth presets** — Essential (~25 top insights, fast), Standard (~80 insights, default), Comprehensive (~200 insights, thorough). Controls how many insights the LLM synthesizes.
+- **SSE streaming** — Real-time progress feedback during LLM generation with loading_insights → synthesizing → complete phases.
+- **AbortSignal support** — Cancel in-progress LLM generation to save tokens when navigating away.
+- **Token budget guard** — Caps input at ~60k tokens with depth-based limits as the primary control.
+- **Shared SSE utility** — Extracted `parseSSEStream` from AnalysisContext to `dashboard/src/lib/sse.ts` for reuse across streaming consumers.
+
+### Changed
+
+- **SQLite schema V2** — Added compound index `idx_insights_confidence_timestamp` on insights table for depth-ordered export queries. Migration runs automatically on first use.
+
 ## [3.5.1] - 2026-03-03
 
 ### Changed

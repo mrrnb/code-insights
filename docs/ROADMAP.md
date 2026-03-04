@@ -134,16 +134,17 @@ This roadmap outlines the development phases for Code Insights. Timelines are fl
   - Analytics page with cost, models, projects breakdown
   - Stats overview and project cards
 
-- [ ] **4.4 Markdown Export**
-  - Export by: session, day, week, project
-  - Formats: Plain Markdown, Obsidian (with wikilinks), Notion
-  - Export page in dashboard
+- [x] **4.4 Session-Level Export Templates** (v3.5.1)
+  - Two export templates: Knowledge Base (human-readable) and Agent Rules (imperative instructions)
+  - Export includes full insight content: summaries, decisions (with alternatives/reasoning), learnings (with root causes/takeaways), techniques, prompt quality
+  - Template selector in Export wizard + Copy to Clipboard
+  - Export by: session IDs, project, or all recent sessions
 
 ### Deliverables
 - ✅ Embedded local dashboard via `code-insights dashboard`
 - ✅ Multi-source support (Claude Code, Cursor, Codex CLI, Copilot CLI)
 - ✅ Full feature parity with original hosted dashboard
-- Markdown export (in progress)
+- ✅ Session-level export with Knowledge Base and Agent Rules templates
 
 ---
 
@@ -199,6 +200,40 @@ This roadmap outlines the development phases for Code Insights. Timelines are fl
 
 ---
 
+## Phase 7: Export & Knowledge Pipeline
+
+**Goal:** Turn session insights into actionable knowledge artifacts via LLM-powered synthesis
+
+### Milestones
+
+- [x] **7.1 Session-Level Export Templates** (v3.5.1) ✅
+  - Knowledge Base template (human-readable markdown with full insight content)
+  - Agent Rules template (imperative instructions for CLAUDE.md/.cursorrules)
+  - Prompt quality analysis in exports (efficiency scores, anti-patterns, wasted turns)
+  - Template selector + Copy to Clipboard in dashboard
+
+- [x] **7.2 LLM-Powered Export Page** (v3.6.0) ✅
+  - Cross-session insight synthesis via LLM (not just template formatting)
+  - LLM reads decisions, learnings, techniques, prompt quality across sessions
+  - Deduplicates overlapping learnings, resolves conflicting decisions
+  - Generates agent rules as a coherent, contextual document
+  - Uses existing multi-provider LLM abstraction (OpenAI, Anthropic, Gemini, Ollama)
+  - 3 depth presets (Essential/Standard/Comprehensive) for controlling synthesis scope
+  - SSE streaming with progress phases, AbortSignal support, token budget guard
+
+- [x] **7.3 Multi-Format Export** (v3.6.0) ✅
+  - Agent Rules (CLAUDE.md / .cursorrules / codex config)
+  - Knowledge Brief (general purpose markdown, shareable)
+  - Obsidian (markdown + YAML frontmatter, tags, wikilinks)
+  - Notion (Notion-compatible markdown with toggle blocks, callouts, tables)
+
+### Deliverables
+- ✅ Session-level export with two templates
+- ✅ LLM-powered cross-session synthesis
+- ✅ Multi-format output (Agent Rules, Knowledge Brief, Obsidian, Notion)
+
+---
+
 ## Version Milestones
 
 | Version | Phase | Key Features | Status |
@@ -214,6 +249,8 @@ This roadmap outlines the development phases for Code Insights. Timelines are fl
 | 3.2.0 | 4 | Dashboard polish — skeletons, ErrorCard, toasts, bundle audit | ✅ Done |
 | 3.3.0 | 5 | PostHog anonymous telemetry (opt-in) | ✅ Done |
 | 3.4.0 | — | Multi-source parser fixes (Codex, Cursor, Copilot), agent message rendering | ✅ Done |
+| 3.5.1 | 7 | Session-level export templates (Knowledge Base, Agent Rules), prompt quality in exports | ✅ Done |
+| 3.6.0 | 7 | LLM-powered Export Page (cross-session synthesis, 4 formats, depth presets, SSE streaming) | ✅ Done |
 
 ---
 
