@@ -41,5 +41,5 @@ function applyV1(db: Database.Database): void {
 
 function applyV2(db: Database.Database): void {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_insights_confidence_timestamp ON insights(confidence DESC, timestamp DESC)`);
-  db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(2);
+  db.prepare('INSERT OR IGNORE INTO schema_version (version) VALUES (?)').run(2);
 }
