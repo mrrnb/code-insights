@@ -61,30 +61,11 @@ export function normalizeFrictionCategory(category: string): string {
   for (const canonical of CANONICAL_FRICTION_CATEGORIES) {
     const shorter = lower.length < canonical.length ? lower : canonical;
     const longer = lower.length < canonical.length ? canonical : lower;
-    if (shorter.length >= 5 && longer.includes(shorter)) {
+    if (shorter.length >= 5 && shorter.length / longer.length >= 0.5 && longer.includes(shorter)) {
       return canonical;
     }
   }
 
   // 4. No match — novel category
   return category;
-}
-
-/**
- * Normalize and group friction points by canonical category.
- * Used during aggregation to cluster similar categories together.
- */
-export function normalizeAndGroupFriction<T extends { category: string }>(
-  items: T[]
-): Map<string, T[]> {
-  const groups = new Map<string, T[]>();
-
-  for (const item of items) {
-    const normalized = normalizeFrictionCategory(item.category);
-    const group = groups.get(normalized) || [];
-    group.push({ ...item, category: normalized });
-    groups.set(normalized, group);
-  }
-
-  return groups;
 }

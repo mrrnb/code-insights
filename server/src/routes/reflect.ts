@@ -178,7 +178,7 @@ app.post('/generate', async (c) => {
 // The full synthesized view requires POST /api/reflect/generate.
 app.get('/results', (c) => {
   const db = getDb();
-  const period = c.req.query('period') || '7d';
+  const period = c.req.query('period') || '30d';
   const project = c.req.query('project');
   const source = c.req.query('source');
 

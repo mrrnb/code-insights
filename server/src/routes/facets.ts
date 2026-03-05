@@ -29,7 +29,7 @@ interface FacetRow {
 app.get('/', (c) => {
   const db = getDb();
   const project = c.req.query('project');
-  const period = c.req.query('period') || '7d';
+  const period = c.req.query('period') || '30d';
   const source = c.req.query('source');
 
   const { where, params } = buildWhereClause(period, project, source);
@@ -60,7 +60,7 @@ app.get('/', (c) => {
 app.get('/aggregated', (c) => {
   const db = getDb();
   const project = c.req.query('project');
-  const period = c.req.query('period') || '7d';
+  const period = c.req.query('period') || '30d';
   const source = c.req.query('source');
 
   const { where, params } = buildWhereClause(period, project, source);

@@ -390,7 +390,6 @@ export function parseAnalysisResponse(response: string): ParseResult<AnalysisRes
 
   parsed.decisions = parsed.decisions || [];
   parsed.learnings = parsed.learnings || [];
-  parsed.facets = parsed.facets || undefined;
 
   // Validate session_character — drop if not a recognized value
   if (parsed.session_character && !VALID_SESSION_CHARACTERS.has(parsed.session_character)) {
