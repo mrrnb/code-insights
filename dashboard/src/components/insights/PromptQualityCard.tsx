@@ -64,7 +64,7 @@ function getScoreColor(score: number): string {
 /** Inner content for prompt quality — used by both PromptQualityCard and InsightListItem. */
 export function PromptQualityContent({ insight }: { insight: Insight }) {
   const metadata = parseJsonField<Record<string, unknown>>(insight.metadata, {});
-  const bullets = parseJsonField<string[]>(insight.bullets, []);
+  const bullets = parseJsonField<(string | { tip?: string; example?: string })[]>(insight.bullets, []);
 
   const score = typeof metadata.efficiencyScore === 'number' ? metadata.efficiencyScore : 0;
   const wastedTurns = Array.isArray(metadata.wastedTurns) ? metadata.wastedTurns as WastedTurn[] : [];
@@ -209,10 +209,21 @@ export function PromptQualityContent({ insight }: { insight: Insight }) {
             <Lightbulb className="h-3.5 w-3.5 text-yellow-500" />
             Tips
           </div>
-          <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-            {bullets.map((tip, i) => (
-              <li key={i}>{tip}</li>
-            ))}
+          <ul className="list-disc list-inside space-y-1.5 text-sm text-muted-foreground">
+            {bullets.map((bullet, i) => {
+              if (typeof bullet === 'string') {
+                return <li key={i}>{bullet}</li>;
+              }
+              const obj = bullet as { tip?: string; example?: string };
+              return (
+                <li key={i}>
+                  {obj.tip}
+                  {obj.example && (
+                    <p className="ml-5 mt-0.5 text-xs italic">{obj.example}</p>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
