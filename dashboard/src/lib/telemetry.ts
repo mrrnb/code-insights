@@ -15,7 +15,7 @@
 import posthog from 'posthog-js';
 
 const POSTHOG_API_KEY = 'phc_552ZSApq5xuagswylfdw2vx8nckm31jn6LCpTVyVn8j';
-const POSTHOG_HOST = 'https://code-insights.app';
+const POSTHOG_HOST = 'https://code-insights.app/ingest';
 
 let initialized = false;
 
