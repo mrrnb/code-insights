@@ -40,6 +40,18 @@ Determine the PR scope:
 - Straightforward UI/component change
 - Config/CI changes only
 
+**Invoke LLM Expert (4th reviewer) if ANY of these apply:**
+- PR touches `server/src/llm/` (prompts, providers, export-prompts)
+- PR adds or modifies LLM API calls
+- PR changes structured output schemas or SSE streaming
+- PR modifies token budgets or model selection logic
+- PR adds new LLM-powered features
+
+**Skip LLM Expert if ALL of these apply:**
+- No LLM code touched
+- Pure UI, CLI, or schema changes
+- Provider (source tool) implementations only
+
 ---
 
 ## Step 3: Run Parallel Independent Reviews
@@ -96,6 +108,41 @@ Task {
 }
 ```
 
+**Launch LLM Expert Review (if applicable):**
+```
+Task {
+  name: "llm-expert-reviewer",
+  subagent_type: "llm-expert",
+  prompt: "You are performing an independent LLM EXPERT review of PR #$ARGUMENTS in the code-insights repo.
+
+  Fetch the PR diff using: gh pr diff $ARGUMENTS
+  Also fetch the PR details: gh pr view $ARGUMENTS
+
+  Review all LLM-related code for:
+  - Prompt quality: clarity, specificity, output format constraints
+  - Token efficiency: redundant instructions, over-prompting, prompt stuffing
+  - Output consistency: structured output schemas, JSON mode, enum enforcement
+  - Model selection: is the chosen model appropriate for the task complexity?
+  - Resilience: handling malformed LLM output, timeouts, retries, rate limits
+  - Cross-model compatibility: prompts that only work with one model family
+  - Cost implications: token budget estimates, unnecessary Opus/GPT-4 usage for simple tasks
+  - Streaming patterns: SSE implementation, partial response handling
+
+  Rate each prompt on: clarity (1-5), token efficiency (1-5), output consistency (1-5), resilience (1-5).
+
+  Output your review in the structured format:
+  ## LLM Expert Review: [PR Title]
+  ### Prompt Quality Assessment
+  ### Token Efficiency
+  ### Model Selection
+  ### Issues Found (with priority markers)
+  ### Recommendations
+
+  DO NOT look at any other review comments. Your review must be independent.",
+  mode: "bypassPermissions"
+}
+```
+
 **Launch Wild Card Review (if applicable):**
 ```
 Task {
@@ -131,12 +178,12 @@ Task {
   subagent_type: "technical-architect",
   prompt: "You are performing Phase 2 SYNTHESIS for PR #$ARGUMENTS.
 
-  The orchestrator will provide you with the independent review outputs.
+  The orchestrator will provide you with the independent review outputs (outsider, wild card if applicable, and LLM expert if applicable).
 
   Follow your Phase 2 synthesis protocol:
-  1. Read all review comments
+  1. Read all review comments (outsider, wild card, LLM expert)
   2. Re-review the PR with all reviews in context
-  3. For each outsider/wild card comment, evaluate:
+  3. For each outsider/wild card/LLM expert comment, evaluate:
      - Does this conflict with project patterns or conventions?
      - Is this a valid point that should be applied?
      - Did you miss this in Phase 1?
@@ -179,6 +226,7 @@ gh pr comment $ARGUMENTS --body "$(cat <<'EOF'
 |------|-------|
 | TA (Insider) | Pattern compliance, schema impact, architecture |
 | Outsider | Security, best practices, logic bugs |
+| LLM Expert | Prompt quality, token efficiency, model selection (if applicable) |
 | Wild Card | Edge cases, fresh perspective |
 
 ### Issues Found & Resolution

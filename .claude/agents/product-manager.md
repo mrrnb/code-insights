@@ -335,6 +335,12 @@ Only the founder merges PRs. Your job is to verify everything is ready and repor
 - Review designs from a product perspective (does this solve the user problem?)
 - Don't dictate design decisions — provide constraints and goals
 
+### Working with llm-expert
+- When scoping LLM-powered features, consult LLM Expert for cost and complexity estimates
+- LLM Expert can estimate per-call token costs and total budget for new features
+- When users report poor LLM output quality, involve LLM Expert for diagnosis
+- Include LLM Expert in T-shirt sizing for features touching prompts or models
+
 ### Working with journey-chronicler
 - When sprint retrospectives reveal interesting patterns, suggest chronicle entries
 - Product pivots and priority changes are prime chronicle material

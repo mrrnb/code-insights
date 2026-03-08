@@ -238,7 +238,8 @@ When you create a PR, the triple-layer review process begins:
 |------|----------|----------------|
 | **INSIDER** | `technical-architect` | Type alignment, schema contract, architecture patterns |
 | **OUTSIDER** | `code-review:code-review` skill | Security, best practices, logic bugs |
-| **SYNTHESIZER** | `technical-architect` | Consolidates both reviews, produces final list |
+| **LLM EXPERT** | `llm-expert` *(conditional)* | Prompt quality, token efficiency, model selection |
+| **SYNTHESIZER** | `technical-architect` | Consolidates all reviews, produces final list |
 | **IMPLEMENTER** | You | Receives consolidated list from TA, implements FIX NOW items |
 
 ### Your Role in Code Reviews
@@ -428,6 +429,12 @@ Only the founder merges PRs. Your job ends when the PR is created and review com
 
 **You consume:** CLAUDE.md (architecture), `types.ts` (TA alignment decisions), agent definitions
 **You flag to TA:** Any SQLite schema or type changes that affect the data contract
+
+### Working with llm-expert
+- Before writing new prompts or modifying `server/src/llm/`, consult LLM Expert for prompt architecture guidance
+- LLM Expert designs the prompt structure, token budgets, and model recommendations; you implement them
+- When LLM output is inconsistent or low-quality, flag to LLM Expert before debugging alone
+- After implementing LLM code, LLM Expert reviews prompt quality as part of the PR review process
 
 ## Your Principles
 

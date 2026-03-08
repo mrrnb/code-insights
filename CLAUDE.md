@@ -238,6 +238,7 @@ Dashboard (dashboard/src/)   -> Reads from Server API
 | `product-manager` | sonnet | Task tracking (GitHub Issues), sprint planning, ceremony coordination |
 | `journey-chronicler` | opus | Capture learning moments, breakthroughs, course corrections |
 | `devtools-cofounder` | opus | DevTools strategy, DX critique, competitive positioning (on-demand, not standard ceremony) |
+| `llm-expert` | opus | LLM integration review, prompt design, token optimization, model selection, cost analysis |
 
 Agent definitions live in `.claude/agents/`.
 
@@ -305,7 +306,7 @@ Step 10: Founder merges PR
 | 6 | TA + Dev agent | Both confirm ready to implement |
 | 7 | Dev agent | Clean repo, feature branch created |
 | 8 | Dev agent | Code implemented, CI passes locally |
-| 9 | TA + Outsider + Dev agent | All review comments addressed |
+| 9 | TA + Outsider + LLM Expert (if applicable) + Dev agent | All review comments addressed |
 | 10 | **Founder only** | PR merged to main |
 
 ### When to Engage TA (Steps 4-5)
@@ -323,6 +324,24 @@ Step 10: Founder merges PR
 - Terminal UI changes
 - Dashboard component styling
 - LLM provider additions
+
+### When to Engage LLM Expert
+
+**Required (LLM impact):**
+- Adding or modifying prompt templates (`server/src/llm/`)
+- New LLM-powered features (insight generation, reflect, export)
+- Changing model assignments or token budgets
+- SSE streaming or structured output schema changes
+- Debugging inconsistent LLM output quality
+- Cost optimization decisions for LLM usage
+
+**Not required (no LLM impact):**
+- CLI commands that don't invoke LLM
+- Dashboard UI changes (unless LLM output rendering logic)
+- Source tool provider implementations (parsers)
+- SQLite schema changes (unless for LLM results storage)
+
+**Proactive dispatch:** Auto-invoke `llm-expert` when conversation touches prompt design, token optimization, model selection, or when engineer writes new code in `server/src/llm/`.
 
 ### CI Simulation Gate (Step 8 — BLOCKING)
 
@@ -357,12 +376,14 @@ For non-trivial features, use `/start-feature` to spin up a coordinated agent te
     +-- PM (team lead): Scopes feature, creates task graph, spawns agents
     |     |
     |     +-- TA: Reviews architecture alignment (skipped for internal changes)
+    |     +-- LLM Expert: Reviews prompt architecture (skipped if no LLM impact)
     |     +-- Dev (engineer): Implements in worktree, creates PR
     |
     +-- /start-review (triggered by PM after PR created)
           |
           +-- TA (insider review)
           +-- Outsider review
+          +-- LLM Expert review (if PR touches LLM code)
           +-- Wild card (if needed)
           |
           +-- TA synthesis -> Consolidated fix list -> Dev implements fixes
@@ -396,8 +417,11 @@ All PRs go through multi-layer review:
 |------|----------|-------|
 | **INSIDER** | `technical-architect` | Type alignment, schema contract, architecture patterns |
 | **OUTSIDER** | `code-review:code-review` skill | Security, best practices, logic bugs, fresh perspective |
+| **LLM EXPERT** | `llm-expert` *(conditional)* | Prompt quality, token efficiency, model selection, output consistency |
 
-**CRITICAL:** Phase 1 reviews run in parallel. TA must NOT read outsider comments during initial review.
+**LLM Expert reviewer is invoked when the PR touches:** `server/src/llm/`, LLM API calls, structured output schemas, SSE streaming, token budgets, or model selection logic.
+
+**CRITICAL:** Phase 1 reviews run in parallel. No reviewer reads another's comments during initial review.
 
 ### Phase 2: TA Synthesis (After Both Reviews Complete)
 
