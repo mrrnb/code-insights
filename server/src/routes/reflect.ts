@@ -75,7 +75,7 @@ app.post('/generate', async (c) => {
         data: JSON.stringify({ phase: 'aggregating', message: 'Aggregating facets...' }),
       });
 
-      const aggregated = getAggregatedData(db, where, params);
+      const aggregated = getAggregatedData(db, where, params, body.project, body.source);
 
       if (aggregated.totalSessions === 0) {
         await stream.writeSSE({
@@ -163,9 +163,17 @@ app.post('/generate', async (c) => {
             { role: 'user', content: prompt },
           ], { signal: abortSignal });
           const parsed = parseLLMJson(response.content);
+          // Sanitize tagline: must be a string ≤40 chars. Non-string LLM outputs
+          // (object, array, number) are normalized to undefined so they don't
+          // corrupt the snapshot blob stored in SQLite.
+          const rawTagline = parsed && (parsed as Record<string, unknown>)['tagline'];
+          const tagline = typeof rawTagline === 'string'
+            ? rawTagline.slice(0, 40)
+            : undefined;
           results['working-style'] = {
             section: 'working-style',
             ...(parsed ?? {}),
+            tagline,
             workflowDistribution: aggregated.workflowDistribution,
             outcomeDistribution: aggregated.outcomeDistribution,
             characterDistribution: aggregated.characterDistribution,
@@ -227,7 +235,7 @@ app.get('/results', (c) => {
   const source = c.req.query('source');
 
   const { where, params } = buildWhereClause(period, project, source);
-  const aggregated = getAggregatedData(db, where, params);
+  const aggregated = getAggregatedData(db, where, params, project, source);
 
   return c.json(aggregated);
 });

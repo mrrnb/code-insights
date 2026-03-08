@@ -63,15 +63,13 @@ export const RULES_SKILLS_SYSTEM_PROMPT = `You are generating actionable artifac
 
 Your job is to produce concrete, copy-paste-ready artifacts:
 1. CLAUDE.md rules — specific instructions to add to the AI assistant's config
-2. Skill templates — reusable workflows for repetitive tasks
-3. Hook configurations — automation triggers
+2. Hook configurations — automation triggers
 
 RULES:
 - Only generate artifacts for patterns with 3+ occurrences (friction) or 2+ occurrences (effective patterns)
 - Rules must be specific enough to be actionable: "Always run tests before creating PRs" not "Be careful with code"
-- Skill templates must include step-by-step instructions
 - Hook configs must include the event trigger and command
-- Max 5 rules, 3 skills, 3 hooks
+- Max 6 rules, 3 hooks
 - Each artifact must reference the friction pattern or effective practice it addresses
 
 Respond with valid JSON only, wrapped in <json>...</json> tags.`;
@@ -103,13 +101,6 @@ Respond with this JSON format:
       "frictionSource": "category-name (N occurrences)"
     }
   ],
-  "skillTemplates": [
-    {
-      "name": "skill-name",
-      "description": "What this skill automates",
-      "content": "Full skill template content with steps"
-    }
-  ],
   "hookConfigs": [
     {
       "event": "pre-commit | post-file-edit | etc.",
@@ -134,6 +125,10 @@ RULES:
 - Be descriptive, not prescriptive (no advice)
 - Mention the dominant workflow pattern, outcome distribution, and any notable characteristics
 - If the data is too sparse (< 5 sessions), say so and keep it brief
+- Generate a tagline: a 2-4 word archetype label in title case, maximum 40 characters (e.g. "The Methodical Builder", "Relentless Debugger", "Ship Fast Fix Later", "Deep Focus Specialist")
+- The tagline must be empowering and descriptive, never critical or negative
+- Base the tagline on the dominant session types, workflow patterns, and outcome distribution
+- Think of it like a developer personality type — specific and earned, not generic
 
 Respond with valid JSON only, wrapped in <json>...</json> tags.`;
 
@@ -160,6 +155,7 @@ FRICTION FREQUENCY: ${data.frictionFrequency} total friction points across all s
 
 Respond with this JSON format:
 {
+  "tagline": "2-4 word archetype label (e.g. The Methodical Builder)",
   "narrative": "3-5 sentence working style description"
 }
 

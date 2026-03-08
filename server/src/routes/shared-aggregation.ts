@@ -70,16 +70,23 @@ export interface AggregatedData {
   frictionTotal: number;
   totalAllSessions: number;  // all sessions in scope (not just those with facets)
   rateLimitInfo: RateLimitInfo | null;
+  streak: number;            // consecutive days with at least one session (ignores period filter)
+  sourceToolCount: number;   // distinct AI tools used within the scope
 }
 
 /**
  * Run all aggregation queries needed for facet analysis and synthesis.
- * Aggregation is done in code (SQL), not by LLM — LLMs synthesize, they don't count.
+ * Aggregation is done in code (SQL), not by LLMs — LLMs synthesize, they don't count.
+ *
+ * project and source are passed separately so streak can build its own
+ * period-free where clause (streak measures continuity across all time).
  */
 export function getAggregatedData(
   db: ReturnType<typeof getDb>,
   where: string,
-  params: (string | number)[]
+  params: (string | number)[],
+  project?: string,
+  source?: string
 ): AggregatedData {
   const hasWhere = where.length > 0;
   const extraPrefix = hasWhere ? 'AND' : 'WHERE';
@@ -226,6 +233,52 @@ export function getAggregatedData(
   // frictionTotal reflects only non-rate-limit friction (rate limits partitioned separately)
   const frictionTotal = mergedFriction.reduce((sum, fc) => sum + fc.count, 0);
 
+  // Count distinct source tools within scope (for hero card stat pill)
+  const sourceToolRow = db.prepare(
+    `SELECT COUNT(DISTINCT source_tool) as count FROM sessions s ${where}`
+  ).get(...params) as { count: number };
+
+  // Streak: count consecutive days (backward from today) with at least one session.
+  // Always uses all-time scope — filtering by period would cap streak at the window size.
+  // Respects project and source filters since those are user-scope constraints.
+  const { where: streakWhere, params: streakParams } = buildWhereClause('all', project, source);
+  const sessionDates = db.prepare(
+    `SELECT DISTINCT date(started_at) as session_date FROM sessions s ${streakWhere} ORDER BY session_date DESC`
+  ).all(...streakParams) as Array<{ session_date: string }>;
+
+  // Compare dates as YYYY-MM-DD strings in UTC to match SQLite's date() output.
+  // Using toISOString().slice(0,10) avoids local timezone shifting the day boundary.
+  const todayUTC = new Date().toISOString().slice(0, 10);
+  const yesterdayUTC = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
+  let streak = 0;
+  // baseline is the date we expect for the next streak entry.
+  // Start at today; if first session is yesterday, reset baseline to yesterday so
+  // the loop can continue counting backward from there correctly.
+  let baseline: string | null = null;
+
+  for (const { session_date } of sessionDates) {
+    if (baseline === null) {
+      // First entry: must be today or yesterday to start an active streak
+      if (session_date === todayUTC) {
+        baseline = todayUTC;
+      } else if (session_date === yesterdayUTC) {
+        baseline = yesterdayUTC;
+      } else {
+        break; // Gap from today — no active streak
+      }
+      streak++;
+    } else {
+      // Subsequent entries: must be exactly one day before current baseline
+      const prevDay: Date = new Date((baseline as string) + 'T00:00:00Z');
+      prevDay.setUTCDate(prevDay.getUTCDate() - 1);
+      const expectedPrev: string = prevDay.toISOString().slice(0, 10);
+      if (session_date !== expectedPrev) break;
+      baseline = expectedPrev;
+      streak++;
+    }
+  }
+
   return {
     frictionCategories: mergedFriction,
     effectivePatterns,
@@ -236,5 +289,7 @@ export function getAggregatedData(
     frictionTotal,
     totalAllSessions: totalAllRow.count,
     rateLimitInfo,
+    streak,
+    sourceToolCount: sourceToolRow.count,
   };
 }
