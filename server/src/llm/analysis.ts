@@ -26,6 +26,7 @@ import {
   type PromptQualityResponse,
   type ParseError,
 } from './prompts.js';
+import { normalizePatternCategory } from './pattern-normalize.js';
 
 // Re-export SQLiteMessageRow so routes can import it from analysis.ts directly
 export type { SQLiteMessageRow };
@@ -825,6 +826,17 @@ function saveFacetsToDb(
   analysisVersion: string
 ): void {
   const db = getDb();
+
+  // Normalize pattern categories at write time so stored data is always clean.
+  // This handles LLM variants (e.g., "task-decomposition" → "structured-planning")
+  // before they hit the database, keeping aggregation queries simple.
+  const normalizedPatterns = Array.isArray(facets.effective_patterns)
+    ? facets.effective_patterns.map(ep => ({
+        ...ep,
+        category: ep.category ? normalizePatternCategory(ep.category) : ep.category,
+      }))
+    : [];
+
   db.prepare(`
     INSERT OR REPLACE INTO session_facets
     (session_id, outcome_satisfaction, workflow_pattern, had_course_correction,
@@ -839,7 +851,7 @@ function saveFacetsToDb(
     facets.course_correction_reason,
     facets.iteration_count,
     JSON.stringify(Array.isArray(facets.friction_points) ? facets.friction_points : []),
-    JSON.stringify(Array.isArray(facets.effective_patterns) ? facets.effective_patterns : []),
+    JSON.stringify(normalizedPatterns),
     analysisVersion
   );
 }
