@@ -80,21 +80,22 @@ export function formatMessagesForAnalysis(messages: SQLiteMessageRow[]): string 
 }
 
 // Shared guidance for friction category and attribution classification.
-// Contrastive pairs help the LLM distinguish similar categories.
+// Actor-neutral category definitions describe the gap, not the actor.
 // Attribution field captures who contributed to the friction for actionability.
 export const FRICTION_CLASSIFICATION_GUIDANCE = `
 FRICTION CLASSIFICATION GUIDANCE:
 
 Each friction point captures WHAT went wrong (category + description) and WHO contributed (attribution).
+Before assigning attribution, write your reasoning in _reasoning using the 3-step decision tree below.
 
 CATEGORIES — classify the TYPE of friction:
-- "wrong-approach": AI pursued a strategy that didn't fit the task — wrong architecture, wrong tool, wrong pattern
-- "knowledge-gap": AI applied incorrect knowledge about a library, API, framework, or language feature
-- "stale-assumptions": AI worked from assumptions about current state that were incorrect (stale files, changed config, different environment)
-- "incomplete-requirements": AI worked from instructions missing critical context, constraints, or acceptance criteria
-- "context-loss": AI lost track of prior decisions or constraints established earlier in the session
-- "scope-creep": AI expanded work beyond the boundaries of the stated task
-- "repeated-mistakes": AI made the same or similar error multiple times despite correction
+- "wrong-approach": The strategy used didn't fit the task — wrong architecture, wrong tool, wrong pattern
+- "knowledge-gap": Incorrect knowledge was applied about a library, API, framework, or language feature
+- "stale-assumptions": The work proceeded from assumptions about current state that were wrong (stale files, changed config, different environment)
+- "incomplete-requirements": The instructions were missing critical context, constraints, or acceptance criteria
+- "context-loss": Prior decisions or constraints established earlier in the session were lost or ignored
+- "scope-creep": Work expanded beyond the boundaries of the stated task
+- "repeated-mistakes": The same or similar error occurred multiple times despite correction
 - "documentation-gap": Relevant docs existed but were inaccessible during the session
 - "tooling-limitation": The tool genuinely lacked a needed capability
 
@@ -104,18 +105,13 @@ CATEGORIES — classify the TYPE of friction:
 - API rate limits → "rate-limit-hit"
 - User-rejected tool calls → not friction (omit)
 
-ATTRIBUTION — classify WHO contributed to the friction:
-- "user-actionable": Better user input would likely have prevented this. Evidence: vague prompt, missing context, no constraints specified, late intervention, or ambiguous correction.
-- "ai-capability": AI failed despite adequate user input. Evidence: user gave clear instructions that the AI ignored, misread, or failed to follow.
-- "environmental": Neither user nor AI could have prevented this — tooling limits, missing docs, infrastructure issues.
-
-Decision logic:
-1. Is the cause external to the user-AI interaction? → "environmental"
-2. Was the user's input before the friction vague, missing context, or lacking constraints? → "user-actionable"
-3. Was the user's input clear and the AI still failed? → "ai-capability"
+ATTRIBUTION — 3-step decision tree (work through all 3 steps in _reasoning before assigning):
+1. Is the cause external to the user-AI interaction (tool limits, missing infra, inaccessible docs)? → "environmental"
+2. Would better user input (clearer prompt, more context, explicit constraints, earlier correction) have likely prevented this? → "user-actionable"
+3. Was the user's input adequate and the AI still failed (ignored clear instructions, misread unambiguous context)? → "ai-capability"
 When genuinely mixed, lean "user-actionable" — this tool helps users improve.
 
-DESCRIPTION — write a neutral one-sentence description of what happened. Include specific details (file names, APIs, error messages). Do NOT assign blame in the description — let the attribution field carry that.
+DESCRIPTION — write a neutral one-sentence description of what happened. Include specific details (file names, APIs, error messages). Do NOT assign blame in the description — attribution carries that.
 
 When no category fits, create a specific kebab-case category. A precise novel category is better than a vague canonical one.`;
 
@@ -145,29 +141,42 @@ export const CANONICAL_PATTERN_CATEGORIES = [
 export const EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE = `
 EFFECTIVE PATTERN CLASSIFICATION GUIDANCE:
 
-Each effective pattern captures a technique or approach that contributed to a productive session outcome.
+Each effective pattern captures a NON-TRIVIAL technique that contributed to a productive session outcome.
+Before assigning driver, write your reasoning in _reasoning.
+
+BASELINE EXCLUSIONS — do NOT classify these as patterns (too routine to be noteworthy):
+- Reading 1-3 files before editing (standard hygiene, not "context-gathering")
+- Following explicit step-by-step user instructions (not "structured-planning" — that's compliance)
+- Using Read/Write/Edit for basic tasks (not "effective-tooling")
+Only classify a pattern when the behavior was notably thorough, proactive, or non-obvious.
 
 CATEGORIES — classify the TYPE of effective pattern:
-- "structured-planning": User or AI decomposed the task into explicit steps, defined scope boundaries, or established an implementation plan BEFORE writing code. In-session signal: a plan, task list, or scope definition appears in the conversation before implementation begins.
-- "incremental-implementation": Work progressed in small, verifiable steps rather than a monolithic change. Each step was validated before moving to the next. In-session signal: multiple small edits with verification between them, not one large batch of changes.
-- "verification-workflow": Proactive correctness checks — running builds, tests, linters, or type checks — BEFORE considering the work complete. In-session signal: tool calls to build/test/lint commands followed by reviewing output, when nothing was known to be broken.
-- "systematic-debugging": Methodical investigation of a problem using structured techniques: binary search, log insertion, reproduction isolation, expected-vs-actual comparison. In-session signal: multiple targeted diagnostic steps rather than random guessing.
-- "self-correction": The AI recognized it was on a wrong path and changed approach WITHOUT the user pointing out the error. In-session signal: the AI explicitly acknowledges a mistake or wrong direction in its response and pivots to a different approach. NOT this category if the user corrected the AI — that is normal interaction, not self-correction.
-- "context-gathering": Actively reading existing code, documentation, schemas, types, or configuration BEFORE making changes. In-session signal: Read/Grep/Glob/search tool calls at the start of a task, before any Edit/Write calls.
-- "domain-expertise": Applying specific framework, library, API, or language knowledge correctly on first attempt, WITHOUT needing to search or experiment. In-session signal: correct usage of non-obvious APIs or patterns with no preceding search and no subsequent error. NOT this category if the AI read docs or code first — that is context-gathering, even if domain knowledge was also needed.
-- "effective-tooling": Leveraging tool-specific capabilities that multiplied productivity — agent delegation, parallel work, multi-file edits, specialized commands, strategic mode selection (chat vs edit vs agent). In-session signal: use of advanced tool features beyond basic read/write/edit.
+- "structured-planning": User or AI decomposed the task into explicit steps, defined scope boundaries, or established an implementation plan BEFORE writing code. Signal: a plan, task list, or scope definition appears in the conversation before implementation begins.
+- "incremental-implementation": Work progressed in small, verifiable steps rather than a monolithic change. Each step was validated before moving to the next. Signal: multiple small edit-verify cycles, not one large batch of changes.
+- "verification-workflow": Proactive correctness checks — running builds, tests, linters, or type checks — BEFORE considering the work complete. Signal: build/test/lint tool calls followed by reviewing output, when nothing was known to be broken.
+- "systematic-debugging": Methodical investigation using structured techniques: binary search, log insertion, reproduction isolation, expected-vs-actual comparison. Signal: multiple targeted diagnostic steps rather than random guessing.
+- "self-correction": The AI recognized it was on a wrong path and changed approach WITHOUT the user pointing out the error. Signal: AI explicitly acknowledges a mistake or wrong direction and pivots. NOT this category if the user corrected the AI.
+- "context-gathering": NOTABLY thorough reading of existing code, documentation, schemas, or types BEFORE making changes — 5+ files, cross-module exploration, or unfamiliar territory. Signal: extensive Read/Grep/Glob calls before any Edit/Write. NOT routine pre-edit reads.
+- "domain-expertise": Applying specific framework, library, API, or language knowledge correctly on first attempt, WITHOUT searching or experimenting. Signal: correct non-obvious API usage with no preceding search and no subsequent error. NOT this category if the AI read docs or code first — that is context-gathering.
+- "effective-tooling": Leveraging tool-specific capabilities that multiplied productivity — agent delegation, parallel work, multi-file edits, specialized commands, strategic mode selection. Signal: advanced tool features beyond basic read/write/edit.
 
-CONTRASTIVE PAIRS — use these to disambiguate confusable categories:
-- structured-planning vs incremental-implementation: Planning is about DECIDING what to do (before implementation). Incremental is about HOW you execute (during implementation). A session can have planning without incremental execution, or incremental execution without upfront planning.
-- context-gathering vs domain-expertise: Context-gathering involves ACTIVE INVESTIGATION (reading files, searching docs, exploring schemas). Domain-expertise involves APPLYING EXISTING KNOWLEDGE without investigation. If the AI read a file or searched before acting, classify as context-gathering even if domain knowledge was also required.
-- verification-workflow vs systematic-debugging: Verification is PROACTIVE (checking that working code still works, running tests before moving on). Debugging is REACTIVE (investigating something that is broken, diagnosing a failure).
-- self-correction vs user-directed correction: Self-correction means the AI caught its OWN mistake unprompted. If the user said "that's wrong" or "try a different approach," any subsequent pivot is normal interaction, NOT self-correction.
+CONTRASTIVE PAIRS:
+- structured-planning vs incremental-implementation: Planning = deciding what to do BEFORE starting. Incremental = HOW you execute in small steps. Both can coexist.
+- context-gathering vs domain-expertise: Context-gathering = active investigation (reading files, searching). Domain-expertise = applying existing knowledge without investigation. If AI read a file or searched first, it's context-gathering.
+- verification-workflow vs systematic-debugging: Verification is PROACTIVE (checking working code). Debugging is REACTIVE (diagnosing something broken).
+- self-correction vs user-directed correction: Self-correction = AI caught its OWN mistake unprompted. User-triggered pivot = normal interaction, NOT self-correction.
 
-DRIVER — classify WHO drove this pattern:
-- "user-driven": The user explicitly initiated this pattern (asked for a plan, requested tests, directed the investigation, specified the tool or approach).
-- "ai-driven": The AI exhibited this pattern without user prompting (self-corrected, proactively ran tests, applied expertise without being asked to, independently explored the codebase).
-- "collaborative": Both contributed, or the pattern emerged naturally from the interaction (user described the problem, AI chose the debugging methodology; user asked for a feature, AI chose to work incrementally).
-When uncertain between user-driven and ai-driven, prefer the more specific label. Use "collaborative" only when BOTH the user AND the AI made distinct, identifiable contributions to this pattern.
+DRIVER — classify WHO drove this pattern (write reasoning in _reasoning first):
+- "user-driven": User explicitly initiated this approach — OR user infrastructure shaped it (CLAUDE.md rules, agent configs, custom skills/commands, hookify hooks, system prompts the user set up).
+- "ai-driven": AI exhibited this pattern without user prompting (self-corrected, proactively ran tests, independently gathered context, applied expertise autonomously).
+- "collaborative": Both contributed, or the pattern emerged naturally from interaction.
+Use "collaborative" only when BOTH user and AI made distinct, identifiable contributions.
+
+User infrastructure decision tree (check FIRST before other driver signals):
+1. Did CLAUDE.md config, agent definitions, custom skills, or hookify hooks enable this pattern? → "user-driven"
+2. Did the user explicitly request this approach? → "user-driven"
+3. Did the AI exhibit this without user direction? → "ai-driven"
+4. Otherwise → "collaborative"
 
 When no canonical category fits, create a specific kebab-case category (a precise novel category is better than forcing a poor fit).`;
 
@@ -308,6 +317,7 @@ Extract insights in this JSON format:
     "iteration_count": 0,
     "friction_points": [
       {
+        "_reasoning": "Step 1: not external. Step 2: user prompt was vague with no file path — user had opportunity to provide more context. → user-actionable.",
         "category": "kebab-case-category",
         "attribution": "user-actionable | ai-capability | environmental",
         "description": "One neutral sentence about what happened, with specific details",
@@ -317,6 +327,7 @@ Extract insights in this JSON format:
     ],
     "effective_patterns": [
       {
+        "_reasoning": "User has CLAUDE.md with agent team configs — this pattern was enabled by user infrastructure. → user-driven.",
         "category": "structured-planning",
         "description": "Broke the migration into 3 phases: schema change, data backfill, API update",
         "confidence": 85,
@@ -377,6 +388,7 @@ export interface AnalysisResponse {
     course_correction_reason: string | null;
     iteration_count: number;
     friction_points: Array<{
+      _reasoning?: string;
       category: string;
       attribution?: string;
       description: string;
@@ -384,6 +396,7 @@ export interface AnalysisResponse {
       resolution: string;
     }>;
     effective_patterns: Array<{
+      _reasoning?: string;
       category: string;
       description: string;
       confidence: number;
@@ -514,6 +527,17 @@ export function parseAnalysisResponse(response: string): ParseResult<AnalysisRes
     console.warn('[pattern-monitor] LLM returned unexpected driver value — check classification quality');
   }
 
+  // Observability: warn when LLM omits _reasoning CoT scratchpad fields.
+  // These fields force the model to work through the attribution/driver decision trees
+  // before committing to values. Missing _reasoning suggests the model skipped the CoT step.
+  // Remove after confirming CoT compliance over ~20 new sessions.
+  if (parsed.facets?.friction_points?.some(fp => !fp._reasoning)) {
+    console.warn('[cot-monitor] LLM returned friction_point without _reasoning — classification may lack decision-tree rigor');
+  }
+  if (parsed.facets?.effective_patterns?.some(ep => !ep._reasoning)) {
+    console.warn('[cot-monitor] LLM returned effective_pattern without _reasoning — classification may lack decision-tree rigor');
+  }
+
   return { success: true, data: parsed };
 }
 
@@ -530,10 +554,10 @@ Extract session facets — a holistic assessment of how the session went:
 1. outcome_satisfaction: "high" (completed successfully), "medium" (partial), "low" (problems), "abandoned" (gave up)
 2. workflow_pattern: The dominant pattern, or null. Values: "plan-then-implement", "iterative-refinement", "debug-fix-verify", "explore-then-build", "direct-execution"
 3. friction_points: Up to 5 moments where progress stalled (array).
-   Each: { category (kebab-case, prefer: ${CANONICAL_FRICTION_CATEGORIES.join(', ')}), attribution ("user-actionable"|"ai-capability"|"environmental"), description (one neutral sentence with specific details), severity ("high"|"medium"|"low"), resolution ("resolved"|"workaround"|"unresolved") }
+   Each: { _reasoning (3-step attribution decision tree reasoning), category (kebab-case, prefer: ${CANONICAL_FRICTION_CATEGORIES.join(', ')}), attribution ("user-actionable"|"ai-capability"|"environmental"), description (one neutral sentence with specific details), severity ("high"|"medium"|"low"), resolution ("resolved"|"workaround"|"unresolved") }
 ${FRICTION_CLASSIFICATION_GUIDANCE}
 4. effective_patterns: Up to 3 things that worked well (array).
-   Each: { category (kebab-case, prefer: ${CANONICAL_PATTERN_CATEGORIES.join(', ')}), description (specific technique, 1-2 sentences), confidence (0-100), driver ("user-driven"|"ai-driven"|"collaborative") }
+   Each: { _reasoning (driver decision tree reasoning — check user infrastructure first), category (kebab-case, prefer: ${CANONICAL_PATTERN_CATEGORIES.join(', ')}), description (specific technique, 1-2 sentences), confidence (0-100), driver ("user-driven"|"ai-driven"|"collaborative") }
 ${EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE}
 5. had_course_correction: true/false — did the user redirect the AI?
 6. course_correction_reason: Brief explanation if true, null otherwise
@@ -566,9 +590,11 @@ Extract facets in this JSON format:
   "had_course_correction": false,
   "course_correction_reason": null,
   "iteration_count": 0,
-  "friction_points": [],
+  "friction_points": [
+    { "_reasoning": "step-by-step attribution reasoning here", "category": "kebab-case-category", "attribution": "user-actionable | ai-capability | environmental", "description": "one neutral sentence", "severity": "high | medium | low", "resolution": "resolved | workaround | unresolved" }
+  ],
   "effective_patterns": [
-    { "category": "kebab-case-category", "description": "technique", "confidence": 85, "driver": "user-driven | ai-driven | collaborative" }
+    { "_reasoning": "driver reasoning here — check user infrastructure first", "category": "kebab-case-category", "description": "technique", "confidence": 85, "driver": "user-driven | ai-driven | collaborative" }
   ]
 }
 
