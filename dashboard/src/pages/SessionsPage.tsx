@@ -17,6 +17,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { ArrowLeft, ChevronDown, MousePointerClick } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
 
 const lgQuery = typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)') : null;
 function subscribeLg(cb: () => void) {
@@ -28,6 +29,7 @@ function getIsLg() {
 }
 
 export default function SessionsPage() {
+  const { t } = useI18n();
   const [filters, setFilter, setFilters, clearFilters] = useFilterParams({
     q: '',
     project: 'all',
@@ -91,9 +93,9 @@ export default function SessionsPage() {
   }, [setFilters]);
 
   const selectedProjectName = useMemo(() => {
-    if (filters.project === 'all') return '全部项目';
-    return projects.find((p) => p.id === filters.project)?.name ?? '项目';
-  }, [filters.project, projects]);
+    if (filters.project === 'all') return t('projectNav.allProjects');
+    return projects.find((p) => p.id === filters.project)?.name ?? t('sessions.projects');
+  }, [filters.project, projects, t]);
 
   const showProject = filters.project === 'all';
   const isLg = useSyncExternalStore(subscribeLg, getIsLg);
@@ -126,8 +128,8 @@ export default function SessionsPage() {
             </SheetTrigger>
             <SheetContent side="left" className="w-[260px] p-0">
               <SheetHeader className="px-4 py-3 border-b">
-                <SheetTitle className="text-sm font-semibold">项目</SheetTitle>
-                <SheetDescription className="sr-only">选择项目</SheetDescription>
+                <SheetTitle className="text-sm font-semibold">{t('sessions.projects')}</SheetTitle>
+                <SheetDescription className="sr-only">{t('sessions.selectProject')}</SheetDescription>
               </SheetHeader>
               <ProjectNav
                 projects={projects}
@@ -183,8 +185,8 @@ export default function SessionsPage() {
         >
           <SheetContent side="right" className="w-full sm:w-[85vw] p-0 flex flex-col">
             <SheetHeader className="sr-only">
-              <SheetTitle>会话详情</SheetTitle>
-              <SheetDescription>会话详情视图</SheetDescription>
+              <SheetTitle>{t('sessions.detailTitle')}</SheetTitle>
+              <SheetDescription>{t('sessions.detailDesc')}</SheetDescription>
             </SheetHeader>
             <div className="shrink-0 px-3 pt-3">
               <Button
@@ -194,7 +196,7 @@ export default function SessionsPage() {
                 onClick={() => setFilter('session', '')}
               >
                 <ArrowLeft className="h-3 w-3" />
-                返回列表
+                {t('sessions.backToList')}
               </Button>
             </div>
             <div className="flex-1 overflow-y-auto">
@@ -214,9 +216,9 @@ function EmptyDetailState() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
       <MousePointerClick className="h-10 w-10 text-muted-foreground/40 mb-3" />
-      <p className="text-sm font-medium text-muted-foreground">选择一个会话查看详情</p>
+      <p className="text-sm font-medium text-muted-foreground">{t('sessions.emptyTitle')}</p>
       <p className="text-xs text-muted-foreground/60 mt-1">
-        从左侧列表中选择会话，即可查看概览、洞察与完整对话。
+        {t('sessions.emptyDesc')}
       </p>
     </div>
   );

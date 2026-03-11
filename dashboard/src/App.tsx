@@ -11,23 +11,25 @@ import SettingsPage from '@/pages/SettingsPage';
 import ExportPage from '@/pages/ExportPage';
 import JournalPage from '@/pages/JournalPage';
 import PatternsPage from '@/pages/PatternsPage';
-
-const ROUTE_TITLES: Record<string, string> = {
-  '/dashboard': '总览',
-  '/sessions': '会话',
-  '/insights': '洞察',
-  '/analytics': '分析',
-  '/patterns': '模式',
-  '/export': '导出',
-  '/journal': '日志',
-  '/settings': '设置',
-};
+import { useI18n } from '@/lib/i18n';
 
 function RouteEffects() {
+  const { t } = useI18n();
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
   const insightParam = searchParams.get('insight');
   const navStartRef = useRef<number>(Date.now());
+
+  const routeTitles: Record<string, string> = {
+    '/dashboard': t('app.title.dashboard'),
+    '/sessions': t('app.title.sessions'),
+    '/insights': t('app.title.insights'),
+    '/analytics': t('app.title.analytics'),
+    '/patterns': t('app.title.patterns'),
+    '/export': t('app.title.export'),
+    '/journal': t('app.title.journal'),
+    '/settings': t('app.title.settings'),
+  };
 
   // Scroll to top on route change, unless deep-linking to a specific insight
   useEffect(() => {
@@ -40,7 +42,7 @@ function RouteEffects() {
   // Update document.title per route, track page views, and capture dashboard_loaded
   useEffect(() => {
     const segment = '/' + pathname.split('/')[1];
-    const page = ROUTE_TITLES[segment];
+    const page = routeTitles[segment];
     document.title = page ? `${page} — Code Insights` : 'Code Insights';
 
     // Track page view on every route change
@@ -53,7 +55,7 @@ function RouteEffects() {
     }
     // Reset nav start for next navigation
     navStartRef.current = Date.now();
-  }, [pathname]);
+  }, [pathname, t]);
 
   return null;
 }

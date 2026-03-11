@@ -20,25 +20,32 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from './ThemeToggle';
 import { Logo } from '@/components/brand/Logo';
 import { cn } from '@/lib/utils';
-
-const NAV_ITEMS = [
-  { href: '/dashboard', label: '总览', icon: LayoutDashboard, exact: true },
-  { href: '/sessions', label: '会话', icon: MessageSquare, exact: false },
-  { href: '/insights', label: '洞察', icon: Lightbulb, exact: false },
-  { href: '/analytics', label: '分析', icon: BarChart3, exact: false },
-  { href: '/patterns', label: '模式', icon: Sparkles, exact: false },
-  { href: '/export', label: '导出', icon: Download, exact: false },
-  { href: '/settings', label: '设置', icon: Settings, exact: false },
-];
-
-// Bottom tab bar shows the first 4 primary nav items
-const BOTTOM_TABS = NAV_ITEMS.slice(0, 4);
+import { useI18n } from '@/lib/i18n';
 
 export function Header() {
+  const { t, language, setLanguage } = useI18n();
   const { pathname } = useLocation();
+
+  const NAV_ITEMS = [
+    { href: '/dashboard', label: t('nav.dashboard'), icon: LayoutDashboard, exact: true },
+    { href: '/sessions', label: t('nav.sessions'), icon: MessageSquare, exact: false },
+    { href: '/insights', label: t('nav.insights'), icon: Lightbulb, exact: false },
+    { href: '/analytics', label: t('nav.analytics'), icon: BarChart3, exact: false },
+    { href: '/patterns', label: t('nav.patterns'), icon: Sparkles, exact: false },
+    { href: '/export', label: t('nav.export'), icon: Download, exact: false },
+    { href: '/settings', label: t('nav.settings'), icon: Settings, exact: false },
+  ];
+
+  const BOTTOM_TABS = NAV_ITEMS.slice(0, 4);
 
   const isActive = (href: string, exact: boolean) =>
     exact ? pathname === href : pathname.startsWith(href);
@@ -61,7 +68,7 @@ export function Header() {
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 lg:hidden">
                 <Menu className="h-4 w-4" />
-                <span className="sr-only">打开导航</span>
+                <span className="sr-only">{t('header.openNavigation')}</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-72 p-0 flex flex-col">
@@ -70,7 +77,7 @@ export function Header() {
                   <Logo className="h-4 w-4" />
                   Code Insights
                 </SheetTitle>
-                <SheetDescription className="sr-only">导航菜单</SheetDescription>
+                <SheetDescription className="sr-only">{t('header.navigationMenu')}</SheetDescription>
               </SheetHeader>
               <nav className="px-2 py-2">
                 {NAV_ITEMS.map(({ href, label, icon: Icon, exact }) => (
@@ -124,6 +131,18 @@ export function Header() {
           <div className="ml-auto flex items-center gap-1">
             <ThemeToggle />
 
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-9 px-2 hidden sm:flex">
+                  {t('lang.label')}: {language === 'zh' ? t('lang.zh') : t('lang.en')}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setLanguage('zh')}>{t('lang.zh')}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLanguage('en')}>{t('lang.en')}</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               variant="ghost"
               size="icon"
@@ -134,7 +153,7 @@ export function Header() {
                 href="https://github.com/mrrnb/code-insights"
                 target="_blank"
                 rel="noopener noreferrer"
-                  aria-label="GitHub 仓库"
+                  aria-label={t('header.githubRepo')}
               >
                 <Github className="h-4 w-4" />
                 <span className="sr-only">GitHub</span>
@@ -167,13 +186,13 @@ export function Header() {
           <SheetTrigger asChild>
             <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-xs text-muted-foreground transition-colors">
               <MoreHorizontal className="h-5 w-5" />
-               <span>更多</span>
+               <span>{t('header.more')}</span>
             </button>
           </SheetTrigger>
           <SheetContent side="bottom" className="h-auto">
             <SheetHeader className="px-4 py-3">
-              <SheetTitle className="text-sm font-semibold sr-only">更多选项</SheetTitle>
-              <SheetDescription className="sr-only">更多导航选项</SheetDescription>
+              <SheetTitle className="text-sm font-semibold sr-only">{t('header.moreOptions')}</SheetTitle>
+              <SheetDescription className="sr-only">{t('header.moreNavOptions')}</SheetDescription>
             </SheetHeader>
             <nav className="px-4 pb-6 grid grid-cols-2 gap-2">
               {NAV_ITEMS.slice(4).map(({ href, label, icon: Icon }) => (

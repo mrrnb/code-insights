@@ -26,6 +26,7 @@ import { Sparkles, SearchX, X, FileText, GitCommit, BookOpen, Target } from 'luc
 import { getDateGroup, sortDateGroups } from '@/lib/utils';
 import { INSIGHT_TYPE_LABELS } from '@/lib/constants/colors';
 import type { Insight, InsightType } from '@/lib/types';
+import { useI18n } from '@/lib/i18n';
 
 const INSIGHT_TYPES: InsightType[] = ['summary', 'decision', 'learning', 'technique', 'prompt_quality'];
 
@@ -37,13 +38,6 @@ const TYPE_SECTION_ICONS: Record<string, { icon: typeof FileText; color: string 
   prompt_quality: { icon: Target, color: 'text-rose-500' },
 };
 
-const VIEW_MODES = [
-  { value: 'timeline', label: '时间线' },
-  { value: 'type', label: '按类型' },
-  { value: 'project', label: '按项目' },
-  { value: 'session', label: '按会话' },
-] as const;
-
 interface InsightGroup {
   key: string;
   label: string;
@@ -52,6 +46,7 @@ interface InsightGroup {
 }
 
 export default function InsightsPage() {
+  const { t } = useI18n();
   const [filters, setFilter, , clearFilters] = useFilterParams({
     q: '',
     project: 'all',
@@ -167,10 +162,10 @@ export default function InsightsPage() {
       {/* Sticky header: title + filters */}
       <div className="shrink-0 sticky top-0 z-10 bg-background border-b px-6 pt-5 pb-3 space-y-3">
         <div>
-          <h1 className="text-2xl font-bold">洞察</h1>
+          <h1 className="text-2xl font-bold">{t('insights.title')}</h1>
           {!isLoading && (
             <p className="text-muted-foreground text-sm">
-              共 {filtered.length} 条洞察{hasFilters ? '（已应用筛选）' : ''}
+              {t('insights.count', { count: filtered.length, filtered: hasFilters ? t('insights.filteredSuffix') : '' })}
             </p>
           )}
         </div>
@@ -179,10 +174,10 @@ export default function InsightsPage() {
         {filters.pattern && (
           <div className="flex items-center gap-2 rounded-lg border bg-amber-500/5 border-amber-500/20 px-3 py-2">
             <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
-                模式
+                {t('insights.pattern')}
             </Badge>
             <span className="text-sm text-muted-foreground">
-              当前重复模式下共有 {filtered.length} 条洞察
+              {t('insights.patternShowing', { count: filtered.length })}
             </span>
             <Button
               variant="ghost"
@@ -198,7 +193,7 @@ export default function InsightsPage() {
         {/* Filters + View Mode */}
         <div className="flex flex-wrap items-center gap-3">
         <Input
-          placeholder="搜索洞察..."
+          placeholder={t('insights.search')}
           value={filters.q}
           onChange={(e) => setFilter('q', e.target.value)}
           className="max-w-xs"
@@ -206,10 +201,10 @@ export default function InsightsPage() {
 
         <Select value={filters.project} onValueChange={(v) => setFilter('project', v)}>
           <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="全部项目" />
+            <SelectValue placeholder={t('insights.allProjects')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部项目</SelectItem>
+            <SelectItem value="all">{t('insights.allProjects')}</SelectItem>
             {projects.map((p) => (
               <SelectItem key={p.id} value={p.id}>
                 {p.name}
@@ -220,10 +215,10 @@ export default function InsightsPage() {
 
         <Select value={filters.type} onValueChange={(v) => setFilter('type', v)}>
           <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="全部类型" />
+            <SelectValue placeholder={t('insights.allTypes')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部类型</SelectItem>
+            <SelectItem value="all">{t('insights.allTypes')}</SelectItem>
             {INSIGHT_TYPES.map((t) => (
               <SelectItem key={t} value={t}>
                 {INSIGHT_TYPE_LABELS[t]}
@@ -251,7 +246,7 @@ export default function InsightsPage() {
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
       {isError && !isLoading ? (
-        <ErrorCard message="加载洞察失败" onRetry={refetch} />
+        <ErrorCard message={t('insights.error')} onRetry={refetch} />
       ) : isLoading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => (
@@ -262,20 +257,20 @@ export default function InsightsPage() {
         hasFilters ? (
           <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
             <SearchX className="h-8 w-8 text-muted-foreground" />
-            <p className="font-medium">没有符合筛选条件的洞察</p>
+            <p className="font-medium">{t('insights.emptyFilteredTitle')}</p>
             <p className="text-sm text-muted-foreground">
-              可以尝试更换关键词，或清空筛选条件后查看全部洞察。
+              {t('insights.emptyFilteredDesc')}
             </p>
             <Button variant="outline" size="sm" onClick={clearFilters}>
-              清空筛选
+              {t('insights.clearFilters')}
             </Button>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
             <Sparkles className="h-8 w-8 text-muted-foreground" />
-            <p className="font-medium">还没有洞察</p>
+            <p className="font-medium">{t('insights.emptyTitle')}</p>
             <p className="text-sm text-muted-foreground">
-              先分析会话，再生成摘要、决策、经验教训等 AI 洞察。
+              {t('insights.emptyDesc')}
             </p>
           </div>
         )
@@ -316,3 +311,9 @@ export default function InsightsPage() {
     </div>
   );
 }
+  const VIEW_MODES = [
+    { value: 'timeline', label: t('insights.view.timeline') },
+    { value: 'type', label: t('insights.view.type') },
+    { value: 'project', label: t('insights.view.project') },
+    { value: 'session', label: t('insights.view.session') },
+  ] as const;

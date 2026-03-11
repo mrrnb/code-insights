@@ -13,6 +13,7 @@ import { analyzeSession } from '@/lib/api';
 import { useLlmConfig } from '@/hooks/useConfig';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Session } from '@/lib/types';
+import { useI18n } from '@/lib/i18n';
 
 interface BulkAnalyzeButtonProps {
   sessions: Session[];
@@ -20,6 +21,7 @@ interface BulkAnalyzeButtonProps {
 }
 
 export function BulkAnalyzeButton({ sessions, onComplete }: BulkAnalyzeButtonProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState({ completed: 0, total: 0 });
@@ -76,8 +78,8 @@ export function BulkAnalyzeButton({ sessions, onComplete }: BulkAnalyzeButtonPro
     return (
       <Button variant="outline" disabled className="gap-2">
         <Sparkles className="h-4 w-4" />
-        批量分析
-        <span className="text-xs text-muted-foreground ml-1">（请先配置 AI）</span>
+        {t('analysis.batch')}
+        <span className="text-xs text-muted-foreground ml-1">{t('analysis.configureFirst')}</span>
       </Button>
     );
   }
@@ -92,14 +94,14 @@ export function BulkAnalyzeButton({ sessions, onComplete }: BulkAnalyzeButtonPro
           onClick={() => setOpen(true)}
         >
           <Sparkles className="h-4 w-4" />
-          分析 {sessions.length} 个会话
+          {t('analysis.batch')} {sessions.length}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>批量分析</DialogTitle>
+          <DialogTitle>{t('analysis.batchTitle')}</DialogTitle>
           <DialogDescription>
-            为已选中的 {sessions.length} 个会话生成 AI 洞察。
+            {t('analysis.batchDesc', { count: sessions.length })}
           </DialogDescription>
         </DialogHeader>
 
@@ -107,11 +109,11 @@ export function BulkAnalyzeButton({ sessions, onComplete }: BulkAnalyzeButtonPro
           {!analyzing && !result && (
             <>
               <p className="text-sm text-muted-foreground">
-                将使用当前配置的 LLM 提供商逐个分析会话并生成洞察。
+                {t('analysis.batchHelp')}
               </p>
               <Button onClick={handleAnalyze} className="w-full gap-2">
                 <Sparkles className="h-4 w-4" />
-                开始分析
+                {t('analysis.start')}
               </Button>
             </>
           )}
@@ -121,7 +123,7 @@ export function BulkAnalyzeButton({ sessions, onComplete }: BulkAnalyzeButtonPro
               <div className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span className="text-sm">
-                  正在分析第 {progress.completed} / {progress.total} 个会话...
+                  {t('analysis.progress', { done: progress.completed, total: progress.total })}
                 </span>
               </div>
               <div className="w-full bg-muted rounded-full h-2">
@@ -138,27 +140,27 @@ export function BulkAnalyzeButton({ sessions, onComplete }: BulkAnalyzeButtonPro
               <div className="flex items-center gap-2 text-green-600">
                 <CheckCircle className="h-4 w-4" />
                 <span>
-                  成功分析 {result.successful} 个会话
+                  {t('analysis.success', { count: result.successful })}
                 </span>
               </div>
               {result.failed > 0 && (
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-red-500">
                     <AlertCircle className="h-4 w-4" />
-                      <span>失败 {result.failed} 个</span>
+                      <span>{t('analysis.failed', { count: result.failed })}</span>
                   </div>
                   <ul className="text-xs text-muted-foreground list-disc list-inside max-h-32 overflow-y-auto">
                     {result.errors.slice(0, 5).map((err, i) => (
                       <li key={i} className="truncate">{err}</li>
                     ))}
                     {result.errors.length > 5 && (
-                      <li>... 另外还有 {result.errors.length - 5} 条</li>
+                      <li>{t('analysis.moreErrors', { count: result.errors.length - 5 })}</li>
                     )}
                   </ul>
                 </div>
               )}
               <Button onClick={handleClose} className="w-full">
-                完成
+                {t('analysis.done')}
               </Button>
             </div>
           )}

@@ -14,6 +14,7 @@ import { parseJsonField } from '@/lib/types';
 import type { Session, Insight, InsightMetadata } from '@/lib/types';
 import { SearchX, Terminal, EyeOff } from 'lucide-react';
 import { useDeletedSessionCount } from '@/hooks/useSessions';
+import { useI18n } from '@/lib/i18n';
 
 const SESSION_CHARACTERS = [
   'deep_focus',
@@ -56,6 +57,7 @@ export function SessionListPanel({
   loading,
   missingFacetIds,
 }: SessionListPanelProps) {
+  const { t } = useI18n();
   const { data: deletedCount = 0 } = useDeletedSessionCount(projectId);
   const analyzedSessionIds = useMemo(
     () => new Set(insights.map((i) => i.session_id)),
@@ -136,7 +138,7 @@ export function SessionListPanel({
       {/* Search + filters */}
       <div className="shrink-0 p-3 space-y-2 border-b">
         <Input
-          placeholder="搜索会话..."
+          placeholder={t('sessionList.search')}
           value={filters.q}
           onChange={(e) => onFilterChange('q', e.target.value)}
           className="h-8 text-xs"
@@ -147,10 +149,10 @@ export function SessionListPanel({
             onValueChange={(v) => onFilterChange('character', v)}
           >
             <SelectTrigger className="h-7 text-xs flex-1">
-              <SelectValue placeholder="类型" />
+              <SelectValue placeholder={t('sessionList.type')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">全部类型</SelectItem>
+              <SelectItem value="all">{t('sessionList.allTypes')}</SelectItem>
               {SESSION_CHARACTERS.map((c) => (
                 <SelectItem key={c} value={c} className="capitalize text-xs">
                   {c.replace(/_/g, ' ')}
@@ -163,12 +165,12 @@ export function SessionListPanel({
             onValueChange={(v) => onFilterChange('status', v)}
           >
             <SelectTrigger className="h-7 text-xs flex-1">
-              <SelectValue placeholder="状态" />
+              <SelectValue placeholder={t('sessionList.status')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">全部状态</SelectItem>
-              <SelectItem value="analyzed">已分析</SelectItem>
-              <SelectItem value="unanalyzed">未分析</SelectItem>
+              <SelectItem value="all">{t('sessionList.allStatus')}</SelectItem>
+              <SelectItem value="analyzed">{t('sessionList.analyzed')}</SelectItem>
+              <SelectItem value="unanalyzed">{t('sessionList.unanalyzed')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -190,17 +192,17 @@ export function SessionListPanel({
           hasClientFilters ? (
             <div className="flex flex-col items-center justify-center py-12 text-center px-4 space-y-2">
               <SearchX className="h-6 w-6 text-muted-foreground" />
-              <p className="text-sm font-medium">没有匹配的会话</p>
+              <p className="text-sm font-medium">{t('sessionList.noMatch')}</p>
               <Button variant="outline" size="sm" onClick={onClearFilters}>
-                清空筛选
+                {t('insights.clearFilters')}
               </Button>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center px-4 space-y-2">
               <Terminal className="h-6 w-6 text-muted-foreground" />
-              <p className="text-sm font-medium">还没有会话</p>
+              <p className="text-sm font-medium">{t('sessionList.empty')}</p>
               <p className="text-xs text-muted-foreground">
-                运行 `code-insights sync` 开始同步。
+                {t('sessionList.emptyDesc')}
               </p>
             </div>
           )
@@ -236,7 +238,7 @@ export function SessionListPanel({
       {projectId && deletedCount > 0 && (
         <div className="shrink-0 border-t px-3 py-2 flex items-center gap-1.5 text-xs text-muted-foreground">
           <EyeOff className="h-3 w-3 shrink-0" />
-          <span>{deletedCount} 个已隐藏会话</span>
+          <span>{t('sessionList.hidden', { count: deletedCount })}</span>
         </div>
       )}
     </div>

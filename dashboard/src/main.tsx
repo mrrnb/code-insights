@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/components/layout/ThemeProvider';
 import { AnalysisProvider } from '@/components/analysis/AnalysisContext';
+import { I18nProvider } from '@/lib/i18n';
 import App from './App';
 import './styles/globals.css';
 import { initTelemetry } from '@/lib/telemetry';
@@ -26,9 +27,11 @@ createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="system">
-        <AnalysisProvider>
-          <App />
-        </AnalysisProvider>
+        <I18nProvider>
+          <AnalysisProvider>
+            <App />
+          </AnalysisProvider>
+        </I18nProvider>
       </ThemeProvider>
     </QueryClientProvider>
   </StrictMode>,
