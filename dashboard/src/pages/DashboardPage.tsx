@@ -19,9 +19,9 @@ type DashboardRange = '7d' | '30d' | '90d' | 'all';
 
 function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return '早上好';
+  if (hour < 17) return '下午好';
+  return '晚上好';
 }
 
 export default function DashboardPage() {
@@ -100,8 +100,8 @@ export default function DashboardPage() {
           <h1 className="text-lg font-bold">{getGreeting()}.</h1>
           {!loading && (
             <p className="text-muted-foreground text-xs animate-in fade-in slide-in-from-bottom-2 duration-300">
-              {sessions.length} session{sessions.length !== 1 ? 's' : ''} loaded
-              {' '}&middot; {projects.length} project{projects.length !== 1 ? 's' : ''}
+              已加载 {sessions.length} 个会话
+              {' '}&middot; {projects.length} 个项目
             </p>
           )}
         </div>
@@ -111,7 +111,7 @@ export default function DashboardPage() {
       {/* Error state */}
       {hasError && !loading && (
         <ErrorCard
-          message="Failed to load dashboard data"
+          message="加载总览数据失败"
           onRetry={() => { refetchStats(); refetchSessions(); }}
         />
       )}
@@ -165,11 +165,10 @@ export default function DashboardPage() {
               <Sparkles className="h-4 w-4 text-amber-600" />
               <div>
                 <p className="text-sm font-medium">
-                  {unanalyzedSessions.length} session{unanalyzedSessions.length !== 1 ? 's' : ''}{' '}
-                  without analysis
+                  还有 {unanalyzedSessions.length} 个会话尚未分析
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Generate AI insights to extract learnings and decisions
+                  使用 AI 生成洞察，提炼经验与决策
                 </p>
               </div>
             </div>
@@ -185,12 +184,12 @@ export default function DashboardPage() {
         }
       >
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-xs font-semibold">Recent Activity</h2>
+          <h2 className="text-xs font-semibold">最近活动</h2>
           <Link
             to="/sessions"
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            View all
+            查看全部
             <ArrowRight className="h-3 w-3" />
           </Link>
         </div>

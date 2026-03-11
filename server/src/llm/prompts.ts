@@ -364,6 +364,8 @@ EXCELLENT learning:
   "evidence": ["User#12: 'The colors are all gone after the upgrade'", "Assistant#13: 'Tailwind v4 requires explicit @theme inline registration...'"]
 }
 
+All human-readable fields in the JSON (title, content, bullets, descriptions, reasoning, takeaways, assessments, evidence text, etc.) MUST be written in Simplified Chinese. Keep enum values, kebab-case categories, message_ref labels, and turn references in their original machine-readable form.
+
 Respond with valid JSON only, wrapped in <json>...</json> tags. Do not include any other text.`;
 
 /**
@@ -447,6 +449,8 @@ Extract insights in this JSON format:
 
 Only include insights rated 70+ confidence. If you cannot cite evidence, drop the insight. Return empty arrays for categories with no strong insights. Max 3 decisions, 5 learnings.
 Evidence should reference the labeled turns in the conversation (e.g., "User#2", "Assistant#5").
+
+All human-readable fields in the JSON must be written in Simplified Chinese. Keep enum values, category IDs, and turn labels exactly as specified.
 
 Respond with valid JSON only, wrapped in <json>...</json> tags. Do not include any other text.`;
 }
@@ -638,6 +642,8 @@ ${EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE}
 6. course_correction_reason: Brief explanation if true, null otherwise
 7. iteration_count: How many user clarification/correction cycles occurred
 
+All human-readable fields in the JSON must be written in Simplified Chinese. Keep enum values, kebab-case categories, and turn labels exactly as specified.
+
 Respond with valid JSON only, wrapped in <json>...</json> tags.`;
 
 export function generateFacetOnlyPrompt(
@@ -685,6 +691,8 @@ Extract facets in this JSON format:
     }
   ]
 }
+
+All human-readable fields in the JSON must be written in Simplified Chinese. Keep enum values, kebab-case categories, and turn labels exactly as specified.
 
 Respond with valid JSON only, wrapped in <json>...</json> tags.`;
 }

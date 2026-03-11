@@ -123,7 +123,8 @@ Rules:
 - Prioritize by confidence and frequency
 - If decisions evolved over time, note the current decision and why it changed
 - Include a "Prompt Hygiene" section aggregating anti-patterns from prompt quality insights (if any exist)
-- Output clean markdown only — no preamble, no meta-commentary`;
+- Output clean markdown only — no preamble, no meta-commentary
+- Write all generated markdown in Simplified Chinese while preserving code identifiers, filenames, URLs, CLI commands, and section syntax where required`;
 
 export const AGENT_RULES_ALL_SYSTEM_PROMPT = `\
 You are a technical writer converting AI coding session insights from multiple \
@@ -156,7 +157,8 @@ Additional rules:
 - Group by topic within each section
 - Prioritize by confidence and frequency
 - Include a "Prompt Hygiene" section with universal anti-patterns (if any exist)
-- Output clean markdown only — no preamble, no meta-commentary`;
+- Output clean markdown only — no preamble, no meta-commentary
+- Write all generated markdown in Simplified Chinese while preserving project names, code identifiers, URLs, and section syntax where required`;
 
 export const KNOWLEDGE_BRIEF_PROJECT_SYSTEM_PROMPT = (projectName: string) => `\
 You are a technical writer creating a project knowledge handoff document for "${projectName}". \
@@ -168,7 +170,8 @@ Structure:
 - Learnings (grouped by topic)
 - Techniques worth reusing
 
-Output clean markdown only — no preamble, no meta-commentary.`;
+Output clean markdown only — no preamble, no meta-commentary.
+Write all generated markdown in Simplified Chinese while preserving project names, code identifiers, filenames, commands, and URLs.`;
 
 export const KNOWLEDGE_BRIEF_ALL_SYSTEM_PROMPT = `\
 You are a technical writer creating a knowledge handoff document from AI coding sessions across multiple projects. \
@@ -181,7 +184,8 @@ Structure:
   - Learnings (grouped by topic)
   - Techniques worth reusing
 
-Output clean markdown only — no preamble, no meta-commentary.`;
+Output clean markdown only — no preamble, no meta-commentary.
+Write all generated markdown in Simplified Chinese while preserving project names, code identifiers, filenames, commands, and URLs.`;
 
 export const OBSIDIAN_PROJECT_SYSTEM_PROMPT = (projectName: string, exportDate: string) => `\
 Produce markdown with YAML frontmatter suitable for Obsidian for the project "${projectName}". \
@@ -196,7 +200,8 @@ type: knowledge-export
 
 Use [[wikilinks]] for cross-references between concepts where appropriate. \
 Group content by topic, not by session. \
-Output clean markdown only — no preamble, no meta-commentary.`;
+Output clean markdown only — no preamble, no meta-commentary.
+Write all generated markdown in Simplified Chinese while preserving YAML/frontmatter keys, wikilinks syntax, code identifiers, filenames, commands, and URLs.`;
 
 export const OBSIDIAN_ALL_SYSTEM_PROMPT = (exportDate: string) => `\
 Produce markdown with YAML frontmatter suitable for Obsidian covering multiple projects. \
@@ -211,7 +216,8 @@ type: knowledge-export
 
 Use [[wikilinks]] for cross-references between concepts where appropriate. \
 Organize content by project with a cross-cutting themes section first. \
-Output clean markdown only — no preamble, no meta-commentary.`;
+Output clean markdown only — no preamble, no meta-commentary.
+Write all generated markdown in Simplified Chinese while preserving YAML/frontmatter keys, wikilinks syntax, code identifiers, filenames, commands, and URLs.`;
 
 export const NOTION_PROJECT_SYSTEM_PROMPT = (projectName: string) => `\
 Produce Notion-compatible markdown for the project "${projectName}". Use:
@@ -221,7 +227,8 @@ Produce Notion-compatible markdown for the project "${projectName}". Use:
 - No wikilinks — use standard markdown links only
 
 Group content by topic, not by session. \
-Output clean markdown only — no preamble, no meta-commentary.`;
+Output clean markdown only — no preamble, no meta-commentary.
+Write all generated markdown in Simplified Chinese while preserving Notion syntax markers, code identifiers, filenames, commands, and URLs.`;
 
 export const NOTION_ALL_SYSTEM_PROMPT = `\
 Produce Notion-compatible markdown covering multiple projects. Use:
@@ -231,7 +238,8 @@ Produce Notion-compatible markdown covering multiple projects. Use:
 - No wikilinks — use standard markdown links only
 
 Organize content by project with a cross-cutting themes section first. \
-Output clean markdown only — no preamble, no meta-commentary.`;
+Output clean markdown only — no preamble, no meta-commentary.
+Write all generated markdown in Simplified Chinese while preserving Notion syntax markers, code identifiers, filenames, commands, and URLs.`;
 
 /**
  * Select the appropriate system prompt for the given format and scope.

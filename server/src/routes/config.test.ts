@@ -157,6 +157,35 @@ describe('Config routes', () => {
       expect(body.ok).toBe(true);
     });
 
+    it('returns 400 when custom provider is missing baseUrl', async () => {
+      const app = createApp();
+      const res = await app.request('/api/config/llm', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'custom', model: 'deepseek-chat', apiKey: 'test-key' }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toMatch(/baseUrl/);
+    });
+
+    it('returns 200 when custom provider includes baseUrl', async () => {
+      const app = createApp();
+      const res = await app.request('/api/config/llm', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'custom',
+          model: 'deepseek-chat',
+          apiKey: 'test-key',
+          baseUrl: 'https://example.com/v1',
+        }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.ok).toBe(true);
+    });
+
     it('calls saveConfig when LLM config changes', async () => {
       vi.mocked(saveConfig).mockClear();
       const app = createApp();

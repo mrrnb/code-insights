@@ -105,10 +105,10 @@ configCommand
 const llmCommand = configCommand
   .command('llm')
   .description('Configure LLM provider for AI-powered session analysis')
-  .option('--provider <provider>', 'LLM provider (openai, anthropic, gemini, ollama)')
+  .option('--provider <provider>', 'LLM provider (openai, anthropic, gemini, ollama, custom)')
   .option('--model <model>', 'Model ID (e.g., gpt-4o, claude-sonnet-4-20250514)')
   .option('--api-key <key>', 'API key for the selected provider')
-  .option('--base-url <url>', 'Custom base URL (for Ollama or local endpoints)')
+  .option('--base-url <url>', 'Custom base URL (for Ollama or OpenAI-compatible endpoints)')
   .option('--show', 'Show current LLM configuration')
   .action(async (options: {
     provider?: string;
@@ -203,18 +203,26 @@ async function runInteractiveLLMConfig(): Promise<void> {
     process.exit(1);
   }
 
-  // Step 2: Select model
+  // Step 2: Select or enter model
   const { model } = await inquirer.prompt<{ model: string }>([
-    {
-      type: 'list',
-      name: 'model',
-      message: 'Select model:',
-      choices: providerInfo.models.map(m => ({
-        name: `${m.name}${m.description ? ` — ${m.description}` : ''}`,
-        value: m.id,
-      })),
-      default: existing?.model ?? getDefaultModel(provider),
-    },
+    provider === 'custom'
+      ? {
+          type: 'input',
+          name: 'model',
+          message: 'Model ID (e.g. gpt-4.1, deepseek-chat, kimi-k2):',
+          default: existing?.model ?? '',
+          validate: (value: string) => value.trim() ? true : 'Model ID is required',
+        }
+      : {
+          type: 'list',
+          name: 'model',
+          message: 'Select model:',
+          choices: providerInfo.models.map(m => ({
+            name: `${m.name}${m.description ? ` — ${m.description}` : ''}`,
+            value: m.id,
+          })),
+          default: existing?.model ?? getDefaultModel(provider),
+        },
   ]);
 
   const llmConfig: LLMProviderConfig = { provider, model };
@@ -249,17 +257,23 @@ async function runInteractiveLLMConfig(): Promise<void> {
   }
 
   // Step 4: Base URL (Ollama or custom)
-  if (provider === 'ollama') {
+  if (provider === 'ollama' || provider === 'custom') {
     const { baseUrl } = await inquirer.prompt<{ baseUrl: string }>([
       {
         type: 'input',
         name: 'baseUrl',
-        message: 'Ollama URL (leave blank for default http://localhost:11434):',
-        default: existing?.baseUrl ?? '',
+        message: provider === 'ollama'
+          ? 'Ollama URL (leave blank for default http://localhost:11434):'
+          : 'OpenAI-compatible base URL (required, e.g. https://api.openai.com/v1):',
+        default: existing?.baseUrl ?? (provider === 'ollama' ? '' : 'https://api.openai.com/v1'),
+        validate: (value: string) => {
+          if (provider === 'custom' && !value.trim()) return 'Base URL is required for custom provider';
+          return true;
+        },
       },
     ]);
 
-    if (baseUrl && baseUrl !== 'http://localhost:11434') {
+    if (baseUrl && (provider !== 'ollama' || baseUrl !== 'http://localhost:11434')) {
       llmConfig.baseUrl = baseUrl;
     }
   }

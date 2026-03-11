@@ -13,14 +13,14 @@ import JournalPage from '@/pages/JournalPage';
 import PatternsPage from '@/pages/PatternsPage';
 
 const ROUTE_TITLES: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/sessions': 'Sessions',
-  '/insights': 'Insights',
-  '/analytics': 'Analytics',
-  '/patterns': 'Patterns',
-  '/export': 'Export',
-  '/journal': 'Journal',
-  '/settings': 'Settings',
+  '/dashboard': '总览',
+  '/sessions': '会话',
+  '/insights': '洞察',
+  '/analytics': '分析',
+  '/patterns': '模式',
+  '/export': '导出',
+  '/journal': '日志',
+  '/settings': '设置',
 };
 
 function RouteEffects() {

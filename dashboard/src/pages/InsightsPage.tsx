@@ -38,10 +38,10 @@ const TYPE_SECTION_ICONS: Record<string, { icon: typeof FileText; color: string 
 };
 
 const VIEW_MODES = [
-  { value: 'timeline', label: 'Timeline' },
-  { value: 'type', label: 'By Type' },
-  { value: 'project', label: 'By Project' },
-  { value: 'session', label: 'By Session' },
+  { value: 'timeline', label: '时间线' },
+  { value: 'type', label: '按类型' },
+  { value: 'project', label: '按项目' },
+  { value: 'session', label: '按会话' },
 ] as const;
 
 interface InsightGroup {
@@ -167,11 +167,10 @@ export default function InsightsPage() {
       {/* Sticky header: title + filters */}
       <div className="shrink-0 sticky top-0 z-10 bg-background border-b px-6 pt-5 pb-3 space-y-3">
         <div>
-          <h1 className="text-2xl font-bold">Insights</h1>
+          <h1 className="text-2xl font-bold">洞察</h1>
           {!isLoading && (
             <p className="text-muted-foreground text-sm">
-              {filtered.length} insight{filtered.length !== 1 ? 's' : ''}
-              {hasFilters ? ' matching filters' : ''}
+              共 {filtered.length} 条洞察{hasFilters ? '（已应用筛选）' : ''}
             </p>
           )}
         </div>
@@ -180,10 +179,10 @@ export default function InsightsPage() {
         {filters.pattern && (
           <div className="flex items-center gap-2 rounded-lg border bg-amber-500/5 border-amber-500/20 px-3 py-2">
             <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
-              Pattern
+                模式
             </Badge>
             <span className="text-sm text-muted-foreground">
-              Showing {filtered.length} insight{filtered.length !== 1 ? 's' : ''} in this recurring pattern
+              当前重复模式下共有 {filtered.length} 条洞察
             </span>
             <Button
               variant="ghost"
@@ -199,7 +198,7 @@ export default function InsightsPage() {
         {/* Filters + View Mode */}
         <div className="flex flex-wrap items-center gap-3">
         <Input
-          placeholder="Search insights..."
+          placeholder="搜索洞察..."
           value={filters.q}
           onChange={(e) => setFilter('q', e.target.value)}
           className="max-w-xs"
@@ -207,10 +206,10 @@ export default function InsightsPage() {
 
         <Select value={filters.project} onValueChange={(v) => setFilter('project', v)}>
           <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="All Projects" />
+            <SelectValue placeholder="全部项目" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Projects</SelectItem>
+            <SelectItem value="all">全部项目</SelectItem>
             {projects.map((p) => (
               <SelectItem key={p.id} value={p.id}>
                 {p.name}
@@ -221,10 +220,10 @@ export default function InsightsPage() {
 
         <Select value={filters.type} onValueChange={(v) => setFilter('type', v)}>
           <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="All Types" />
+            <SelectValue placeholder="全部类型" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="all">全部类型</SelectItem>
             {INSIGHT_TYPES.map((t) => (
               <SelectItem key={t} value={t}>
                 {INSIGHT_TYPE_LABELS[t]}
@@ -252,7 +251,7 @@ export default function InsightsPage() {
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
       {isError && !isLoading ? (
-        <ErrorCard message="Failed to load insights" onRetry={refetch} />
+        <ErrorCard message="加载洞察失败" onRetry={refetch} />
       ) : isLoading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => (
@@ -263,20 +262,20 @@ export default function InsightsPage() {
         hasFilters ? (
           <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
             <SearchX className="h-8 w-8 text-muted-foreground" />
-            <p className="font-medium">No insights match your search</p>
+            <p className="font-medium">没有符合筛选条件的洞察</p>
             <p className="text-sm text-muted-foreground">
-              Try different keywords or clear the search to see all insights.
+              可以尝试更换关键词，或清空筛选条件后查看全部洞察。
             </p>
             <Button variant="outline" size="sm" onClick={clearFilters}>
-              Clear filters
+              清空筛选
             </Button>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
             <Sparkles className="h-8 w-8 text-muted-foreground" />
-            <p className="font-medium">No insights yet</p>
+            <p className="font-medium">还没有洞察</p>
             <p className="text-sm text-muted-foreground">
-              Analyze your sessions to generate AI insights like learnings, decisions, and summaries.
+              先分析会话，再生成摘要、决策、经验教训等 AI 洞察。
             </p>
           </div>
         )

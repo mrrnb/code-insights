@@ -6,7 +6,7 @@ import { discoverOllamaModels } from '../llm/providers/ollama.js';
 
 const app = new Hono();
 
-const VALID_PROVIDERS = ['openai', 'anthropic', 'gemini', 'ollama'] as const;
+const VALID_PROVIDERS = ['openai', 'anthropic', 'gemini', 'ollama', 'custom'] as const;
 
 function maskApiKey(key: string | undefined): string | undefined {
   if (!key || key.length < 8) return key ? '***' : undefined;
@@ -78,6 +78,10 @@ app.put('/llm', async (c) => {
 
     if (!updatedLlm.model) {
       return c.json({ error: 'model is required when setting LLM config' }, 400);
+    }
+
+    if (updatedLlm.provider === 'custom' && !updatedLlm.baseUrl) {
+      return c.json({ error: 'baseUrl is required for custom provider' }, 400);
     }
 
     config.dashboard = { ...config.dashboard, llm: updatedLlm };

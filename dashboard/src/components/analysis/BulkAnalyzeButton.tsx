@@ -76,8 +76,8 @@ export function BulkAnalyzeButton({ sessions, onComplete }: BulkAnalyzeButtonPro
     return (
       <Button variant="outline" disabled className="gap-2">
         <Sparkles className="h-4 w-4" />
-        Analyze Selected
-        <span className="text-xs text-muted-foreground ml-1">(Configure AI first)</span>
+        批量分析
+        <span className="text-xs text-muted-foreground ml-1">（请先配置 AI）</span>
       </Button>
     );
   }
@@ -92,15 +92,14 @@ export function BulkAnalyzeButton({ sessions, onComplete }: BulkAnalyzeButtonPro
           onClick={() => setOpen(true)}
         >
           <Sparkles className="h-4 w-4" />
-          Analyze {sessions.length} Session{sessions.length !== 1 ? 's' : ''}
+          分析 {sessions.length} 个会话
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Bulk Analysis</DialogTitle>
+          <DialogTitle>批量分析</DialogTitle>
           <DialogDescription>
-            Generate AI insights for {sessions.length} selected session
-            {sessions.length !== 1 ? 's' : ''}.
+            为已选中的 {sessions.length} 个会话生成 AI 洞察。
           </DialogDescription>
         </DialogHeader>
 
@@ -108,11 +107,11 @@ export function BulkAnalyzeButton({ sessions, onComplete }: BulkAnalyzeButtonPro
           {!analyzing && !result && (
             <>
               <p className="text-sm text-muted-foreground">
-                This will use your configured LLM provider to analyze each session and generate insights.
+                将使用当前配置的 LLM 提供商逐个分析会话并生成洞察。
               </p>
               <Button onClick={handleAnalyze} className="w-full gap-2">
                 <Sparkles className="h-4 w-4" />
-                Start Analysis
+                开始分析
               </Button>
             </>
           )}
@@ -122,7 +121,7 @@ export function BulkAnalyzeButton({ sessions, onComplete }: BulkAnalyzeButtonPro
               <div className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span className="text-sm">
-                  Analyzing session {progress.completed} of {progress.total}...
+                  正在分析第 {progress.completed} / {progress.total} 个会话...
                 </span>
               </div>
               <div className="w-full bg-muted rounded-full h-2">
@@ -139,27 +138,27 @@ export function BulkAnalyzeButton({ sessions, onComplete }: BulkAnalyzeButtonPro
               <div className="flex items-center gap-2 text-green-600">
                 <CheckCircle className="h-4 w-4" />
                 <span>
-                  {result.successful} session{result.successful !== 1 ? 's' : ''} analyzed successfully
+                  成功分析 {result.successful} 个会话
                 </span>
               </div>
               {result.failed > 0 && (
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-red-500">
                     <AlertCircle className="h-4 w-4" />
-                    <span>{result.failed} failed</span>
+                      <span>失败 {result.failed} 个</span>
                   </div>
                   <ul className="text-xs text-muted-foreground list-disc list-inside max-h-32 overflow-y-auto">
                     {result.errors.slice(0, 5).map((err, i) => (
                       <li key={i} className="truncate">{err}</li>
                     ))}
                     {result.errors.length > 5 && (
-                      <li>...and {result.errors.length - 5} more</li>
+                      <li>... 另外还有 {result.errors.length - 5} 条</li>
                     )}
                   </ul>
                 </div>
               )}
               <Button onClick={handleClose} className="w-full">
-                Done
+                完成
               </Button>
             </div>
           )}

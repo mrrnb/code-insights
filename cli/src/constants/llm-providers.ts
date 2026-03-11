@@ -49,6 +49,14 @@ export const PROVIDERS: ProviderInfo[] = [
       { id: 'qwen2.5-coder', name: 'Qwen 2.5 Coder', description: 'Code-focused, free' },
     ],
   },
+  {
+    id: 'custom',
+    name: 'Custom OpenAI-Compatible',
+    requiresApiKey: true,
+    models: [
+      { id: 'custom-model', name: 'Custom Model', description: 'Use any OpenAI-compatible endpoint' },
+    ],
+  },
 ];
 
 export function getProviderInfo(providerId: string): ProviderInfo | undefined {

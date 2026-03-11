@@ -136,7 +136,7 @@ export function SessionListPanel({
       {/* Search + filters */}
       <div className="shrink-0 p-3 space-y-2 border-b">
         <Input
-          placeholder="Search sessions..."
+          placeholder="搜索会话..."
           value={filters.q}
           onChange={(e) => onFilterChange('q', e.target.value)}
           className="h-8 text-xs"
@@ -147,10 +147,10 @@ export function SessionListPanel({
             onValueChange={(v) => onFilterChange('character', v)}
           >
             <SelectTrigger className="h-7 text-xs flex-1">
-              <SelectValue placeholder="Type" />
+              <SelectValue placeholder="类型" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="all">全部类型</SelectItem>
               {SESSION_CHARACTERS.map((c) => (
                 <SelectItem key={c} value={c} className="capitalize text-xs">
                   {c.replace(/_/g, ' ')}
@@ -163,12 +163,12 @@ export function SessionListPanel({
             onValueChange={(v) => onFilterChange('status', v)}
           >
             <SelectTrigger className="h-7 text-xs flex-1">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder="状态" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="analyzed">Analyzed</SelectItem>
-              <SelectItem value="unanalyzed">Not Analyzed</SelectItem>
+              <SelectItem value="all">全部状态</SelectItem>
+              <SelectItem value="analyzed">已分析</SelectItem>
+              <SelectItem value="unanalyzed">未分析</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -190,17 +190,17 @@ export function SessionListPanel({
           hasClientFilters ? (
             <div className="flex flex-col items-center justify-center py-12 text-center px-4 space-y-2">
               <SearchX className="h-6 w-6 text-muted-foreground" />
-              <p className="text-sm font-medium">No matching sessions</p>
+              <p className="text-sm font-medium">没有匹配的会话</p>
               <Button variant="outline" size="sm" onClick={onClearFilters}>
-                Clear filters
+                清空筛选
               </Button>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center px-4 space-y-2">
               <Terminal className="h-6 w-6 text-muted-foreground" />
-              <p className="text-sm font-medium">No sessions yet</p>
+              <p className="text-sm font-medium">还没有会话</p>
               <p className="text-xs text-muted-foreground">
-                Run code-insights sync to get started.
+                运行 `code-insights sync` 开始同步。
               </p>
             </div>
           )
@@ -236,7 +236,7 @@ export function SessionListPanel({
       {projectId && deletedCount > 0 && (
         <div className="shrink-0 border-t px-3 py-2 flex items-center gap-1.5 text-xs text-muted-foreground">
           <EyeOff className="h-3 w-3 shrink-0" />
-          <span>{deletedCount} hidden session{deletedCount !== 1 ? 's' : ''}</span>
+          <span>{deletedCount} 个已隐藏会话</span>
         </div>
       )}
     </div>

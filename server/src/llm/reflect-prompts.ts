@@ -19,6 +19,8 @@ RULES:
 - Be specific: "wrong-approach appeared 7 times with high severity" not "there were some issues"
 - Keep the narrative under 500 words.
 
+All narrative and explanation fields must be written in Simplified Chinese. Keep enum values and machine-readable category IDs unchanged.
+
 Respond with valid JSON only, wrapped in <json>...</json> tags.`;
 
 export function generateFrictionWinsPrompt(data: {
@@ -55,6 +57,8 @@ Respond with this JSON format:
   ]
 }
 
+All narrative and explanation fields must be written in Simplified Chinese. Keep enum values and machine-readable category IDs unchanged.
+
 Respond with valid JSON only, wrapped in <json>...</json> tags.`;
 }
 
@@ -72,6 +76,8 @@ RULES:
 - Hook configs must include the event trigger and command
 - Max 6 rules, 3 hooks
 - Each artifact must reference the friction pattern or effective practice it addresses
+
+All narrative and explanation fields must be written in Simplified Chinese. Keep enum values and machine-readable category IDs unchanged.
 
 Respond with valid JSON only, wrapped in <json>...</json> tags.`;
 
@@ -108,6 +114,8 @@ Respond with this JSON format:
   ]
 }
 
+All narrative and explanation fields must be written in Simplified Chinese. Keep enum values and machine-readable category IDs unchanged.
+
 Respond with valid JSON only, wrapped in <json>...</json> tags.`;
 }
 
@@ -127,6 +135,8 @@ RULES:
 - The tagline must be empowering and descriptive, never critical or negative
 - Base the tagline on the dominant session types, workflow patterns, and outcome distribution
 - Think of it like a developer personality type — specific and earned, not generic
+
+All narrative and explanation fields must be written in Simplified Chinese. Keep enum values and machine-readable category IDs unchanged.
 
 Respond with valid JSON only, wrapped in <json>...</json> tags.`;
 
@@ -156,6 +166,8 @@ Respond with this JSON format:
   "tagline": "2-4 word archetype label (e.g. The Methodical Builder)",
   "narrative": "3-5 sentence working style description"
 }
+
+All narrative and explanation fields must be written in Simplified Chinese. Keep enum values and machine-readable category IDs unchanged.
 
 Respond with valid JSON only, wrapped in <json>...</json> tags.`;
 }

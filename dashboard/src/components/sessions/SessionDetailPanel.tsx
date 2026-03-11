@@ -118,7 +118,7 @@ function CollapsibleInsightItem({ insight }: { insight: Insight }) {
   );
 }
 
-/** Minimal analyze button for the Prompt Quality empty state. */
+/** Minimal analyze button for the Prompt 质量 empty state. */
 function PromptQualityAnalyzeButton({ session }: { session: Session }) {
   const { state: analysisState, startAnalysis } = useAnalysis();
   const { data: llmConfig } = useLlmConfig();
@@ -130,7 +130,7 @@ function PromptQualityAnalyzeButton({ session }: { session: Session }) {
   if (!configured) {
     return (
       <Link to="/settings" className="text-xs text-muted-foreground underline hover:text-foreground">
-        Configure AI in Settings
+        请先在设置中配置 AI
       </Link>
     );
   }
@@ -144,12 +144,12 @@ function PromptQualityAnalyzeButton({ session }: { session: Session }) {
       {isAnalyzing ? (
         <>
           <Loader2 className="h-4 w-4 animate-spin" />
-          Analyzing...
+          分析中...
         </>
       ) : (
         <>
           <Target className="h-4 w-4" />
-          Analyze
+          分析
         </>
       )}
     </Button>
@@ -267,7 +267,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
     return (
       <div className="p-6">
         <ErrorCard
-          message={error instanceof Error ? error.message : 'Session not found'}
+          message={error instanceof Error ? error.message : '未找到会话'}
         />
       </div>
     );
@@ -307,8 +307,8 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
     summaryInsight?.title ||
     (session.summary
       ? session.summary.split('\n').find((l) => !l.startsWith('- '))?.trim() ||
-        'Session Summary'
-      : 'Session Summary');
+        '会话摘要'
+      : '会话摘要');
 
   const startedAt = new Date(session.started_at);
   const endedAt = new Date(session.ended_at);
@@ -329,21 +329,21 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
       lines.push(`# ${title}`, '', `> [!info]`);
       lines.push(
         `> Date: ${dateStr}  `,
-        `> Duration: ${formatDurationMinutes(durationMinutes)}  `,
-        `> Project: ${session!.project_name}`
+        `> 时长： ${formatDurationMinutes(durationMinutes)}  `,
+        `> 项目： ${session!.project_name}`
       );
     } else {
       lines.push(
         `# ${title}`,
         '',
         `**Date:** ${dateStr}  `,
-        `**Duration:** ${formatDurationMinutes(durationMinutes)}  `,
-        `**Project:** ${session!.project_name}`
+        `**时长：** ${formatDurationMinutes(durationMinutes)}  `,
+        `**项目：** ${session!.project_name}`
       );
     }
 
     if (summaryText) {
-      lines.push('', '## Summary', '', summaryText);
+      lines.push('', '## 摘要', '', summaryText);
     }
     if (insights.length > 0) {
       lines.push('', '## Insights');
@@ -364,7 +364,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast.success(`Exported as ${format === 'plain' ? 'Markdown' : format}`);
+    toast.success(`已导出为 ${format === 'plain' ? 'Markdown' : format}`);
   }
 
   return (
@@ -413,21 +413,21 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-7 w-7">
                       <Download className="h-3.5 w-3.5" />
-                      <span className="sr-only">Export session</span>
+                      <span className="sr-only">导出会话</span>
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
-                <TooltipContent side="bottom">Export session</TooltipContent>
+                <TooltipContent side="bottom">导出会话</TooltipContent>
               </Tooltip>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => handleExport('plain')}>
-                  Export as Markdown
+                  导出为 Markdown
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport('obsidian')}>
-                  Export for Obsidian
+                  导出为 Obsidian
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport('notion')}>
-                  Export for Notion
+                  导出为 Notion
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -437,15 +437,15 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
                   <AlertDialogTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
                       <Trash2 className="h-3.5 w-3.5" />
-                      <span className="sr-only">Hide session</span>
+                      <span className="sr-only">隐藏会话</span>
                     </Button>
                   </AlertDialogTrigger>
                 </TooltipTrigger>
-                <TooltipContent side="bottom">Hide session</TooltipContent>
+                <TooltipContent side="bottom">隐藏会话</TooltipContent>
               </Tooltip>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Hide this session?</AlertDialogTitle>
+                  <AlertDialogTitle>确认隐藏这个会话吗？</AlertDialogTitle>
                   <AlertDialogDescription>
                     This session will no longer appear in your session list. You can restore it by running{' '}
                     <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">code-insights sync --force</code>.
@@ -458,14 +458,14 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
                     onClick={async () => {
                       try {
                         await deleteMutation.mutateAsync(session.id);
-                        toast.success('Session hidden');
+                        toast.success('会话已隐藏');
                         onDelete?.();
                       } catch (err) {
                         toast.error(err instanceof Error ? err.message : 'Failed to hide session');
                       }
                     }}
                   >
-                    Hide session
+                    隐藏会话
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -542,7 +542,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
                     id: session.id,
                     customTitle: suggestedTitle!,
                   });
-                  toast.success('Session renamed successfully');
+                  toast.success('会话重命名成功');
                   setSuggestedTitle(null);
                 } catch (err) {
                   toast.error(
@@ -565,15 +565,15 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
         </div>
       )}
 
-      {/* Tabs: Insights | Prompt Quality | Conversation */}
+      {/* Tabs: Insights | Prompt 质量 | Conversation */}
       <Tabs defaultValue="insights" className="flex flex-col flex-1 overflow-hidden pt-2">
         <TabsList variant="line" className="shrink-0 w-full justify-start gap-4 px-6 border-b">
           <TabsTrigger value="insights" className="px-0">
             Insights{nonPromptInsights.length > 0 && ` (${nonPromptInsights.length})`}
           </TabsTrigger>
           <TabsTrigger value="prompt-quality" className="px-0">
-            <span className="flex items-center gap-1.5" aria-label={promptQualityScore != null ? `Prompt Quality, score ${promptQualityScore} out of 100` : 'Prompt Quality'}>
-              Prompt Quality
+            <span className="flex items-center gap-1.5" aria-label={promptQualityScore != null ? `Prompt 质量, score ${promptQualityScore} out of 100` : 'Prompt 质量'}>
+              Prompt 质量
               {promptQualityScore != null && (
                 <span className={cn(
                   'inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none',
@@ -585,7 +585,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
             </span>
           </TabsTrigger>
           <TabsTrigger value="conversation" className="px-0">
-            Conversation ({session.message_count})
+            对话（{session.message_count})
           </TabsTrigger>
         </TabsList>
 
@@ -633,7 +633,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <FileText className="h-4 w-4 text-purple-500 shrink-0" />
-                <h3 className="text-sm font-medium">Summary</h3>
+                <h3 className="text-sm font-medium">摘要</h3>
               </div>
               <div className="rounded-md bg-muted/20 px-4 py-3">
                 <p className="font-medium text-sm mb-1.5">{summaryTitle}</p>
@@ -655,7 +655,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <GitPullRequest className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-sm font-medium">Pull Requests</h3>
+                <h3 className="text-sm font-medium">关联 Pull Request</h3>
               </div>
               <div className="flex flex-wrap gap-2">
                 {prLinks.map((url) => {
@@ -703,7 +703,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <BookOpen className="h-4 w-4 text-green-500" />
-                      <h3 className="text-sm font-medium">Learnings</h3>
+                      <h3 className="text-sm font-medium">经验教训</h3>
                       <Badge variant="secondary" className="text-xs">
                         {learningInsights.length}
                       </Badge>
@@ -724,7 +724,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <GitCommit className="h-4 w-4 text-blue-500" />
-                      <h3 className="text-sm font-medium">Decisions</h3>
+                      <h3 className="text-sm font-medium">决策</h3>
                       <Badge variant="secondary" className="text-xs">
                         {decisionInsights.length}
                       </Badge>
@@ -741,7 +741,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
           )}
         </TabsContent>
 
-        {/* Tab 2: Prompt Quality */}
+        {/* Tab 2: Prompt 质量 */}
         <TabsContent value="prompt-quality" className="flex-1 overflow-y-auto mt-0 p-5 space-y-4">
           {promptQualityInsight ? (
             <PromptQualityCard insight={promptQualityInsight} />
@@ -749,9 +749,9 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
             <div className="rounded-lg border border-dashed">
               <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
                 <Target className="h-8 w-8 text-muted-foreground" />
-                <p className="font-medium text-sm">No Prompt Quality Analysis</p>
+                <p className="font-medium text-sm">还没有 Prompt 质量分析</p>
                 <p className="text-xs text-muted-foreground max-w-[280px]">
-                  Analyze your prompting patterns to improve efficiency.
+                  分析您的提示词模式，持续提升协作效率。
                 </p>
                 <div className="pt-2">
                   <PromptQualityAnalyzeButton session={session} />

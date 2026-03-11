@@ -7,7 +7,7 @@ interface ErrorCardProps {
   onRetry?: () => void;
 }
 
-export function ErrorCard({ message = 'Something went wrong', onRetry }: ErrorCardProps) {
+export function ErrorCard({ message = '出错了', onRetry }: ErrorCardProps) {
   return (
     <Card className="border-destructive/50 bg-destructive/5">
       <CardContent className="flex items-center justify-between py-4 gap-4">
@@ -17,7 +17,7 @@ export function ErrorCard({ message = 'Something went wrong', onRetry }: ErrorCa
         </div>
         {onRetry && (
           <Button variant="outline" size="sm" onClick={onRetry}>
-            Retry
+            重试
           </Button>
         )}
       </CardContent>

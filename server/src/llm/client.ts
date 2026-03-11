@@ -25,6 +25,7 @@ export function isLLMConfigured(): boolean {
   const llm = loadLLMConfig();
   if (!llm) return false;
   if (llm.provider === 'ollama') return !!llm.model;
+  if (llm.provider === 'custom') return !!llm.apiKey && !!llm.model && !!llm.baseUrl;
   return !!llm.apiKey && !!llm.model;
 }
 
@@ -46,13 +47,15 @@ export function createLLMClient(): LLMClient {
 export function createClientFromConfig(config: LLMProviderConfig): LLMClient {
   switch (config.provider) {
     case 'openai':
-      return createOpenAIClient(config.apiKey ?? '', config.model);
+      return createOpenAIClient(config.apiKey ?? '', config.model, config.baseUrl, 'openai');
     case 'anthropic':
       return createAnthropicClient(config.apiKey ?? '', config.model);
     case 'gemini':
       return createGeminiClient(config.apiKey ?? '', config.model);
     case 'ollama':
       return createOllamaClient(config.model, config.baseUrl);
+    case 'custom':
+      return createOpenAIClient(config.apiKey ?? '', config.model, config.baseUrl, 'custom');
     default:
       throw new Error(`Unknown LLM provider: ${config.provider}`);
   }

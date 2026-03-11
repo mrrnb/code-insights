@@ -2,13 +2,20 @@
 
 import type { LLMClient, LLMMessage, LLMResponse, ChatOptions } from '../types.js';
 
-export function createOpenAIClient(apiKey: string, model: string): LLMClient {
+export function createOpenAIClient(
+  apiKey: string,
+  model: string,
+  baseUrl = 'https://api.openai.com/v1',
+  provider = 'openai'
+): LLMClient {
+  const normalizedBaseUrl = baseUrl.replace(/\/+$/, '');
+
   return {
-    provider: 'openai',
+    provider,
     model,
 
     async chat(messages: LLMMessage[], options?: ChatOptions): Promise<LLMResponse> {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch(`${normalizedBaseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -25,7 +32,7 @@ export function createOpenAIClient(apiKey: string, model: string): LLMClient {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({})) as { error?: { message?: string } };
-        throw new Error(error.error?.message || `OpenAI API error: ${response.status}`);
+        throw new Error(error.error?.message || `${provider} API error: ${response.status}`);
       }
 
       const data = await response.json() as {

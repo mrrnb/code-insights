@@ -46,7 +46,7 @@ export function ProjectNav({
       <div className="p-3 space-y-2">
         {showSearch && (
           <Input
-            placeholder="Search projects..."
+            placeholder="搜索项目..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-8 text-xs"
@@ -66,7 +66,7 @@ export function ProjectNav({
               : 'text-foreground hover:bg-accent/50'
           )}
         >
-          <span className="truncate">All Projects</span>
+          <span className="truncate">全部项目</span>
           <span className="text-xs text-muted-foreground tabular-nums shrink-0">{totalSessions}</span>
         </button>
 
@@ -102,10 +102,10 @@ export function ProjectNav({
       <div className="p-3 border-t">
         <Select value={selectedSource} onValueChange={onSelectSource}>
           <SelectTrigger className="h-8 text-xs">
-            <SelectValue placeholder="All Sources" />
+            <SelectValue placeholder="全部来源" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Sources</SelectItem>
+            <SelectItem value="all">全部来源</SelectItem>
             <SelectItem value="claude-code">Claude Code</SelectItem>
             <SelectItem value="cursor">Cursor</SelectItem>
             <SelectItem value="codex-cli">Codex CLI</SelectItem>

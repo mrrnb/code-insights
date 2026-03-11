@@ -25,13 +25,13 @@ import { Logo } from '@/components/brand/Logo';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { href: '/sessions', label: 'Sessions', icon: MessageSquare, exact: false },
-  { href: '/insights', label: 'Insights', icon: Lightbulb, exact: false },
-  { href: '/analytics', label: 'Analytics', icon: BarChart3, exact: false },
-  { href: '/patterns', label: 'Patterns', icon: Sparkles, exact: false },
-  { href: '/export', label: 'Export', icon: Download, exact: false },
-  { href: '/settings', label: 'Settings', icon: Settings, exact: false },
+  { href: '/dashboard', label: '总览', icon: LayoutDashboard, exact: true },
+  { href: '/sessions', label: '会话', icon: MessageSquare, exact: false },
+  { href: '/insights', label: '洞察', icon: Lightbulb, exact: false },
+  { href: '/analytics', label: '分析', icon: BarChart3, exact: false },
+  { href: '/patterns', label: '模式', icon: Sparkles, exact: false },
+  { href: '/export', label: '导出', icon: Download, exact: false },
+  { href: '/settings', label: '设置', icon: Settings, exact: false },
 ];
 
 // Bottom tab bar shows the first 4 primary nav items
@@ -61,7 +61,7 @@ export function Header() {
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 lg:hidden">
                 <Menu className="h-4 w-4" />
-                <span className="sr-only">Open navigation</span>
+                <span className="sr-only">打开导航</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-72 p-0 flex flex-col">
@@ -70,7 +70,7 @@ export function Header() {
                   <Logo className="h-4 w-4" />
                   Code Insights
                 </SheetTitle>
-                <SheetDescription className="sr-only">Navigation menu</SheetDescription>
+                <SheetDescription className="sr-only">导航菜单</SheetDescription>
               </SheetHeader>
               <nav className="px-2 py-2">
                 {NAV_ITEMS.map(({ href, label, icon: Icon, exact }) => (
@@ -131,10 +131,10 @@ export function Header() {
               asChild
             >
               <a
-                href="https://github.com/melagiri/code-insights"
+                href="https://github.com/mrrnb/code-insights"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="GitHub repository"
+                  aria-label="GitHub 仓库"
               >
                 <Github className="h-4 w-4" />
                 <span className="sr-only">GitHub</span>
@@ -167,13 +167,13 @@ export function Header() {
           <SheetTrigger asChild>
             <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-xs text-muted-foreground transition-colors">
               <MoreHorizontal className="h-5 w-5" />
-              <span>More</span>
+               <span>更多</span>
             </button>
           </SheetTrigger>
           <SheetContent side="bottom" className="h-auto">
             <SheetHeader className="px-4 py-3">
-              <SheetTitle className="text-sm font-semibold sr-only">More options</SheetTitle>
-              <SheetDescription className="sr-only">Additional navigation options</SheetDescription>
+              <SheetTitle className="text-sm font-semibold sr-only">更多选项</SheetTitle>
+              <SheetDescription className="sr-only">更多导航选项</SheetDescription>
             </SheetHeader>
             <nav className="px-4 pb-6 grid grid-cols-2 gap-2">
               {NAV_ITEMS.slice(4).map(({ href, label, icon: Icon }) => (

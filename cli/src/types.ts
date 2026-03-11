@@ -322,7 +322,7 @@ export interface WorkingStyleResult {
 
 export type ReflectResult = FrictionWinsResult | RulesSkillsResult | WorkingStyleResult;
 
-export type LLMProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama';
+export type LLMProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'custom';
 
 export interface LLMProviderConfig {
   provider: LLMProvider;
@@ -372,4 +372,3 @@ export interface FileSyncState {
   sessionId: string;
   syncedSessionIds?: string[];  // For providers where 1 file = N sessions (e.g., Cursor SQLite)
 }
-

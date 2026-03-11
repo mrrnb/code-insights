@@ -14,7 +14,7 @@ function parseMetadata(raw: string | null): Record<string, unknown> {
 }
 
 export function formatAgentRules(sessions: SessionRow[], insights: InsightRow[]): string {
-  if (sessions.length === 0) return '# Agent Rules Export\n\n*No sessions selected.*\n';
+  if (sessions.length === 0) return '# Agent Rules 导出\n\n*未选择任何会话。*\n';
 
   // Compute date range and project name from sessions
   const dates = sessions.flatMap((s) => [s.started_at, s.ended_at]).filter(Boolean) as string[];
@@ -27,15 +27,15 @@ export function formatAgentRules(sessions: SessionRow[], insights: InsightRow[])
   const projectName = projectNames[0] ?? 'unknown';
 
   const lines: string[] = [
-    `# Agent Rules Export`,
-    `> Generated from ${sessions.length} session${sessions.length !== 1 ? 's' : ''} analyzed by Code Insights`,
-    `> Project: ${projectName} | Period: ${dateRange}`,
+    `# Agent Rules 导出`,
+    `> 由 Code Insights 基于 ${sessions.length} 个已分析会话生成`,
+    `> 项目：${projectName} | 时间范围：${dateRange}`,
     '',
   ];
 
   if (insights.length === 0) {
     lines.push(
-      '> **Note:** No insights found. Run analysis on sessions first to generate rules.',
+      '> **提示：** 当前没有可用洞察。请先分析会话，再生成规则。',
     );
     return lines.join('\n');
   }
@@ -50,7 +50,7 @@ export function formatAgentRules(sessions: SessionRow[], insights: InsightRow[])
 
   const decisions = byType.get('decision');
   if (decisions && decisions.length > 0) {
-    lines.push('## Decisions');
+    lines.push('## 决策规则');
     lines.push('');
     for (const insight of decisions) {
       const meta = parseMetadata(insight.metadata);
@@ -89,7 +89,7 @@ export function formatAgentRules(sessions: SessionRow[], insights: InsightRow[])
 
   const learnings = byType.get('learning');
   if (learnings && learnings.length > 0) {
-    lines.push('## Learnings');
+    lines.push('## 经验规则');
     lines.push('');
     for (const insight of learnings) {
       const meta = parseMetadata(insight.metadata);
@@ -116,7 +116,7 @@ export function formatAgentRules(sessions: SessionRow[], insights: InsightRow[])
 
   const techniques = byType.get('technique');
   if (techniques && techniques.length > 0) {
-    lines.push('## Techniques');
+    lines.push('## 可复用技巧');
     lines.push('');
     for (const insight of techniques) {
       const meta = parseMetadata(insight.metadata);
@@ -134,7 +134,7 @@ export function formatAgentRules(sessions: SessionRow[], insights: InsightRow[])
         }
       }
       if (applicability) {
-        lines.push(`- Applicability: ${applicability}`);
+        lines.push(`- 适用范围：${applicability}`);
       }
       lines.push('');
     }
@@ -157,8 +157,8 @@ export function formatAgentRules(sessions: SessionRow[], insights: InsightRow[])
       if (findings && Array.isArray(findings)) {
         for (const f of findings.filter(f => f.type === 'deficit')) {
           const category = f.category ? ` [${f.category}]` : '';
-          const fix = f.suggested_improvement ? `. Instead: ${f.suggested_improvement}` : '';
-          avoidLines.push(`- AVOID: ${f.description ?? 'Prompting issue detected'}${category}${fix}`);
+          const fix = f.suggested_improvement ? `。建议改为：${f.suggested_improvement}` : '';
+          avoidLines.push(`- 避免：${f.description ?? '检测到提示词问题'}${category}${fix}`);
         }
         continue;
       }
@@ -172,13 +172,13 @@ export function formatAgentRules(sessions: SessionRow[], insights: InsightRow[])
       if (antiPatterns) {
         for (const pattern of antiPatterns) {
           const desc = pattern.description ? `: ${pattern.description}` : '';
-          const fix = pattern.fix ? `. Instead: ${pattern.fix}` : '';
-          avoidLines.push(`- AVOID ${pattern.name ?? 'unknown pattern'}${desc}${fix}`);
+          const fix = pattern.fix ? `。建议改为：${pattern.fix}` : '';
+          avoidLines.push(`- 避免 ${pattern.name ?? '未知模式'}${desc}${fix}`);
         }
       }
     }
     if (avoidLines.length > 0) {
-      lines.push('## Prompt Patterns to Avoid');
+        lines.push('## 需要避免的 Prompt 模式');
       lines.push('');
       lines.push(...avoidLines);
       lines.push('');

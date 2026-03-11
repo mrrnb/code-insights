@@ -57,11 +57,11 @@ export function AnalyzeButton({ session, hasExistingInsights, insightCount }: An
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <AlertCircle className="h-4 w-4" />
         <span>
-          Configure an AI provider in{' '}
+          请先在{' '}
           <Link to="/settings" className="underline hover:text-foreground">
-            Settings
+            设置
           </Link>{' '}
-          to analyze sessions
+          中配置 AI 提供商后再分析会话
         </span>
       </div>
     );
@@ -82,7 +82,7 @@ export function AnalyzeButton({ session, hasExistingInsights, insightCount }: An
             onClick={cancelAnalysis}
           >
             <X className="h-3.5 w-3.5" />
-            Cancel
+            取消
           </Button>
         </div>
       </div>
@@ -95,11 +95,11 @@ export function AnalyzeButton({ session, hasExistingInsights, insightCount }: An
         <div className="flex items-center gap-3">
           <Button disabled variant="outline" className="gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Analysis in progress...
+            正在分析中...
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Waiting for &quot;{analysisState.sessionTitle}&quot; to finish
+          正在等待 “{analysisState.sessionTitle}” 分析完成
         </p>
       </div>
     );
@@ -116,12 +116,12 @@ export function AnalyzeButton({ session, hasExistingInsights, insightCount }: An
           {isReanalyze ? (
             <>
               <CheckCircle className="h-4 w-4 text-green-500" />
-              Re-analyze Session
+              重新分析会话
             </>
           ) : (
             <>
               <Sparkles className="h-4 w-4" />
-              Analyze Session
+              分析会话
             </>
           )}
         </Button>
@@ -135,37 +135,37 @@ export function AnalyzeButton({ session, hasExistingInsights, insightCount }: An
 
       {isReanalyze && !isCompleteForThisSession && (
         <p className="text-xs text-muted-foreground">
-          Replaces existing insights. Uses LLM tokens.
+          会覆盖现有洞察，并消耗 LLM Tokens。
         </p>
       )}
 
       {isCompleteForThisSession && analysisState.result?.success && (
         <div className="text-sm text-green-600">
           {analysisState.result.insightCount != null
-            ? `Analysis complete! ${analysisState.result.insightCount} insight${analysisState.result.insightCount !== 1 ? 's' : ''} saved.`
-            : 'Analysis complete! Insights saved.'}
+            ? `分析完成，已保存 ${analysisState.result.insightCount} 条洞察。`
+            : '分析完成，洞察已保存。'}
         </div>
       )}
 
       {isCompleteForThisSession && !analysisState.result?.success && (
         <div className="flex items-start gap-2 text-sm text-red-500">
           <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-          <span>{analysisState.result?.error || 'Analysis failed'}</span>
+          <span>{analysisState.result?.error || '分析失败'}</span>
         </div>
       )}
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Re-analyze this session?</AlertDialogTitle>
+            <AlertDialogTitle>要重新分析这个会话吗？</AlertDialogTitle>
             <AlertDialogDescription>
-              This will replace {insightCount ?? 0} existing insight{(insightCount ?? 0) !== 1 ? 's' : ''} with new ones.
-              This uses LLM tokens and cannot be undone.
+              这会用新的分析结果替换现有的 {insightCount ?? 0} 条洞察。
+              该操作会消耗 LLM Tokens，且无法撤销。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleAnalyze}>Re-analyze</AlertDialogAction>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAnalyze}>重新分析</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

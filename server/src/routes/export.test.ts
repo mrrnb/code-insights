@@ -85,7 +85,7 @@ describe('Export routes', () => {
       expect(res.status).toBe(200);
       expect(res.headers.get('Content-Type')).toContain('text/markdown');
       const text = await res.text();
-      expect(text).toContain('# Code Insights Export');
+      expect(text).toContain('# Code Insights 导出');
       expect(text).toContain('Test Session');
     });
 
@@ -100,7 +100,7 @@ describe('Export routes', () => {
       });
       expect(res.status).toBe(200);
       const text = await res.text();
-      expect(text).toContain('# Code Insights Export');
+      expect(text).toContain('# Code Insights 导出');
       expect(text).toContain('Test Session');
     });
 
@@ -127,7 +127,7 @@ describe('Export routes', () => {
       });
       expect(res.status).toBe(200);
       const text = await res.text();
-      expect(text).toContain('# Code Insights Export');
+      expect(text).toContain('# Code Insights 导出');
       expect(text).toContain('Test Session');
     });
 
@@ -140,7 +140,7 @@ describe('Export routes', () => {
       });
       expect(res.status).toBe(200);
       const text = await res.text();
-      expect(text).toContain('# Code Insights Export');
+      expect(text).toContain('# Code Insights 导出');
       // No session sections — just the header
       expect(text).not.toContain('## ');
     });
@@ -188,14 +188,14 @@ describe('Export routes', () => {
       expect(text).toContain('Test Session');
       // Decision insight
       expect(text).toContain('Use SQLite over Postgres');
-      expect(text).toContain('**Reasoning:**');
+      expect(text).toContain('**原因：**');
       // Verifies the rejected_because fix — must appear in output
       expect(text).toContain('rejected because too slow to set up locally');
       // Learning insight
       expect(text).toContain('WAL mode prevents read locks');
-      expect(text).toContain('**What Happened:**');
-      expect(text).toContain('**Root Cause:**');
-      expect(text).toContain('**Takeaway:**');
+      expect(text).toContain('**现象：**');
+      expect(text).toContain('**根因：**');
+      expect(text).toContain('**结论：**');
     });
 
     it('agent-rules template produces imperative format', async () => {
@@ -223,11 +223,11 @@ describe('Export routes', () => {
       expect(res.status).toBe(200);
       const text = await res.text();
 
-      expect(text).toContain('# Agent Rules Export');
-      expect(text).toContain('## Decisions');
+      expect(text).toContain('# Agent Rules 导出');
+      expect(text).toContain('## 决策规则');
       expect(text).toContain('- USE SQLite');
       expect(text).toContain('- DO NOT use Postgres');
-      expect(text).toContain('## Learnings');
+      expect(text).toContain('## 经验规则');
       expect(text).toContain('- WHEN ');
     });
 
@@ -243,7 +243,7 @@ describe('Export routes', () => {
       });
       expect(res.status).toBe(200);
       const text = await res.text();
-      expect(text).toContain('*No insights for this session.*');
+      expect(text).toContain('*这个会话还没有洞察。*');
     });
   });
 });

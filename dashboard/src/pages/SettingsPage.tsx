@@ -19,7 +19,7 @@ import {
   Minus,
 } from 'lucide-react';
 
-type LLMProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama';
+type LLMProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'custom';
 
 interface ProviderInfo {
   id: LLMProvider;
@@ -36,9 +36,9 @@ const PROVIDERS: ProviderInfo[] = [
     requiresApiKey: true,
     apiKeyLink: 'https://platform.openai.com/api-keys',
     models: [
-      { id: 'gpt-4.1', name: 'GPT-4.1', description: 'Best' },
-      { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini', description: 'Fast & cheap' },
-      { id: 'gpt-4o', name: 'GPT-4o', description: 'Fallback' },
+      { id: 'gpt-4.1', name: 'GPT-4.1', description: '最佳' },
+      { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini', description: '快且便宜' },
+      { id: 'gpt-4o', name: 'GPT-4o', description: '备用' },
     ],
   },
   {
@@ -47,9 +47,9 @@ const PROVIDERS: ProviderInfo[] = [
     requiresApiKey: true,
     apiKeyLink: 'https://console.anthropic.com/settings/keys',
     models: [
-      { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', description: 'Most capable' },
-      { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', description: 'Best balance' },
-      { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', description: 'Fast & cheap' },
+      { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', description: '能力最强' },
+      { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', description: '综合最均衡' },
+      { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', description: '快且便宜' },
     ],
   },
   {
@@ -58,18 +58,26 @@ const PROVIDERS: ProviderInfo[] = [
     requiresApiKey: true,
     apiKeyLink: 'https://aistudio.google.com/app/apikey',
     models: [
-      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Fast' },
-      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Capable' },
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: '快速' },
+      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: '更强' },
     ],
   },
   {
     id: 'ollama',
-    name: 'Ollama (Local)',
+    name: 'Ollama（本地）',
     requiresApiKey: false,
     models: [
       { id: 'llama3.3', name: 'Llama 3.3' },
       { id: 'qwen3:14b', name: 'Qwen3 14B' },
       { id: 'mistral', name: 'Mistral' },
+    ],
+  },
+  {
+    id: 'custom',
+    name: '自定义 OpenAI 兼容接口',
+    requiresApiKey: true,
+    models: [
+      { id: 'custom-model', name: '自定义模型', description: '支持任意兼容 Chat Completions 的接口' },
     ],
   },
 ];
@@ -93,7 +101,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!llmConfig) return;
     if (llmConfig.provider) {
-      setLlmProvider(llmConfig.provider);
+      setLlmProvider(llmConfig.provider as LLMProvider);
       setLlmConfigured(true);
     }
     if (llmConfig.model) {
@@ -145,12 +153,16 @@ export default function SettingsPage() {
     // Custom model input overrides the dropdown selection for cloud providers
     const effectiveModel = customModel.trim() || llmModel;
 
-    if (providerInfo.requiresApiKey && !llmApiKey) {
-      setLlmTestError('API key is required');
+    if (providerInfo.requiresApiKey && !llmApiKey && !llmConfigured) {
+      setLlmTestError('需要填写 API Key');
+      return;
+    }
+    if (llmProvider === 'custom' && !llmBaseUrl.trim()) {
+      setLlmTestError('自定义接口必须填写 Base URL');
       return;
     }
     if (!effectiveModel) {
-      setLlmTestError('Please select a model');
+      setLlmTestError('请填写模型 ID');
       return;
     }
 
@@ -174,12 +186,12 @@ export default function SettingsPage() {
         });
         setLlmConfigured(true);
         setLlmTestError(null);
-        toast.success('AI provider configured successfully');
+        toast.success('AI 分析提供商配置成功');
       } else {
-        setLlmTestError(testResult.error || 'Failed to connect');
+        setLlmTestError(testResult.error || '连接测试失败');
       }
     } catch (err) {
-      setLlmTestError(err instanceof Error ? err.message : 'Failed to save configuration');
+      setLlmTestError(err instanceof Error ? err.message : '保存配置失败');
     } finally {
       setLlmTesting(false);
     }
@@ -192,16 +204,16 @@ export default function SettingsPage() {
       setLlmApiKey('');
       setCustomModel('');
       setLlmTestError(null);
-      toast.success('AI provider configuration cleared');
+      toast.success('已清空 AI 提供商配置');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to clear configuration';
+      const msg = err instanceof Error ? err.message : '清空配置失败';
       setLlmTestError(msg);
       toast.error(msg);
     }
   };
 
   const progressItems = [
-    { label: 'AI Provider', done: llmConfigured, required: true },
+    { label: 'AI 提供商', done: llmConfigured, required: true },
   ];
   const requiredDone = progressItems.filter((p) => p.required && p.done).length;
   const requiredTotal = progressItems.filter((p) => p.required).length;
@@ -210,8 +222,8 @@ export default function SettingsPage() {
     return (
       <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">Configure your Code Insights dashboard</p>
+          <h1 className="text-2xl font-bold">设置</h1>
+          <p className="text-muted-foreground">配置 Code Insights 控制台</p>
         </div>
         <div className="h-32 flex items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -223,14 +235,14 @@ export default function SettingsPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">Configure your Code Insights dashboard</p>
+        <h1 className="text-2xl font-bold">设置</h1>
+        <p className="text-muted-foreground">配置 Code Insights 控制台</p>
       </div>
 
       {/* Setup progress strip */}
       <div className="rounded-lg border bg-card px-4 py-3 flex items-center gap-4 flex-wrap">
         <span className="text-sm font-medium shrink-0">
-          Setup: {requiredDone} of {requiredTotal} required configs complete
+          配置进度：已完成 {requiredDone}/{requiredTotal} 项必填配置
         </span>
         <div className="flex items-center gap-3 flex-wrap">
           {progressItems.map((item) => (
@@ -254,34 +266,34 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Cpu className="h-5 w-5" />
-              <CardTitle className="text-base">AI Analysis Provider</CardTitle>
+              <CardTitle className="text-base">AI 分析提供商</CardTitle>
             </div>
             {llmConfigured ? (
               <Badge variant="outline" className="text-green-600 border-green-600">
                 <CheckCircle className="mr-1 h-3 w-3" />
-                Connected
+                已连接
               </Badge>
             ) : (
               <Badge variant="outline" className="text-amber-600 border-amber-600">
                 <XCircle className="mr-1 h-3 w-3" />
-                Not Configured
+                未配置
               </Badge>
             )}
           </div>
           <CardDescription>
-            Configure an LLM provider to analyze sessions and generate insights
+            配置一个 LLM 提供商，用于分析会话并生成洞察
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Provider Selection */}
           <div>
-            <label className="text-sm font-medium">Provider</label>
+            <label className="text-sm font-medium">提供商</label>
             <Select
               value={llmProvider}
               onValueChange={(v) => handleProviderChange(v as LLMProvider)}
             >
               <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Select provider" />
+                <SelectValue placeholder="选择提供商" />
               </SelectTrigger>
               <SelectContent>
                 {PROVIDERS.map((provider) => (
@@ -295,13 +307,13 @@ export default function SettingsPage() {
 
           {/* Model Selection */}
           <div>
-            <label className="text-sm font-medium">Model</label>
+            <label className="text-sm font-medium">模型</label>
             {llmProvider === 'ollama' ? (
               <div className="mt-1 space-y-2">
                 <Input
                   value={llmModel}
                   onChange={(e) => setLlmModel(e.target.value)}
-                  placeholder="Type any model name (e.g. llama3.3)"
+                  placeholder="输入任意模型名，例如 llama3.3"
                 />
                 {(() => {
                   const hardcoded =
@@ -309,7 +321,7 @@ export default function SettingsPage() {
                   const suggestions = [...new Set([...hardcoded, ...ollamaDiscoveredModels])];
                   return suggestions.length > 0 ? (
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1.5">Suggestions:</p>
+                      <p className="text-xs text-muted-foreground mb-1.5">建议：</p>
                       <div className="flex flex-wrap gap-1.5">
                         {suggestions.map((name) => (
                           <button
@@ -330,7 +342,7 @@ export default function SettingsPage() {
               <div className="mt-1 space-y-2">
                 <Select value={llmModel} onValueChange={setLlmModel}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select model" />
+                    <SelectValue placeholder="选择模型" />
                   </SelectTrigger>
                   <SelectContent>
                     {PROVIDERS.find((p) => p.id === llmProvider)?.models.map((model) => (
@@ -348,16 +360,16 @@ export default function SettingsPage() {
                   </SelectContent>
                 </Select>
                 <div>
-                  <label className="text-xs text-muted-foreground">Or enter a custom model ID</label>
+                  <label className="text-xs text-muted-foreground">或直接输入自定义模型 ID</label>
                   <Input
                     value={customModel}
                     onChange={(e) => setCustomModel(e.target.value)}
-                    placeholder="e.g. gpt-4.1-nano, claude-opus-4-6"
+                    placeholder="例如 gpt-4.1-nano、claude-opus-4-6、deepseek-chat"
                     className="mt-1"
                   />
                   {customModel.trim() && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      Custom model <span className="font-mono">{customModel.trim()}</span> will be used instead of the dropdown selection.
+                      将优先使用自定义模型 <span className="font-mono">{customModel.trim()}</span>，而不是下拉框中的模型。
                     </p>
                   )}
                 </div>
@@ -378,17 +390,19 @@ export default function SettingsPage() {
                 }}
                 placeholder={
                   llmConfigured
-                    ? 'Leave blank to keep existing key'
+                    ? '留空则保留当前 Key'
                     : llmProvider === 'openai'
                       ? 'sk-...'
                       : llmProvider === 'anthropic'
                         ? 'sk-ant-...'
-                        : 'AIza...'
+                        : llmProvider === 'gemini'
+                          ? 'AIza...'
+                          : '填入你的自定义 Key'
                 }
                 className="mt-1"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Get your API key from{' '}
+                获取 API Key：{' '}
                 <a
                   href={PROVIDERS.find((p) => p.id === llmProvider)?.apiKeyLink}
                   target="_blank"
@@ -405,7 +419,7 @@ export default function SettingsPage() {
           {llmProvider === 'ollama' && (
             <>
               <div>
-                <label className="text-sm font-medium">Base URL (optional)</label>
+                <label className="text-sm font-medium">Base URL（可选）</label>
                 <Input
                   value={llmBaseUrl}
                   onChange={(e) => setLlmBaseUrl(e.target.value)}
@@ -413,7 +427,7 @@ export default function SettingsPage() {
                   className="mt-1"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Leave empty for default (localhost:11434)
+                  留空则使用默认地址（localhost:11434）
                 </p>
               </div>
 
@@ -429,17 +443,16 @@ export default function SettingsPage() {
                     ) : (
                       <ChevronRight className="h-3.5 w-3.5" />
                     )}
-                    Ollama connection notes
+                    Ollama 连接说明
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3 space-y-2">
                     <p className="text-xs text-amber-700 dark:text-amber-300">
-                      Ollama runs locally on your machine. The dashboard connects to it via the
-                      Hono server at localhost:7890, so no CORS configuration is required.
+                      Ollama 运行在本机，控制台通过 localhost:7890 上的 Hono 服务转发请求，通常不需要额外配置 CORS。
                     </p>
                     <p className="text-xs text-amber-700 dark:text-amber-300">
-                      Ensure Ollama is running before testing:{' '}
+                      测试前请确认 Ollama 已启动：{' '}
                       <code className="bg-amber-100 dark:bg-amber-950/50 px-0.5 rounded">
                         ollama serve
                       </code>
@@ -448,6 +461,21 @@ export default function SettingsPage() {
                 </CollapsibleContent>
               </Collapsible>
             </>
+          )}
+
+          {llmProvider === 'custom' && (
+            <div>
+              <label className="text-sm font-medium">Base URL</label>
+              <Input
+                value={llmBaseUrl}
+                onChange={(e) => setLlmBaseUrl(e.target.value)}
+                placeholder="https://api.openai.com/v1"
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                填写 OpenAI Chat Completions 兼容接口地址，例如 OpenAI、OpenRouter、DeepSeek、硅基流动或自建网关。
+              </p>
+            </div>
           )}
 
           {/* Error message */}
@@ -459,12 +487,12 @@ export default function SettingsPage() {
               {llmTesting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Testing...
+                  测试中...
                 </>
               ) : llmConfigured ? (
-                'Update Configuration'
+                '更新配置'
               ) : (
-                'Save & Test'
+                '保存并测试'
               )}
             </Button>
             {llmConfigured && (
@@ -473,7 +501,7 @@ export default function SettingsPage() {
                 onClick={handleClearLLMConfig}
                 disabled={saveMutation.isPending}
               >
-                Clear
+                清空
               </Button>
             )}
           </div>
@@ -483,25 +511,24 @@ export default function SettingsPage() {
       {/* CLI Setup */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">CLI Setup</CardTitle>
+          <CardTitle className="text-base">CLI 安装与初始化</CardTitle>
           <CardDescription>
-            Install and configure the CLI to sync your AI coding sessions
+            安装并配置 CLI，用来同步您的 AI 编程会话
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-lg bg-muted p-4 font-mono text-sm">
-            <p className="text-muted-foreground"># Install the CLI</p>
+            <p className="text-muted-foreground"># 安装 CLI</p>
             <p>npm install -g @code-insights/cli</p>
-            <p className="mt-2 text-muted-foreground"># Initialize</p>
+            <p className="mt-2 text-muted-foreground"># 初始化</p>
             <p>code-insights init</p>
-            <p className="mt-2 text-muted-foreground"># Sync your sessions</p>
+            <p className="mt-2 text-muted-foreground"># 同步会话</p>
             <p>code-insights sync</p>
-            <p className="mt-2 text-muted-foreground"># Open this dashboard</p>
+            <p className="mt-2 text-muted-foreground"># 打开控制台</p>
             <p>code-insights dashboard</p>
           </div>
           <p className="text-sm text-muted-foreground">
-            The CLI parses sessions from Claude Code, Cursor, Codex CLI, and Copilot CLI into a
-            local SQLite database. All data stays on your machine.
+            CLI 会把 Claude Code、Cursor、Codex CLI 和 Copilot CLI 的会话解析后写入本地 SQLite 数据库。所有数据都保留在您的机器上。
           </p>
         </CardContent>
       </Card>
@@ -510,12 +537,12 @@ export default function SettingsPage() {
       <div className="text-center text-xs text-muted-foreground pt-2 pb-4">
         Code Insights &mdash;{' '}
         <a
-          href="https://github.com/melagiri/code-insights"
+          href="https://github.com/mrrnb/code-insights"
           target="_blank"
           rel="noopener noreferrer"
           className="underline hover:text-foreground transition-colors"
         >
-          View on GitHub
+          在 GitHub 查看
         </a>
       </div>
     </div>
