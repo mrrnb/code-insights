@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ProgressRing } from '@/components/shared/ProgressRing';
-import { Target, AlertTriangle, Lightbulb, TrendingDown, Compass, ArrowRight, Sparkles, BarChart3 } from 'lucide-react';
+import { Target, AlertTriangle, Lightbulb, TrendingDown, Compass, ArrowRight, BarChart3 } from 'lucide-react';
 import type { Insight } from '@/lib/types';
 import { parseJsonField } from '@/lib/types';
 import { getPQCategoryLabel, getPQCategoryType } from '@/lib/prompt-quality-utils';
@@ -149,7 +149,6 @@ function DimensionScores({ scores }: { scores: PQDimensionScores }) {
 function NewSchemaContent({
   score,
   overhead,
-  assessment,
   takeaways,
   findings,
   dimensionScores,
@@ -157,7 +156,6 @@ function NewSchemaContent({
 }: {
   score: number;
   overhead: number;
-  assessment: string;
   takeaways: PQTakeaway[];
   findings: PQFinding[];
   dimensionScores: PQDimensionScores | null;
@@ -176,7 +174,7 @@ function NewSchemaContent({
             {getScoreLabel(score)}
           </p>
           <p className="text-sm text-muted-foreground">
-            {assessment || content}
+            {content}
           </p>
         </div>
       </div>
@@ -493,7 +491,6 @@ export function PromptQualityContent({ insight }: { insight: Insight }) {
   if (isNewSchema) {
     const score = typeof metadata.efficiency_score === 'number' ? metadata.efficiency_score : 0;
     const overhead = typeof metadata.message_overhead === 'number' ? metadata.message_overhead : 0;
-    const assessment = typeof metadata.assessment === 'string' ? metadata.assessment : '';
     const takeaways = Array.isArray(metadata.takeaways) ? metadata.takeaways as PQTakeaway[] : [];
     const findings = metadata.findings as PQFinding[];
     const dimensionScores = metadata.dimension_scores && typeof metadata.dimension_scores === 'object'
@@ -504,7 +501,6 @@ export function PromptQualityContent({ insight }: { insight: Insight }) {
       <NewSchemaContent
         score={score}
         overhead={overhead}
-        assessment={assessment}
         takeaways={takeaways}
         findings={findings}
         dimensionScores={dimensionScores}

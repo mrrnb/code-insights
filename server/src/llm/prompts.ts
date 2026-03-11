@@ -220,7 +220,8 @@ DIMENSION SCORING (0-100):
 EDGE CASES:
 - Short sessions (<5 user messages): Score conservatively. Do not penalize for missing elements unnecessary in quick tasks.
 - Exploration sessions: Do not penalize for missing acceptance criteria or scope drift.
-- Sessions where AI performed well despite vague prompts: Still classify deficits. Impact should be "low" since no visible cost.`;
+- Sessions where AI performed well despite vague prompts: Still classify deficits. Impact should be "low" since no visible cost.
+- Agentic/delegation sessions: If the user gave a clear high-level directive and the AI autonomously planned and executed successfully, do not penalize for low message count or lack of micro-level specificity. Effective delegation IS good prompting. Focus on the quality of the initial delegation prompt.`;
 
 export const EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE = `
 EFFECTIVE PATTERN CLASSIFICATION GUIDANCE:
@@ -870,12 +871,17 @@ export function parsePromptQualityResponse(response: string): ParseResult<Prompt
 
   // Clamp dimension scores
   for (const key of Object.keys(parsed.dimension_scores) as Array<keyof PromptQualityDimensionScores>) {
-    parsed.dimension_scores[key] = Math.max(0, Math.min(100, Math.round(parsed.dimension_scores[key] || 50)));
+    parsed.dimension_scores[key] = Math.max(0, Math.min(100, Math.round(parsed.dimension_scores[key] ?? 50)));
   }
 
   // Observability: warn when findings missing category
   if (parsed.findings.some(f => !f.category)) {
     console.warn('[pq-monitor] LLM returned finding without category field');
+  }
+
+  // Observability: warn when findings have unexpected type values
+  if (parsed.findings.some(f => f.type && f.type !== 'deficit' && f.type !== 'strength')) {
+    console.warn('[pq-monitor] LLM returned finding with unexpected type value — expected deficit or strength');
   }
 
   return { success: true, data: parsed };

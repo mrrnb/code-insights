@@ -741,7 +741,7 @@ function convertPromptQualityToInsightRow(response: PromptQualityResponse, sessi
     title: `Prompt Efficiency: ${response.efficiency_score}/100`,
     content: response.assessment,
     summary: response.assessment,
-    bullets: JSON.stringify(normalizedTakeaways),
+    bullets: JSON.stringify([]),  // takeaways live in metadata.takeaways; bullets expects string[] for other insight types
     confidence: 0.85,
     source: 'llm',
     metadata: JSON.stringify({
