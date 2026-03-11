@@ -88,8 +88,9 @@ function getScoreColor(score: number): string {
 
 // ── Category badges ───────────────────────────────────────────────────────────
 
-function CategoryBadge({ category }: { category: string }) {
-  const type = getPQCategoryType(category);
+function CategoryBadge({ category, type: typeProp }: { category: string; type?: 'deficit' | 'strength' }) {
+  // Use the finding's own type field as truth; fall back to category-based lookup for novel categories
+  const type = typeProp ?? getPQCategoryType(category);
   const label = getPQCategoryLabel(category);
   const className = type === 'strength'
     ? 'text-green-500 bg-green-500/10 border-green-500/20'
@@ -259,7 +260,7 @@ function NewSchemaContent({
             {findings.map((f, i) => (
               <div key={i} className="text-sm rounded-md border p-2 space-y-1">
                 <div className="flex items-start justify-between gap-2">
-                  <CategoryBadge category={f.category} />
+                  <CategoryBadge category={f.category} type={f.type} />
                   <Badge variant="outline" className={`text-xs shrink-0 ${
                     f.impact === 'high' ? 'text-red-500 bg-red-500/10 border-red-500/20' :
                     f.impact === 'medium' ? 'text-orange-500 bg-orange-500/10 border-orange-500/20' :

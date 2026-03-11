@@ -857,7 +857,7 @@ export function parsePromptQualityResponse(response: string): ParseResult<Prompt
 
   // Clamp and default
   parsed.efficiency_score = Math.max(0, Math.min(100, Math.round(parsed.efficiency_score)));
-  parsed.message_overhead = parsed.message_overhead || 0;
+  parsed.message_overhead = parsed.message_overhead ?? 0;
   parsed.assessment = parsed.assessment || '';
   parsed.takeaways = parsed.takeaways || [];
   parsed.findings = parsed.findings || [];
