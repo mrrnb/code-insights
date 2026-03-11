@@ -211,32 +211,78 @@ describe('parseAnalysisResponse', () => {
 // ──────────────────────────────────────────────────────
 
 describe('parsePromptQualityResponse', () => {
-  it('parses valid prompt quality response', () => {
+  it('parses valid response with findings and takeaways', () => {
     const response = `<json>{
-      "efficiencyScore": 85,
-      "potentialMessageReduction": 2,
-      "overallAssessment": "Good prompting style",
-      "wastedTurns": [],
-      "antiPatterns": [],
-      "tips": ["Be more specific"]
+      "efficiency_score": 85,
+      "message_overhead": 2,
+      "assessment": "Good prompting style overall",
+      "takeaways": [
+        {
+          "type": "improve",
+          "category": "vague-request",
+          "label": "Add file path to requests",
+          "message_ref": "User#3",
+          "original": "fix the bug",
+          "better_prompt": "Fix the null pointer in cli/src/commands/sync.ts line 42",
+          "why": "The original lacked enough detail to act on without guessing"
+        }
+      ],
+      "findings": [
+        {
+          "category": "vague-request",
+          "type": "deficit",
+          "description": "User#3 asked to fix a bug without specifying file, function, or error message",
+          "message_ref": "User#3",
+          "impact": "medium",
+          "confidence": 80
+        }
+      ],
+      "dimension_scores": {
+        "context_provision": 70,
+        "request_specificity": 65,
+        "scope_management": 90,
+        "information_timing": 80,
+        "correction_quality": 75
+      }
     }</json>`;
     const result = parsePromptQualityResponse(response);
     expect(result.success).toBe(true);
     if (!result.success) return;
-    expect(result.data.efficiencyScore).toBe(85);
-    expect(result.data.tips).toHaveLength(1);
+    expect(result.data.efficiency_score).toBe(85);
+    expect(result.data.takeaways).toHaveLength(1);
+    expect(result.data.findings).toHaveLength(1);
+    expect(result.data.findings[0].category).toBe('vague-request');
+    expect(result.data.dimension_scores.scope_management).toBe(90);
   });
 
-  it('clamps efficiency score to 0-100 range', () => {
-    const response = '<json>{ "efficiencyScore": 150, "wastedTurns": [], "antiPatterns": [], "tips": [] }</json>';
+  it('clamps efficiency_score to 0-100 range', () => {
+    const response = '<json>{ "efficiency_score": 150, "message_overhead": 0, "assessment": "ok", "takeaways": [], "findings": [], "dimension_scores": { "context_provision": 50, "request_specificity": 50, "scope_management": 50, "information_timing": 50, "correction_quality": 50 } }</json>';
     const result = parsePromptQualityResponse(response);
     expect(result.success).toBe(true);
     if (!result.success) return;
-    expect(result.data.efficiencyScore).toBe(100);
+    expect(result.data.efficiency_score).toBe(100);
   });
 
-  it('returns error for missing efficiencyScore', () => {
-    const response = '<json>{ "overallAssessment": "no score" }</json>';
+  it('defaults missing dimension_scores to 50s', () => {
+    const response = '<json>{ "efficiency_score": 75, "message_overhead": 0, "assessment": "ok", "takeaways": [], "findings": [] }</json>';
+    const result = parsePromptQualityResponse(response);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.dimension_scores.context_provision).toBe(50);
+    expect(result.data.dimension_scores.correction_quality).toBe(50);
+  });
+
+  it('accepts empty arrays (well-prompted session)', () => {
+    const response = '<json>{ "efficiency_score": 95, "message_overhead": 0, "assessment": "Excellent session", "takeaways": [], "findings": [], "dimension_scores": { "context_provision": 95, "request_specificity": 90, "scope_management": 95, "information_timing": 95, "correction_quality": 75 } }</json>';
+    const result = parsePromptQualityResponse(response);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.takeaways).toHaveLength(0);
+    expect(result.data.findings).toHaveLength(0);
+  });
+
+  it('returns error for missing efficiency_score', () => {
+    const response = '<json>{ "assessment": "no score" }</json>';
     const result = parsePromptQualityResponse(response);
     expect(result.success).toBe(false);
     if (result.success) return;
