@@ -16,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ErrorCard } from '@/components/ErrorCard';
 import { frictionBarColor, getDominantDriver } from '@/lib/constants/patterns';
+import { useI18n } from '@/lib/i18n';
 import {
   AlertTriangle, Sparkles, Shield, Brain, Copy, Check, Loader2, Zap,
 } from 'lucide-react';
@@ -56,6 +57,7 @@ function getCurrentIsoWeek(): string {
 }
 
 export default function PatternsPage() {
+  const { t } = useI18n();
   const [currentWeek, setCurrentWeek] = useState<string>(() => getCurrentIsoWeek());
   const [selectedProject, setSelectedProject] = useState<string | undefined>(undefined);
   const [generating, setGenerating] = useState(false);
@@ -260,14 +262,14 @@ export default function PatternsPage() {
       {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Patterns</h1>
+          <h1 className="text-2xl font-bold">{t('patterns.title')}</h1>
           <p className="text-sm text-muted-foreground">
-            Cross-session analysis — friction, wins, and working style
+            {t('patterns.desc')}
           </p>
           {/* Snapshot metadata line — shown when a reflection exists for this week */}
           {snapshotData?.snapshot && reflectResults && (
             <p className="text-xs text-muted-foreground mt-1">
-              Generated {formatRelativeDate(snapshotData.snapshot.generatedAt)}
+               Generated {formatRelativeDate(snapshotData.snapshot.generatedAt)}
               {' · '}
               {snapshotData.snapshot.sessionCount} sessions analyzed
               {aggregation && aggregation.totalSessions > snapshotData.snapshot.sessionCount && (
@@ -290,7 +292,7 @@ export default function PatternsPage() {
                 onChange={(e) => handleProjectChange(e.target.value || undefined)}
                 className="h-8 rounded-md border bg-background px-2 text-xs"
               >
-                <option value="">All Projects</option>
+                <option value="">{t('patterns.allProjects')}</option>
                 {projects.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
@@ -302,11 +304,11 @@ export default function PatternsPage() {
               size="sm"
             >
               {generating ? (
-                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Generating...</>
+                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />{t('patterns.generating')}</>
               ) : reflectResults ? (
-                <><Sparkles className="h-4 w-4 mr-1.5" />Regenerate</>
+                <><Sparkles className="h-4 w-4 mr-1.5" />{t('patterns.regenerate')}</>
               ) : (
-                <><Sparkles className="h-4 w-4 mr-1.5" />Generate</>
+                <><Sparkles className="h-4 w-4 mr-1.5" />{t('patterns.generate')}</>
               )}
             </Button>
           </div>
@@ -320,15 +322,15 @@ export default function PatternsPage() {
           <div>
             {aggregation.totalAllSessions === 0 ? (
               <>
-                <p className="text-sm font-medium">No sessions in this week</p>
+                <p className="text-sm font-medium">{t('patterns.noSessionsWeek')}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Navigate to a week with sessions using the arrows above.
+                  {t('patterns.noSessionsWeekDesc')}
                 </p>
               </>
             ) : (
               <>
                 <p className="text-sm font-medium">
-                  Not enough analyzed sessions for pattern synthesis
+                  {t('patterns.notEnough')}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Need at least 8 sessions with facets this week (currently {aggregation.totalSessions}).
@@ -346,10 +348,10 @@ export default function PatternsPage() {
           <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
           <div>
             <p className="text-sm font-medium">
-              {aggregation.totalSessions} of {aggregation.totalAllSessions} sessions analyzed
+              {t('patterns.coverage', { done: aggregation.totalSessions, total: aggregation.totalAllSessions })}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Results may not represent your full patterns. Analyze more sessions for better accuracy.
+              {t('patterns.coverageDesc')}
             </p>
           </div>
         </div>
@@ -360,7 +362,7 @@ export default function PatternsPage() {
         <Alert className="border-amber-500/30 bg-amber-50 dark:bg-amber-950/20">
           <AlertTriangle className="h-4 w-4 text-amber-500" />
           <AlertDescription className="text-xs text-amber-700 dark:text-amber-300">
-            {outdatedCount} session{outdatedCount !== 1 ? 's have' : ' has'} outdated insight formats. Re-analyze them from the Session Insights page to improve pattern accuracy.
+            {t('patterns.outdated', { count: outdatedCount })}
           </AlertDescription>
         </Alert>
       )}
@@ -391,11 +393,11 @@ export default function PatternsPage() {
         <TabsList variant="line" className="w-full justify-start border-b rounded-none px-0 h-auto pb-0">
           <TabsTrigger value="insights" className="flex items-center gap-1.5 pb-2.5">
             <Brain className="h-4 w-4" />
-            Insights
+            {t('patterns.insightsTab')}
           </TabsTrigger>
           <TabsTrigger value="artifacts" className="flex items-center gap-1.5 pb-2.5">
             <Shield className="h-4 w-4" />
-            Artifacts
+            {t('patterns.artifactsTab')}
           </TabsTrigger>
         </TabsList>
 
@@ -405,7 +407,7 @@ export default function PatternsPage() {
           {(reflectResults || (aggregation?.totalSessions ?? 0) > 0) && (
             <Card className="border-l-2 border-primary">
               <CardHeader>
-                <CardTitle className="text-base">Working Style</CardTitle>
+                <CardTitle className="text-base">{t('patterns.workingStyle')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <WorkingStyleHighlights
@@ -434,15 +436,15 @@ export default function PatternsPage() {
             {/* Friction Points */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Friction Points</CardTitle>
-                <CardDescription>Most common blockers across sessions — badge color indicates severity</CardDescription>
+                <CardTitle className="text-base">{t('patterns.friction')}</CardTitle>
+                <CardDescription>{t('patterns.frictionDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {frictionItems.length > 0 ? (
                   <CollapsibleCategoryList items={frictionItems} variant="friction" />
                 ) : (
                   <p className="text-sm text-muted-foreground py-4 text-center">
-                    No friction data yet. Analyze sessions to extract facets.
+                    {t('patterns.noFriction')}
                   </p>
                 )}
               </CardContent>
@@ -451,15 +453,15 @@ export default function PatternsPage() {
             {/* Effective Patterns */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Effective Patterns</CardTitle>
-                <CardDescription>Techniques that work well across sessions</CardDescription>
+                <CardTitle className="text-base">{t('patterns.effective')}</CardTitle>
+                <CardDescription>{t('patterns.effectiveDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {patternItems.length > 0 ? (
                   <CollapsibleCategoryList items={patternItems} variant="pattern" />
                 ) : (
                   <p className="text-sm text-muted-foreground py-4 text-center">
-                    No pattern data yet. Analyze sessions to extract facets.
+                    {t('patterns.noEffective')}
                   </p>
                 )}
               </CardContent>
@@ -472,10 +474,10 @@ export default function PatternsPage() {
               <Zap className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                  Usage Insight: API Rate Limits
+                  {t('patterns.rateLimit')}
                 </p>
                 <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                  You hit API rate limits {aggregation.rateLimitInfo.count} time{aggregation.rateLimitInfo.count !== 1 ? 's' : ''} this week ({aggregation.rateLimitInfo.sessionsAffected} session{aggregation.rateLimitInfo.sessionsAffected !== 1 ? 's' : ''} affected). Consider upgrading your subscription or checking your API rate limits — your usage may exceed your current plan's token or request limits.
+                  {t('patterns.rateLimitDesc', { count: aggregation.rateLimitInfo.count, sessions: aggregation.rateLimitInfo.sessionsAffected })}
                 </p>
               </div>
             </div>
@@ -490,8 +492,8 @@ export default function PatternsPage() {
               {Array.isArray(rulesSkillsResult.claudeMdRules) && (rulesSkillsResult.claudeMdRules as Array<{ rule: string; rationale: string; frictionSource: string }>).length > 0 && (
                 <Card className="border-l-2 border-primary">
                   <CardHeader>
-                    <CardTitle className="text-base">CLAUDE.md Rules</CardTitle>
-                    <CardDescription>Add these to your AI assistant configuration</CardDescription>
+                    <CardTitle className="text-base">{t('patterns.claudeRules')}</CardTitle>
+                    <CardDescription>{t('patterns.claudeRulesDesc')}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {(rulesSkillsResult.claudeMdRules as Array<{ rule: string; rationale: string; frictionSource: string }>).map((r, i) => (
@@ -521,8 +523,8 @@ export default function PatternsPage() {
               {Array.isArray(rulesSkillsResult.hookConfigs) && (rulesSkillsResult.hookConfigs as Array<{ event: string; command: string; rationale: string }>).length > 0 && (
                 <Card className="border-l-2 border-primary">
                   <CardHeader>
-                    <CardTitle className="text-base">Hook Configurations</CardTitle>
-                    <CardDescription>Automation triggers</CardDescription>
+                    <CardTitle className="text-base">{t('patterns.hookConfigs')}</CardTitle>
+                    <CardDescription>{t('patterns.hookConfigsDesc')}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {(rulesSkillsResult.hookConfigs as Array<{ event: string; command: string; rationale: string }>).map((h, i) => (
@@ -553,17 +555,17 @@ export default function PatternsPage() {
             aggregation && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Pattern Ingredients</CardTitle>
+                  <CardTitle className="text-base">{t('patterns.ingredients')}</CardTitle>
                   <CardDescription>
                     {hasEnoughFacets
-                      ? 'Click Generate to create rules and hooks from these patterns.'
-                      : 'Analyze more sessions to unlock pattern synthesis.'}
+                      ? t('patterns.ingredientsDescReady')
+                      : t('patterns.ingredientsDescLocked')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {aggregation.frictionCategories.filter(fc => fc.count >= 3).length > 0 && (
                     <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-2">Recurring friction (3+ occurrences):</p>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">{t('patterns.recurringFriction')}:</p>
                       <ul className="space-y-1">
                         {aggregation.frictionCategories.filter(fc => fc.count >= 3).map((fc, i) => (
                           <li key={i} className="text-sm flex items-center gap-2">
@@ -576,7 +578,7 @@ export default function PatternsPage() {
                   )}
                   {aggregation.effectivePatterns.filter(ep => ep.frequency >= 2).length > 0 && (
                     <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-2">Effective patterns (2+ occurrences):</p>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">{t('patterns.recurringEffective')}:</p>
                       <ul className="space-y-1">
                         {aggregation.effectivePatterns.filter(ep => ep.frequency >= 2).map((ep, i) => (
                           <li key={i} className="text-sm flex items-center gap-2">
@@ -590,7 +592,7 @@ export default function PatternsPage() {
                   {aggregation.frictionCategories.filter(fc => fc.count >= 3).length === 0 &&
                    aggregation.effectivePatterns.filter(ep => ep.frequency >= 2).length === 0 && (
                     <p className="text-sm text-muted-foreground">
-                      No recurring patterns yet. Analyze more sessions to detect patterns.
+                      {t('patterns.noRecurring')}
                     </p>
                   )}
                 </CardContent>

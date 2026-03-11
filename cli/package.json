@@ -25,6 +25,7 @@
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "prepare": "cd .. && pnpm -r build && rm -rf cli/dashboard-dist cli/server-dist && cp -r dashboard/dist cli/dashboard-dist && cp -r server/dist cli/server-dist",
     "prepublishOnly": "cd .. && pnpm -r build && cp -r dashboard/dist cli/dashboard-dist && cp -r server/dist cli/server-dist",
     "postpublish": "rm -rf dashboard-dist server-dist"
   },
@@ -54,13 +55,13 @@
   "author": "Srikanth Rao M",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/melagiri/code-insights.git",
+    "url": "git+https://github.com/mrrnb/code-insights.git",
     "directory": "cli"
   },
   "bugs": {
-    "url": "https://github.com/melagiri/code-insights/issues"
+    "url": "https://github.com/mrrnb/code-insights/issues"
   },
-  "homepage": "https://github.com/melagiri/code-insights/tree/master/cli#readme",
+  "homepage": "https://github.com/mrrnb/code-insights/tree/master/cli#readme",
   "publishConfig": {
     "access": "public"
   },
