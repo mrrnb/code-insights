@@ -27,6 +27,7 @@ import {
   type ParseError,
 } from './prompts.js';
 import { normalizePatternCategory } from './pattern-normalize.js';
+import { normalizePromptQualityCategory } from './prompt-quality-normalize.js';
 
 // Re-export SQLiteMessageRow so routes can import it from analysis.ts directly
 export type { SQLiteMessageRow };
@@ -720,24 +721,35 @@ function convertToInsightRows(response: AnalysisResponse, session: SessionData):
 function convertPromptQualityToInsightRow(response: PromptQualityResponse, session: SessionData): InsightRow {
   const now = new Date().toISOString();
 
+  // Normalize categories at write time (mirrors saveFacetsToDb pattern)
+  const normalizedFindings = response.findings.map(f => ({
+    ...f,
+    category: f.category ? normalizePromptQualityCategory(f.category) : 'uncategorized',
+  }));
+
+  const normalizedTakeaways = response.takeaways.map(t => ({
+    ...t,
+    category: t.category ? normalizePromptQualityCategory(t.category) : 'uncategorized',
+  }));
+
   return {
     id: randomUUID(),
     session_id: session.id,
     project_id: session.project_id,
     project_name: session.project_name,
     type: 'prompt_quality',
-    title: `Prompt Efficiency: ${response.efficiencyScore}/100`,
-    content: response.overallAssessment,
-    summary: response.overallAssessment,
-    bullets: JSON.stringify(response.tips),
+    title: `Prompt Efficiency: ${response.efficiency_score}/100`,
+    content: response.assessment,
+    summary: response.assessment,
+    bullets: JSON.stringify(normalizedTakeaways),
     confidence: 0.85,
     source: 'llm',
     metadata: JSON.stringify({
-      efficiencyScore: response.efficiencyScore,
-      wastedTurns: response.wastedTurns,
-      antiPatterns: response.antiPatterns,
-      sessionTraits: response.sessionTraits,
-      potentialMessageReduction: response.potentialMessageReduction,
+      efficiency_score: response.efficiency_score,
+      message_overhead: response.message_overhead,
+      takeaways: normalizedTakeaways,
+      findings: normalizedFindings,
+      dimension_scores: response.dimension_scores,
     }),
     timestamp: session.ended_at,
     created_at: now,
