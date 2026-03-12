@@ -31,6 +31,7 @@ let _stmtUpdateProjectWithUsage: BetterSqlite3.Statement | null = null;
 let _stmtUpdateProjectCountOnly: BetterSqlite3.Statement | null = null;
 let _stmtUpsertSession: BetterSqlite3.Statement | null = null;
 let _stmtInsertMessage: BetterSqlite3.Statement | null = null;
+let _stmtDeleteMessagesBySession: BetterSqlite3.Statement | null = null;
 let _stmtUpsertUsageStatsIncrement: BetterSqlite3.Statement | null = null;
 
 function getStmts() {
@@ -43,6 +44,7 @@ function getStmts() {
     _stmtUpdateProjectCountOnly = null;
     _stmtUpsertSession = null;
     _stmtInsertMessage = null;
+    _stmtDeleteMessagesBySession = null;
     _stmtUpsertUsageStatsIncrement = null;
   }
 
@@ -132,6 +134,10 @@ function getStmts() {
     `);
   }
 
+  if (!_stmtDeleteMessagesBySession) {
+    _stmtDeleteMessagesBySession = db.prepare('DELETE FROM messages WHERE session_id = ?');
+  }
+
   if (!_stmtUpsertUsageStatsIncrement) {
     _stmtUpsertUsageStatsIncrement = db.prepare(`
       INSERT INTO usage_stats (id, total_input_tokens, total_output_tokens, cache_creation_tokens, cache_read_tokens, estimated_cost_usd, sessions_with_usage, last_updated_at)
@@ -153,6 +159,7 @@ function getStmts() {
     updateProjectCountOnly: _stmtUpdateProjectCountOnly,
     upsertSession: _stmtUpsertSession,
     insertMessage: _stmtInsertMessage,
+    deleteMessagesBySession: _stmtDeleteMessagesBySession,
     upsertUsageStatsIncrement: _stmtUpsertUsageStatsIncrement,
   };
 }
@@ -282,6 +289,8 @@ export function insertMessages(session: ParsedSession): void {
   const stmts = getStmts();
 
   const tx = db.transaction((messages: ParsedMessage[]) => {
+    stmts.deleteMessagesBySession.run(session.id);
+
     for (const msg of messages) {
       stmts.insertMessage.run(
         msg.id,

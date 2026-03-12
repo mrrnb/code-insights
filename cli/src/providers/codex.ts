@@ -216,6 +216,10 @@ function parseFormatA(content: string): ParsedSession | null {
   let turnUsage: CodexUsage | null = null;
   let toolCounter = 0;
 
+  function nextMessageId(type: 'user' | 'assistant'): string {
+    return `${sessionId}:${type}:${messages.length}`;
+  }
+
   function flushAssistantTurn(): void {
     const text = currentAssistantText.trim();
     if (!text && currentToolCalls.length === 0) return;
@@ -230,7 +234,7 @@ function parseFormatA(content: string): ParsedSession | null {
     } : null;
 
     messages.push({
-      id: `codex-assistant-${messages.length}`,
+      id: nextMessageId('assistant'),
       sessionId: sessionId,
       type: 'assistant',
       content: text.slice(0, 10000),
@@ -298,7 +302,7 @@ function parseFormatA(content: string): ParsedSession | null {
         const msgText = (payload.message as string) || '';
         if (msgText) {
           messages.push({
-            id: (payload.id as string) || `codex-user-${messages.length}`,
+            id: nextMessageId('user'),
             sessionId: sessionId,
             type: 'user',
             content: msgText.slice(0, 10000),
@@ -486,6 +490,10 @@ function parseFormatB(content: string): ParsedSession | null {
   let currentThinking: string | null = null;
   let toolCounter = 0;
 
+  function nextMessageId(type: 'user' | 'assistant'): string {
+    return `${sessionId}:${type}:${messages.length}`;
+  }
+
   // Format B has no per-item timestamps — use session timestamp for all
   const sessionDate = new Date(sessionTimestamp);
 
@@ -493,7 +501,7 @@ function parseFormatB(content: string): ParsedSession | null {
     if (currentToolCalls.length === 0 && !currentThinking) return;
 
     messages.push({
-      id: `codex-assistant-${messages.length}`,
+      id: nextMessageId('assistant'),
       sessionId: sessionId,
       type: 'assistant',
       content: '',
@@ -519,7 +527,7 @@ function parseFormatB(content: string): ParsedSession | null {
       const userContent = extractFormatBContent(item.content);
       if (userContent && !isSystemContextMessage(userContent)) {
         messages.push({
-          id: `codex-user-${messages.length}`,
+          id: nextMessageId('user'),
           sessionId: sessionId,
           type: 'user',
           content: userContent.slice(0, 10000),

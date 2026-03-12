@@ -349,6 +349,41 @@ describe('Database read/write operations', () => {
       expect(rows.cnt).toBe(1);
     });
 
+    it('replaces existing messages for the same session on re-sync', () => {
+      const original = makeParsedSession({
+        id: 'sess-resync',
+        messages: [
+          makeParsedMessage({ id: 'sess-resync:user:0', sessionId: 'sess-resync', type: 'user', content: 'before' }),
+          makeParsedMessage({ id: 'sess-resync:assistant:1', sessionId: 'sess-resync', type: 'assistant', content: 'old reply' }),
+        ],
+      });
+      const updated = makeParsedSession({
+        id: 'sess-resync',
+        messages: [
+          makeParsedMessage({ id: 'sess-resync:user:0', sessionId: 'sess-resync', type: 'user', content: 'before' }),
+          makeParsedMessage({ id: 'sess-resync:assistant:1', sessionId: 'sess-resync', type: 'assistant', content: 'new reply' }),
+          makeParsedMessage({ id: 'sess-resync:user:2', sessionId: 'sess-resync', type: 'user', content: 'after' }),
+        ],
+      });
+
+      insertSessionWithProject(original);
+      insertMessages(original);
+      insertSessionWithProject(updated);
+      insertMessages(updated);
+
+      const rows = testDb
+        .prepare('SELECT id, content FROM messages WHERE session_id = ? ORDER BY id')
+        .all('sess-resync') as Array<{ id: string; content: string }>;
+
+      expect(rows).toHaveLength(3);
+      expect(rows.map(row => row.id)).toEqual([
+        'sess-resync:assistant:1',
+        'sess-resync:user:0',
+        'sess-resync:user:2',
+      ]);
+      expect(rows.find(row => row.id === 'sess-resync:assistant:1')?.content).toBe('new reply');
+    });
+
     it('stores tool_calls as JSON when present', () => {
       const msg = makeParsedMessage({
         id: 'msg-tools',
