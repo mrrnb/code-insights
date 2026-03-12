@@ -213,6 +213,7 @@ export default function SessionsPage() {
 }
 
 function EmptyDetailState() {
+  const { t } = useI18n();
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
       <MousePointerClick className="h-10 w-10 text-muted-foreground/40 mb-3" />

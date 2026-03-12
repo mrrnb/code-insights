@@ -47,6 +47,13 @@ interface InsightGroup {
 
 export default function InsightsPage() {
   const { t } = useI18n();
+  const VIEW_MODES = [
+    { value: 'timeline', label: t('insights.view.timeline') },
+    { value: 'type', label: t('insights.view.type') },
+    { value: 'project', label: t('insights.view.project') },
+    { value: 'session', label: t('insights.view.session') },
+  ] as const;
+
   const [filters, setFilter, , clearFilters] = useFilterParams({
     q: '',
     project: 'all',
@@ -311,9 +318,3 @@ export default function InsightsPage() {
     </div>
   );
 }
-  const VIEW_MODES = [
-    { value: 'timeline', label: t('insights.view.timeline') },
-    { value: 'type', label: t('insights.view.type') },
-    { value: 'project', label: t('insights.view.project') },
-    { value: 'session', label: t('insights.view.session') },
-  ] as const;
