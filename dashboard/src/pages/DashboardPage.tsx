@@ -87,6 +87,13 @@ export default function DashboardPage() {
       }
     : undefined;
 
+  const greeting = (() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return t('dashboard.greeting.morning');
+    if (hour < 17) return t('dashboard.greeting.afternoon');
+    return t('dashboard.greeting.evening');
+  })();
+
   return (
     <div className="p-3 lg:p-4 space-y-2">
       {/* Greeting header */}
@@ -213,9 +220,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-  const greeting = (() => {
-    const hour = new Date().getHours();
-    if (hour < 12) return t('dashboard.greeting.morning');
-    if (hour < 17) return t('dashboard.greeting.afternoon');
-    return t('dashboard.greeting.evening');
-  })();
