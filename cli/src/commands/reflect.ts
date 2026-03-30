@@ -338,37 +338,48 @@ async function backfillAction(options: {
   period?: string;
   project?: string;
   dryRun?: boolean;
+  sessionId?: string[];
+  yes?: boolean;
 }): Promise<void> {
   const baseUrl = getBaseUrl();
   await checkServer(baseUrl);
   await checkLlmConfigured(baseUrl);
 
-  const params = new URLSearchParams();
-  params.set('period', options.period || 'all');
-  if (options.project) params.set('project', options.project);
+  let missingCount = 0;
+  let outdatedCount = 0;
+  let sessionIds: string[] = [];
 
-  const missingRes = await fetch(`${baseUrl}/api/facets/missing?${params.toString()}`);
-  if (!missingRes.ok) {
-    const text = await missingRes.text().catch(() => missingRes.statusText);
-    console.log(chalk.red(`  Error: ${text}`));
-    process.exit(1);
+  if (options.sessionId && options.sessionId.length > 0) {
+    sessionIds = Array.from(new Set(options.sessionId));
+    missingCount = sessionIds.length;
+  } else {
+    const params = new URLSearchParams();
+    params.set('period', options.period || 'all');
+    if (options.project) params.set('project', options.project);
+
+    const missingRes = await fetch(`${baseUrl}/api/facets/missing?${params.toString()}`);
+    if (!missingRes.ok) {
+      const text = await missingRes.text().catch(() => missingRes.statusText);
+      console.log(chalk.red(`  Error: ${text}`));
+      process.exit(1);
+    }
+
+    const missingData = await missingRes.json() as { sessionIds: string[]; count: number };
+    const outdatedRes = await fetch(`${baseUrl}/api/facets/outdated?${params.toString()}`);
+    if (!outdatedRes.ok) {
+      const text = await outdatedRes.text().catch(() => outdatedRes.statusText);
+      console.log(chalk.red(`  Error fetching outdated sessions: ${text}`));
+      process.exit(1);
+    }
+
+    const outdatedData = await outdatedRes.json() as { sessionIds: string[]; count: number };
+    missingCount = missingData.count;
+    outdatedCount = outdatedData.count;
+
+    const mergedSet = new Set([...missingData.sessionIds, ...outdatedData.sessionIds]);
+    sessionIds = Array.from(mergedSet);
   }
 
-  const { sessionIds: missingIds, count: missingCount } = await missingRes.json() as { sessionIds: string[]; count: number };
-
-  const outdatedRes = await fetch(`${baseUrl}/api/facets/outdated?${params.toString()}`);
-  if (!outdatedRes.ok) {
-    const text = await outdatedRes.text().catch(() => outdatedRes.statusText);
-    console.log(chalk.red(`  Error fetching outdated sessions: ${text}`));
-    process.exit(1);
-  }
-
-  const { sessionIds: outdatedIds, count: outdatedCount } = await outdatedRes.json() as { sessionIds: string[]; count: number };
-
-  // Merge and deduplicate — a session could theoretically appear in both lists
-  // (e.g., if it got a partial facets row). Set deduplication ensures we count correctly.
-  const mergedSet = new Set([...missingIds, ...outdatedIds]);
-  const sessionIds = Array.from(mergedSet);
   const count = sessionIds.length;
 
   console.log();
@@ -378,7 +389,9 @@ async function backfillAction(options: {
     return;
   }
 
-  if (missingCount > 0 && outdatedCount > 0) {
+  if (options.sessionId && options.sessionId.length > 0) {
+    console.log(chalk.cyan(`  Processing ${count} explicitly selected session${count !== 1 ? 's' : ''}.`));
+  } else if (missingCount > 0 && outdatedCount > 0) {
     console.log(chalk.cyan(`  Found ${missingCount} session${missingCount !== 1 ? 's' : ''} missing facets and ${outdatedCount} with outdated analysis. Processing ${count} total.`));
   } else if (missingCount > 0) {
     console.log(chalk.cyan(`  Found ${missingCount} session${missingCount !== 1 ? 's' : ''} missing facets.`));
@@ -394,11 +407,13 @@ async function backfillAction(options: {
   }
 
   // Confirm before proceeding — each call costs tokens
-  const confirmed = await confirmPrompt('  Continue?');
-  if (!confirmed) {
-    console.log(chalk.dim('  Aborted.'));
-    console.log();
-    return;
+  if (!options.yes) {
+    const confirmed = await confirmPrompt('  Continue?');
+    if (!confirmed) {
+      console.log(chalk.dim('  Aborted.'));
+      console.log();
+      return;
+    }
   }
 
   console.log();
@@ -430,7 +445,9 @@ const backfillCommand = new Command('backfill')
   .description('Extract facets for sessions that are missing pattern data')
   .option('-p, --period <period>', 'Time range: 7d, 30d, 90d, all', 'all')
   .option('--project <name>', 'Scope to a single project')
+  .option('--session-id <ids...>', 'Backfill specific session IDs directly')
   .option('--dry-run', 'Show count without backfilling')
+  .option('-y, --yes', 'Skip confirmation prompt')
   .action(backfillAction);
 
 export const reflectCommand = new Command('reflect')

@@ -13,6 +13,7 @@ import { statsCommand } from './commands/stats/index.js';
 import { configCommand } from './commands/config.js';
 import { telemetryCommand } from './commands/telemetry.js';
 import { reflectCommand } from './commands/reflect.js';
+import { analyzeCommand } from './commands/analyze.js';
 import { memoriesCommand } from './commands/memories.js';
 import { exportMemoriesCommand } from './commands/export-memories.js';
 import { showTelemetryNoticeIfNeeded } from './utils/telemetry.js';
@@ -116,6 +117,7 @@ program.addCommand(statsCommand);
 program.addCommand(configCommand);
 program.addCommand(telemetryCommand);
 program.addCommand(reflectCommand);
+program.addCommand(analyzeCommand);
 program.addCommand(memoriesCommand);
 program.addCommand(exportMemoriesCommand);
 
