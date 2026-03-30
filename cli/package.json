@@ -17,7 +17,8 @@
     "./utils/telemetry": "./dist/utils/telemetry.js"
   },
   "bin": {
-    "code-insights": "./dist/index.js"
+    "code-insights": "./dist/index.js",
+    "insights": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
