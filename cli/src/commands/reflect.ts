@@ -381,7 +381,7 @@ async function backfillAction(options: {
   if (missingCount > 0 && outdatedCount > 0) {
     console.log(chalk.cyan(`  Found ${missingCount} session${missingCount !== 1 ? 's' : ''} missing facets and ${outdatedCount} with outdated analysis. Processing ${count} total.`));
   } else if (missingCount > 0) {
-    console.log(chalk.cyan(`  Found ${missingCount} session${missingCount !== 1 ? 's' : ''} with insights but missing facets.`));
+    console.log(chalk.cyan(`  Found ${missingCount} session${missingCount !== 1 ? 's' : ''} missing facets.`));
   } else {
     console.log(chalk.cyan(`  Found ${outdatedCount} session${outdatedCount !== 1 ? 's' : ''} with outdated analysis.`));
   }
@@ -427,7 +427,7 @@ async function backfillAction(options: {
 // ---------------------------------------------------------------------------
 
 const backfillCommand = new Command('backfill')
-  .description('Extract facets for sessions that have insights but are missing pattern data')
+  .description('Extract facets for sessions that are missing pattern data')
   .option('-p, --period <period>', 'Time range: 7d, 30d, 90d, all', 'all')
   .option('--project <name>', 'Scope to a single project')
   .option('--dry-run', 'Show count without backfilling')

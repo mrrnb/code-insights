@@ -70,7 +70,7 @@ app.get('/aggregated', (c) => {
 });
 
 // GET /api/facets/missing
-// Returns session IDs that have insights but no session_facets row.
+// Returns session IDs that have no session_facets row (regardless of whether they have insights).
 // Used by CLI `reflect backfill` and dashboard facet status indicators.
 app.get('/missing', (c) => {
   const db = getDb();
@@ -104,10 +104,9 @@ app.get('/missing', (c) => {
   const where = `WHERE ${conditions.join(' AND ')}`;
 
   const rows = db.prepare(`
-    SELECT DISTINCT i.session_id
-    FROM insights i
-    JOIN sessions s ON i.session_id = s.id
-    LEFT JOIN session_facets sf ON i.session_id = sf.session_id
+    SELECT DISTINCT s.id AS session_id
+    FROM sessions s
+    LEFT JOIN session_facets sf ON s.id = sf.session_id
     ${where}
   `).all(...params) as Array<{ session_id: string }>;
 
