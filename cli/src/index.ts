@@ -13,6 +13,7 @@ import { statsCommand } from './commands/stats/index.js';
 import { configCommand } from './commands/config.js';
 import { telemetryCommand } from './commands/telemetry.js';
 import { reflectCommand } from './commands/reflect.js';
+import { memoriesCommand } from './commands/memories.js';
 import { showTelemetryNoticeIfNeeded } from './utils/telemetry.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
@@ -114,6 +115,7 @@ program.addCommand(statsCommand);
 program.addCommand(configCommand);
 program.addCommand(telemetryCommand);
 program.addCommand(reflectCommand);
+program.addCommand(memoriesCommand);
 
 // Show one-time telemetry disclosure before any command runs
 showTelemetryNoticeIfNeeded();
