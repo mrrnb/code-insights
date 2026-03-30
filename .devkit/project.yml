@@ -1,0 +1,12 @@
+name: code-insights
+type: personal
+category: tool
+description: AI 会话分析工具 — 解析 Claude/Cursor/Codex 会话历史，写入 SQLite，提供统计和 LLM 分析
+init_config:
+  devkit: 1
+  claude: 1
+  vscode: 0
+  aihelp: 0
+  zcripts: 0
+workspace:
+  enabled: 1
