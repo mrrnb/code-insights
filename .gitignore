@@ -52,3 +52,12 @@ docs/plans/
 .worktrees/
 .aiws
 AGENTS.md
+
+notes
+.devkit
+.mcp.json
+.vscode
+.aihelp
+CLAUDE.local.md
+zcripts
+.claude
