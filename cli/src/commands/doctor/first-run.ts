@@ -20,33 +20,33 @@ export async function renderFirstRun(version: string): Promise<void> {
   console.log(chalk.cyan(`\n  Code Insights — Doctor  v${version}`));
   console.log(chalk.dim('  ────────────────────────────────────────────────'));
   console.log('');
-  console.log('  Looks like you\'re just getting started. Here\'s what to do:');
+  console.log('  看起来你刚开始使用。以下是操作步骤：');
   console.log('');
 
   // Step 1
-  console.log(chalk.white('  Step 1 — Sync your sessions'));
+  console.log(chalk.white('  第 1 步 — 同步你的会话'));
   console.log(chalk.cyan('    code-insights sync'));
   if (sessionCount > 0) {
-    console.log(chalk.dim(`    Found ${sessionCount} session(s) ready to import.`));
+    console.log(chalk.dim(`    发现 ${sessionCount} 个会话可导入。`));
   }
   console.log('');
 
   // Step 2
-  console.log(chalk.white('  Step 2 — Open the dashboard'));
+  console.log(chalk.white('  第 2 步 — 打开控制台'));
   console.log(chalk.cyan('    code-insights dashboard'));
   console.log('');
 
   // Step 3
-  console.log(chalk.white('  Step 3 — Auto-sync future sessions  (recommended)'));
+  console.log(chalk.white('  第 3 步 — 自动同步未来的会话（推荐）'));
   console.log(chalk.cyan('    code-insights install-hook'));
   console.log('');
 
   // Step 4
-  console.log(chalk.white('  Step 4 — Set up AI analysis  (optional)'));
-  console.log(chalk.cyan('    code-insights config set-provider ollama llama3.3   # free, local'));
+  console.log(chalk.white('  第 4 步 — 设置 AI 分析（可选）'));
+  console.log(chalk.cyan('    code-insights config set-provider ollama llama3.3   # 免费，本地运行'));
   console.log('');
 
   console.log(chalk.dim('  ────────────────────────────────────────────────'));
-  console.log('  Run `code-insights doctor` again after syncing to verify your setup.');
+  console.log('  同步后再次运行 `code-insights doctor` 以验证配置。');
   console.log('');
 }

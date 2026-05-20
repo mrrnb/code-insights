@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Brain, ChevronRight, ChevronDown } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
 
 interface ThinkingBlockProps {
   thinking: string;
 }
 
-function formatCharCount(count: number): string {
+function formatCharCount(count: number, charsLabel: string): string {
   if (count >= 1000) {
-    return `${(count / 1000).toFixed(1)}K chars`;
+    return `${(count / 1000).toFixed(1)}K ${charsLabel}`;
   }
-  return `${count} chars`;
+  return `${count} ${charsLabel}`;
 }
 
 /**
@@ -18,6 +19,7 @@ function formatCharCount(count: number): string {
  * Shows a compact header with char count when collapsed.
  */
 export function ThinkingBlock({ thinking }: ThinkingBlockProps) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -29,10 +31,10 @@ export function ThinkingBlock({ thinking }: ThinkingBlockProps) {
         aria-expanded={expanded}
       >
         <Brain className="h-3 w-3 text-amber-600 dark:text-amber-400 shrink-0" />
-        <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">Thinking</span>
+        <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">{t('thinking.label')}</span>
         {!expanded && (
           <span className="text-xs text-amber-600/60 dark:text-amber-400/60">
-            &middot; {formatCharCount(thinking.length)}
+            &middot; {formatCharCount(thinking.length, t('thinking.chars'))}
           </span>
         )}
         <div className="ml-auto shrink-0 text-amber-600/60 dark:text-amber-400/60">

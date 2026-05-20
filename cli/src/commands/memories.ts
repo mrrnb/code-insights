@@ -206,7 +206,7 @@ function formatTime(iso: string): string {
 function buildEntry(session: SessionRow, messages: MessageRow[]): string {
   const time = formatTime(session.startedAt);
   const type = classifySession(session, messages);
-  const title = session.customTitle ?? session.generatedTitle ?? `${session.projectName} session`;
+  const title = session.customTitle ?? session.generatedTitle ?? `${session.projectName} 会话`;
 
   const lines: string[] = [];
   lines.push(`## ${time} [${type}] ${title}`);
@@ -258,17 +258,17 @@ async function memoriesAction(options: MemoriesOptions): Promise<void> {
   const gainsDir = options.gainsDir ?? '/data/apps/gains';
   const dateStr = options.date ?? new Date().toISOString().slice(0, 10);
 
-  console.log(chalk.cyan('\n  Code Insights — Memories\n'));
-  console.log(chalk.dim(`  Date:      ${dateStr}`));
-  console.log(chalk.dim(`  Gains dir: ${gainsDir}`));
-  if (options.project) console.log(chalk.dim(`  Project:   ${options.project}`));
-  if (options.dryRun) console.log(chalk.yellow('  [dry-run] No files will be written.\n'));
+  console.log(chalk.cyan('\n  Code Insights — 记忆\n'));
+  console.log(chalk.dim(`  日期：    ${dateStr}`));
+  console.log(chalk.dim(`  Gains 目录：${gainsDir}`));
+  if (options.project) console.log(chalk.dim(`  项目：    ${options.project}`));
+  if (options.dryRun) console.log(chalk.yellow('  [试运行] 不会写入任何文件。\n'));
   else console.log();
 
   const sessions = getSessionsForDate(dateStr, options.project);
 
   if (sessions.length === 0) {
-    console.log(chalk.yellow('  No sessions found for this date.'));
+    console.log(chalk.yellow('  该日期没有发现会话。'));
     return;
   }
 
@@ -301,7 +301,7 @@ async function memoriesAction(options: MemoriesOptions): Promise<void> {
     }
 
     if (newEntries.length === 0) {
-      console.log(chalk.dim(`  ${projectName}: all ${projectSessions.length} session(s) already recorded`));
+      console.log(chalk.dim(`  ${projectName}：所有 ${projectSessions.length} 个会话已记录`));
       continue;
     }
 
@@ -327,21 +327,21 @@ async function memoriesAction(options: MemoriesOptions): Promise<void> {
         writeFileSync(filePath, newContent, 'utf-8');
       }
 
-      console.log(chalk.green(`  ✓ ${projectName}: ${newEntries.length} entr${newEntries.length === 1 ? 'y' : 'ies'} → ${filePath}`));
+      console.log(chalk.green(`  ✓ ${projectName}: ${newEntries.length} 条记录 → ${filePath}`));
     }
 
     totalWritten += newEntries.length;
   }
 
   if (totalSkipped > 0) {
-    console.log(chalk.dim(`\n  Skipped ${totalSkipped} already-recorded session(s).`));
+    console.log(chalk.dim(`\n  跳过 ${totalSkipped} 个已记录的会话。`));
   }
 
   console.log();
   if (options.dryRun) {
-    console.log(chalk.cyan(`  [dry-run] ${totalWritten} entr${totalWritten === 1 ? 'y' : 'ies'} across ${byProject.size} project(s).`));
+    console.log(chalk.cyan(`  [试运行] ${byProject.size} 个项目中共 ${totalWritten} 条记录。`));
   } else {
-    console.log(chalk.green(`  Done. ${totalWritten} entr${totalWritten === 1 ? 'y' : 'ies'} written across ${byProject.size} project(s).`));
+    console.log(chalk.green(`  完成。${byProject.size} 个项目中共写入 ${totalWritten} 条记录。`));
   }
 }
 
@@ -350,11 +350,11 @@ async function memoriesAction(options: MemoriesOptions): Promise<void> {
 // ──────────────────────────────────────────────────────
 
 export const memoriesCommand = new Command('memories')
-  .description('Extract session memories and write to .aiws/memories/ per project')
-  .option('--date <date>', 'Date to process (YYYY-MM-DD, default: today)')
-  .option('--project <name>', 'Filter by project name or path fragment')
-  .option('--dry-run', 'Preview output without writing files')
-  .option('--gains-dir <dir>', 'Root gains directory (default: /data/apps/gains)')
+  .description('提取会话记忆并按项目写入 .aiws/memories/ 目录')
+  .option('--date <date>', '要处理的日期（YYYY-MM-DD，默认：今天）')
+  .option('--project <name>', '按项目名称或路径片段筛选')
+  .option('--dry-run', '预览输出但不写入文件')
+  .option('--gains-dir <dir>', 'Gains 根目录（默认：/data/apps/gains）')
   .action(async (options: MemoriesOptions) => {
     await memoriesAction(options);
   });

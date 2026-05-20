@@ -19,10 +19,10 @@ app.get('/', (c) => {
   // Validate from/to are ISO 8601 date strings before passing to SQLite comparisons.
   // Invalid date strings in SQLite produce silent wrong results rather than errors.
   if (from && !ISO_DATE_RE.test(from)) {
-    return c.json({ error: 'Invalid from: must be an ISO 8601 date (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ)' }, 400);
+    return c.json({ error: 'from 参数无效：必须是 ISO 8601 日期格式（YYYY-MM-DD 或 YYYY-MM-DDTHH:MM:SSZ）' }, 400);
   }
   if (to && !ISO_DATE_RE.test(to)) {
-    return c.json({ error: 'Invalid to: must be an ISO 8601 date (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ)' }, 400);
+    return c.json({ error: 'to 参数无效：必须是 ISO 8601 日期格式（YYYY-MM-DD 或 YYYY-MM-DDTHH:MM:SSZ）' }, 400);
   }
 
   const conditions: string[] = [];
@@ -102,7 +102,7 @@ app.get('/:id', (c) => {
            compact_count, auto_compact_count, slash_commands
     FROM sessions WHERE id = ? AND deleted_at IS NULL
   `).get(c.req.param('id'));
-  if (!session) return c.json({ error: 'Not found' }, 404);
+  if (!session) return c.json({ error: '未找到' }, 404);
   return c.json({ session });
 });
 
@@ -111,12 +111,12 @@ app.patch('/:id', async (c) => {
   const body = await c.req.json<{ customTitle?: string }>();
   const { customTitle } = body;
   if (customTitle === undefined) {
-    return c.json({ error: 'customTitle is required' }, 400);
+    return c.json({ error: '缺少 customTitle 参数' }, 400);
   }
   const result = db.prepare(
     'UPDATE sessions SET custom_title = ? WHERE id = ? AND deleted_at IS NULL'
   ).run(customTitle || null, c.req.param('id'));
-  if (result.changes === 0) return c.json({ error: 'Not found' }, 404);
+  if (result.changes === 0) return c.json({ error: '未找到' }, 404);
   return c.json({ ok: true });
 });
 
@@ -125,7 +125,7 @@ app.delete('/:id', (c) => {
   const result = db.prepare(
     `UPDATE sessions SET deleted_at = datetime('now') WHERE id = ? AND deleted_at IS NULL`
   ).run(c.req.param('id'));
-  if (result.changes === 0) return c.json({ error: 'Not found' }, 404);
+  if (result.changes === 0) return c.json({ error: '未找到' }, 404);
   return c.json({ ok: true });
 });
 

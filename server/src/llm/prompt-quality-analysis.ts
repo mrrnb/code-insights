@@ -28,7 +28,7 @@ export async function analyzePromptQuality(
     return {
       success: false,
       insights: [],
-      error: 'LLM not configured. Run `code-insights config llm` to configure a provider.',
+      error: 'LLM 未配置。运行 `code-insights config llm` 配置提供商。',
     };
   }
 
@@ -36,7 +36,7 @@ export async function analyzePromptQuality(
     return {
       success: false,
       insights: [],
-      error: 'No messages found for this session.',
+      error: '未找到此会话的消息。',
     };
   }
 
@@ -50,7 +50,7 @@ export async function analyzePromptQuality(
     return {
       success: false,
       insights: [],
-      error: 'Not enough user messages to analyze prompt quality (need at least 2).',
+      error: '用户消息不足，无法分析提示词质量（至少需要 2 条）。',
     };
   }
 
@@ -93,7 +93,7 @@ export async function analyzePromptQuality(
       return {
         success: false,
         insights: [],
-        error: 'Failed to parse prompt quality analysis. Please try again.',
+        error: '提示词质量分析解析失败，请重试。',
         error_type: parsed.error.error_type,
         response_length: parsed.error.response_length,
         response_preview: parsed.error.response_preview,
@@ -146,12 +146,12 @@ export async function analyzePromptQuality(
     };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      return { success: false, insights: [], error: 'Analysis cancelled', error_type: 'abort' };
+      return { success: false, insights: [], error: '分析已取消', error_type: 'abort' };
     }
     return {
       success: false,
       insights: [],
-      error: error instanceof Error ? error.message : 'Prompt quality analysis failed',
+      error: error instanceof Error ? error.message : '提示词质量分析失败',
       error_type: 'api_error',
     };
   }

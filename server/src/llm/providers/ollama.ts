@@ -34,7 +34,7 @@ export function createOllamaClient(model: string, baseUrl?: string): LLMClient {
         // the TypeError fallback ('fetch failed') handles that case.
         const cause = (err as { cause?: { code?: string } })?.cause;
         if (cause?.code === 'ECONNREFUSED' || (err instanceof TypeError && err.message.includes('fetch'))) {
-          throw new Error(`Cannot connect to Ollama at ${url} — is it running? Start it with: ollama serve`);
+          throw new Error(`无法连接到 Ollama（${url}）— 是否已启动？运行 ollama serve 启动`);
         }
         throw err;
       }
@@ -43,16 +43,16 @@ export function createOllamaClient(model: string, baseUrl?: string): LLMClient {
         const detail = await response.text().catch(() => '');
         if (response.status === 401 || response.status === 403) {
           // Ollama itself has no auth — this typically means a proxy or gateway in front of it requires credentials.
-          throw new Error(`Ollama returned HTTP ${response.status} — check if your Ollama endpoint requires authentication (proxy or gateway).${detail ? ` (${detail})` : ''}`);
+          throw new Error(`Ollama 返回 HTTP ${response.status} — 请检查 Ollama 端点是否需要认证（代理或网关）。${detail ? ` (${detail})` : ''}`);
         }
         if (response.status === 429) {
           // Standard Ollama has no rate limits — 429 likely comes from a proxy or gateway.
-          throw new Error(`Ollama returned HTTP 429 — rate limited by a proxy or gateway in front of Ollama.${detail ? ` (${detail})` : ''}`);
+          throw new Error(`Ollama 返回 HTTP 429 — 被 Ollama 前端的代理或网关限流。${detail ? ` (${detail})` : ''}`);
         }
         if (response.status >= 500) {
-          throw new Error(`Ollama service error (HTTP ${response.status}). Try again later.${detail ? ` (${detail})` : ''}`);
+          throw new Error(`Ollama 服务错误（HTTP ${response.status}），请稍后重试。${detail ? ` (${detail})` : ''}`);
         }
-        throw new Error(`Ollama API error (HTTP ${response.status})${detail ? ` - ${detail}` : ''}`);
+        throw new Error(`Ollama API 错误（HTTP ${response.status}）${detail ? ` - ${detail}` : ''}`);
       }
 
       const data = await response.json() as {

@@ -71,18 +71,18 @@ app.post('/', async (c) => {
   const required = ['sessionId', 'projectId', 'type', 'title', 'content'] as const;
   for (const field of required) {
     if (!body[field] || typeof body[field] !== 'string') {
-      return c.json({ error: `Missing or invalid field: ${field}` }, 400);
+      return c.json({ error: `缺少或无效的字段：${field}` }, 400);
     }
   }
 
   // Validate type is one of the known insight types
   if (!VALID_TYPES.includes(body.type as typeof VALID_TYPES[number])) {
-    return c.json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` }, 400);
+    return c.json({ error: `type 必须是以下之一：${VALID_TYPES.join(', ')}` }, 400);
   }
 
   // Validate confidence is a finite number if provided
   if (body.confidence !== undefined && (typeof body.confidence !== 'number' || !Number.isFinite(body.confidence))) {
-    return c.json({ error: 'confidence must be a finite number' }, 400);
+    return c.json({ error: 'confidence 必须是有限数字' }, 400);
   }
 
   const id = randomUUID();
@@ -111,7 +111,7 @@ app.post('/', async (c) => {
     );
   } catch (err) {
     if (err instanceof Error && err.message.includes('FOREIGN KEY constraint failed')) {
-      return c.json({ error: 'Invalid sessionId or projectId' }, 400);
+      return c.json({ error: '无效的 sessionId 或 projectId' }, 400);
     }
     throw err;
   }
@@ -122,7 +122,7 @@ app.post('/', async (c) => {
 app.delete('/:id', (c) => {
   const db = getDb();
   const result = db.prepare('DELETE FROM insights WHERE id = ?').run(c.req.param('id'));
-  if (result.changes === 0) return c.json({ error: 'Not found' }, 404);
+  if (result.changes === 0) return c.json({ error: '未找到' }, 404);
   return c.json({ ok: true });
 });
 

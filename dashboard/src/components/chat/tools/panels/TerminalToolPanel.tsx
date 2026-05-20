@@ -3,6 +3,7 @@ import type { ToolCall, ToolResult } from '@/lib/types';
 import { parseToolInput } from '../utils';
 import { usePreviewText } from '../usePreview';
 import { CollapsibleToolPanel } from '../CollapsibleToolPanel';
+import { useI18n } from '@/lib/i18n';
 
 interface TerminalToolPanelProps {
   toolCall: ToolCall;
@@ -10,6 +11,7 @@ interface TerminalToolPanelProps {
 }
 
 export function TerminalToolPanel({ toolCall, result }: TerminalToolPanelProps) {
+  const { t } = useI18n();
   const input = parseToolInput(toolCall.input);
   const command = (input.command as string) || '';
   const description = (input.description as string) || '';
@@ -29,7 +31,7 @@ export function TerminalToolPanel({ toolCall, result }: TerminalToolPanelProps) 
   return (
     <CollapsibleToolPanel
       icon={<Terminal className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />}
-      label="Terminal"
+      label={t('chat.terminal')}
       summary={summary}
       className="border-zinc-200 dark:border-zinc-700/50"
       headerClassName="bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200/80 dark:hover:bg-zinc-800/80"

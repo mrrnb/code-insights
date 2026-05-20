@@ -12,6 +12,7 @@ import {
 import { useAnalysisCost } from '@/hooks/useAnalysisCost';
 import { formatCost } from '@/lib/cost-utils';
 import { formatTokenCount } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n';
 
 interface AnalysisCostLineProps {
   sessionId: string;
@@ -20,11 +21,11 @@ interface AnalysisCostLineProps {
 }
 
 /** Human-readable label for each analysis type. */
-function analysisTypeLabel(type: string): string {
+function analysisTypeLabel(type: string, t: (key: string) => string): string {
   switch (type) {
-    case 'session': return 'Session Analysis';
-    case 'prompt_quality': return 'Prompt Quality';
-    case 'facet': return 'Facet Extraction';
+    case 'session': return t('costLine.sessionAnalysis');
+    case 'prompt_quality': return t('costLine.promptQuality');
+    case 'facet': return t('costLine.facetExtraction');
     default: return type;
   }
 }
@@ -35,6 +36,7 @@ function formatTokens(n: number): string {
 }
 
 export function AnalysisCostLine({ sessionId, isAnalyzing }: AnalysisCostLineProps) {
+  const { t } = useI18n();
   const { data } = useAnalysisCost(sessionId);
 
   // While analysis is running, show a placeholder
@@ -42,7 +44,7 @@ export function AnalysisCostLine({ sessionId, isAnalyzing }: AnalysisCostLinePro
     return (
       <div className="flex items-center gap-1.5 text-sm text-muted-foreground px-1 py-1">
         <Sparkles className="h-3.5 w-3.5 text-purple-500 shrink-0" />
-        <span>Analyzing... cost will appear when complete</span>
+        <span>{t('costLine.analyzingCost')}</span>
       </div>
     );
   }
@@ -69,9 +71,9 @@ export function AnalysisCostLine({ sessionId, isAnalyzing }: AnalysisCostLinePro
 
   // Build sublabel
   const sublabelParts: string[] = [modelLabel];
-  if (totalInput > 0) sublabelParts.push(`${formatTokens(totalInput)} in`);
-  if (totalOutput > 0) sublabelParts.push(`${formatTokens(totalOutput)} out`);
-  if (cacheSavingsUsd > 0.005) sublabelParts.push(`saved ${formatCost(cacheSavingsUsd)}`);
+  if (totalInput > 0) sublabelParts.push(`${formatTokens(totalInput)} ${t('costLine.in')}`);
+  if (totalOutput > 0) sublabelParts.push(`${formatTokens(totalOutput)} ${t('costLine.out')}`);
+  if (cacheSavingsUsd > 0.005) sublabelParts.push(`${t('costLine.saved')} ${formatCost(cacheSavingsUsd)}`);
   const sublabel = sublabelParts.join(' · ');
 
   // Legacy sessions: usage row exists but cost is 0 and provider is not Ollama or native
@@ -82,8 +84,8 @@ export function AnalysisCostLine({ sessionId, isAnalyzing }: AnalysisCostLinePro
   if (allNative) {
     const durationSec = totalDurationMs > 0 ? Math.round(totalDurationMs / 1000) : null;
     const nativeLabel = durationSec != null
-      ? `Analyzed via Claude Code · ${durationSec}s`
-      : 'Analyzed via Claude Code';
+      ? t('costLine.analyzedViaTime').replace('{sec}', String(durationSec))
+      : t('costLine.analyzedVia');
     return (
       <div className="flex flex-col gap-0.5 px-1 py-1 select-none">
         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -96,9 +98,9 @@ export function AnalysisCostLine({ sessionId, isAnalyzing }: AnalysisCostLinePro
   }
 
   const primaryText = allOllama
-    ? 'Analysis: local (free)'
+    ? t('costLine.analysisLocal')
     : isLegacy
-      ? 'Analysis cost: not tracked'
+      ? t('costLine.costNotTracked')
       : `Analysis cost: ${formatCost(totalCostUsd)}`;
 
   const showPopover = usage.length > 0 && !isLegacy;
@@ -125,7 +127,7 @@ export function AnalysisCostLine({ sessionId, isAnalyzing }: AnalysisCostLinePro
         <div className="select-none hover:opacity-80 transition-opacity">{content}</div>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-3">
-        <p className="text-xs font-semibold text-foreground mb-2">Analysis Cost Breakdown</p>
+        <p className="text-xs font-semibold text-foreground mb-2">{t('costLine.costBreakdown')}</p>
         <div className="space-y-2">
           {usage.map((row, idx) => {
             const cacheRead = row.cache_read_tokens;
@@ -142,19 +144,19 @@ export function AnalysisCostLine({ sessionId, isAnalyzing }: AnalysisCostLinePro
                 {idx > 0 && <div className="border-t my-2" />}
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-xs font-medium text-foreground">
-                    {analysisTypeLabel(row.analysis_type)}
+                    {analysisTypeLabel(row.analysis_type, t)}
                   </span>
                   <span className="text-xs font-medium text-foreground shrink-0">
-                    {row.provider === 'ollama' || row.provider === 'llamacpp' || row.provider === 'claude-code-native' ? 'free' : formatCost(row.estimated_cost_usd)}
+                    {row.provider === 'ollama' || row.provider === 'llamacpp' || row.provider === 'claude-code-native' ? t('costLine.free') : formatCost(row.estimated_cost_usd)}
                   </span>
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
-                  {formatTokens(row.input_tokens)} in · {formatTokens(row.output_tokens)} out
+                  {formatTokens(row.input_tokens)} {t('costLine.in')} · {formatTokens(row.output_tokens)} {t('costLine.out')}
                 </p>
                 {cacheRead > 0 && (
                   <p className="text-[10px] text-muted-foreground">
-                    Cache: {formatTokens(cacheRead)} read
-                    {rowCacheSavings > 0.005 && ` (saved ${formatCost(rowCacheSavings)})`}
+                    {t('costLine.cache')} {formatTokens(cacheRead)} read
+                    {rowCacheSavings > 0.005 && ` (${t('costLine.saved')} ${formatCost(rowCacheSavings)})`}
                   </p>
                 )}
               </div>
@@ -164,9 +166,9 @@ export function AnalysisCostLine({ sessionId, isAnalyzing }: AnalysisCostLinePro
             <>
               <div className="border-t my-2" />
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-foreground">Total</span>
+                <span className="text-xs font-semibold text-foreground">{t('costLine.total')}</span>
                 <span className="text-xs font-semibold text-foreground">
-                  {allOllama || allNative ? 'free' : formatCost(totalCostUsd)}
+                  {allOllama || allNative ? t('costLine.free') : formatCost(totalCostUsd)}
                 </span>
               </div>
             </>

@@ -27,7 +27,7 @@ app.get('/:id', (c) => {
     FROM projects
     WHERE id = ?
   `).get(c.req.param('id'));
-  if (!project) return c.json({ error: 'Not found' }, 404);
+  if (!project) return c.json({ error: '未找到' }, 404);
   return c.json({ project });
 });
 

@@ -28,44 +28,44 @@ const program = new Command();
 
 program
   .name('code-insights')
-  .description('AI coding session analytics — sync, stats, and insights')
+  .description('AI 编程会话分析 — 同步、统计与洞察')
   .version(pkg.version);
 
 program
   .command('init')
-  .description('Set up Code Insights (initializes local database)')
+  .description('初始化 Code Insights（创建本地数据库）')
   .action(initCommand);
 
 const syncCmd = program
   .command('sync')
-  .description('Sync AI coding sessions to local SQLite database')
-  .option('-f, --force', 'Force re-sync all sessions (also restores hidden sessions)')
-  .option('-p, --project <name>', 'Only sync sessions from a specific project')
-  .option('-s, --source <name>', 'Only sync sessions from a specific tool (e.g., claude-code, cursor)')
-  .option('--dry-run', 'Show what would be synced without making changes')
-  .option('-q, --quiet', 'Suppress output (useful for hooks)')
-  .option('-v, --verbose', 'Show diagnostic warnings from providers')
-  .option('--regenerate-titles', 'Regenerate titles for all sessions')
+  .description('同步 AI 编程会话到本地 SQLite 数据库')
+  .option('-f, --force', '强制重新同步所有会话（同时恢复已隐藏的会话）')
+  .option('-p, --project <name>', '仅同步指定项目的会话')
+  .option('-s, --source <name>', '仅同步指定工具的会话（如 claude-code、cursor）')
+  .option('--dry-run', '预览同步内容，不做实际更改')
+  .option('-q, --quiet', '静默输出（适用于 hook）')
+  .option('-v, --verbose', '显示来自 provider 的诊断警告')
+  .option('--regenerate-titles', '重新生成所有会话的标题')
   .action(syncCommand);
 
 syncCmd
   .command('prune')
-  .description('Soft-delete sessions with ≤2 messages (trivial abandoned sessions)')
+  .description('软删除消息数 ≤2 的会话（无内容的废弃会话）')
   .action(async () => {
     const chalk = (await import('chalk')).default;
     const { default: inquirer } = await import('inquirer');
-    console.log(chalk.cyan('\n  Code Insights — Prune\n'));
+    console.log(chalk.cyan('\n  Code Insights — 清理\n'));
 
     const sessions = getTrivialSessions();
     if (sessions.length === 0) {
-      console.log(chalk.green('  No trivial sessions found. Nothing to prune.'));
+      console.log(chalk.green('  没有发现可清理的会话。'));
       return;
     }
 
-    console.log(chalk.white(`  Found ${sessions.length} session${sessions.length !== 1 ? 's' : ''} with ≤2 messages:\n`));
+    console.log(chalk.white(`  发现 ${sessions.length} 个消息数 ≤2 的会话：\n`));
     for (const s of sessions) {
-      const label = s.title ?? chalk.dim('(no title)');
-      console.log(`  ${chalk.dim('·')} ${label} ${chalk.dim(`[${s.project_name}, ${s.message_count} msg]`)}`);
+      const label = s.title ?? chalk.dim('（无标题）');
+      console.log(`  ${chalk.dim('·')} ${label} ${chalk.dim(`[${s.project_name}, ${s.message_count} 条消息]`)}`);
     }
     console.log('');
 
@@ -73,58 +73,58 @@ syncCmd
       {
         type: 'confirm',
         name: 'confirmed',
-        message: `Soft-delete these ${sessions.length} session${sessions.length !== 1 ? 's' : ''}? (Restorable with sync --force)`,
+        message: `软删除这 ${sessions.length} 个会话？（可通过 sync --force 恢复）`,
         default: false,
       },
     ]);
 
     if (!confirmed) {
-      console.log(chalk.yellow('\n  Cancelled. No sessions were hidden.'));
+      console.log(chalk.yellow('\n  已取消。没有会话被隐藏。'));
       return;
     }
 
     const { deleted } = pruneTrivialSessions(sessions.map((s) => s.id));
-    console.log(chalk.green(`\n  Hidden ${deleted} session${deleted !== 1 ? 's' : ''}.`));
-    console.log(chalk.dim('  Use code-insights sync --force to restore hidden sessions.'));
+    console.log(chalk.green(`\n  已隐藏 ${deleted} 个会话。`));
+    console.log(chalk.dim('  使用 code-insights sync --force 恢复已隐藏的会话。'));
   });
 
 program
   .command('status')
-  .description('Show Code Insights status and statistics')
+  .description('显示 Code Insights 状态和统计信息')
   .action(statusCommand);
 
 program
   .command('install-hook')
-  .description('Install Claude Code SessionEnd hook for automatic sync and analysis')
+  .description('安装 Claude Code SessionEnd hook，实现自动同步和分析')
   .action(() => installHookCommand());
 
 program
   .command('uninstall-hook')
-  .description('Remove Claude Code hooks (sync and analysis)')
+  .description('移除 Claude Code hooks（同步和分析）')
   .action(uninstallHookCommand);
 
 program
   .command('doctor')
-  .description('Check your Code Insights installation')
-  .option('--fix', 'Apply safe idempotent fixes automatically')
-  .option('--verbose', 'Show probed paths for skipped items')
-  .option('--json', 'Machine-readable JSON output')
+  .description('检查 Code Insights 安装状态')
+  .option('--fix', '自动应用安全的幂等修复')
+  .option('--verbose', '显示跳过项的探测路径')
+  .option('--json', '机器可读的 JSON 输出')
   .action(async (opts) => {
     await doctorCommand({ fix: opts.fix, verbose: opts.verbose, json: opts.json });
   });
 
 program
   .command('open')
-  .description('Open the local dashboard in your browser')
-  .option('--project', 'Open filtered to the current project')
+  .description('在浏览器中打开本地控制台')
+  .option('--project', '打开时筛选当前项目')
   .action(openCommand);
 
 program
   .command('dashboard')
-  .description('Start the Code Insights dashboard server and open in browser')
-  .option('-p, --port <number>', 'Port number', String(7890))
-  .option('--no-open', 'Do not open browser automatically')
-  .option('--no-sync', 'Skip automatic session sync before starting')
+  .description('启动 Code Insights 控制台服务并在浏览器中打开')
+  .option('-p, --port <number>', '端口号', String(7890))
+  .option('--no-open', '不自动打开浏览器')
+  .option('--no-sync', '启动前跳过自动会话同步')
   .action(dashboardCommand);
 
 program.addCommand(resetCommand);
@@ -140,11 +140,11 @@ program.addCommand(exportMemoriesCommand);
 // session-end command — single SessionEnd hook entry point (sync + enqueue + spawn worker)
 program
   .command('session-end')
-  .description('SessionEnd hook: sync session, enqueue for analysis, spawn background worker')
-  .option('--native', 'Use claude -p for analysis worker (default: true)')
-  .option('-s, --source <tool>', 'Source tool identifier (default: claude-code)')
-  .option('-q, --quiet', 'Suppress output')
-  .option('--model <model>', 'Model for native analysis (default: sonnet)')
+  .description('SessionEnd hook：同步会话、入队分析、启动后台 worker')
+  .option('--native', '使用 claude -p 进行分析（默认：true）')
+  .option('-s, --source <tool>', '来源工具标识符（默认：claude-code）')
+  .option('-q, --quiet', '静默输出')
+  .option('--model <model>', '用于原生分析的模型（默认：sonnet）')
   .action(async (opts) => {
     await sessionEndCommand({ native: opts.native ?? true, quiet: opts.quiet, source: opts.source, model: opts.model });
   });
@@ -155,23 +155,23 @@ program.addCommand(buildQueueCommand());
 // insights command — analyze a session using native claude -p or configured LLM
 const insightsCmd = program
   .command('insights [session_id]')
-  .description('Analyze a session with AI — extracts insights and prompt quality score')
-  .option('--native', 'Use claude -p (your Claude subscription, no API key required)')
-  .option('--hook', 'Read session context from stdin (for Claude Code SessionEnd hook)')
-  .option('-s, --source <tool>', 'Source tool identifier (default: claude-code)')
-  .option('--force', 'Re-analyze even if already analyzed at this session length')
-  .option('-q, --quiet', 'Suppress output')
-  .option('--model <model>', 'Model for native analysis (default: sonnet)')
+  .description('使用 AI 分析会话 — 提取洞察和 Prompt 质量评分')
+  .option('--native', '使用 claude -p（你的 Claude 订阅，无需 API key）')
+  .option('--hook', '从 stdin 读取会话上下文（用于 Claude Code SessionEnd hook）')
+  .option('-s, --source <tool>', '来源工具标识符（默认：claude-code）')
+  .option('--force', '即使已在当前会话长度下分析过也重新分析')
+  .option('-q, --quiet', '静默输出')
+  .option('--model <model>', '用于原生分析的模型（默认：sonnet）')
   .action(async (sessionId: string | undefined, opts) => {
     await insightsCommand(sessionId, opts);
   });
 
 insightsCmd
   .command('check')
-  .description('Check for unanalyzed sessions in the last N days')
-  .option('--days <n>', 'Lookback window in days', '7')
-  .option('-q, --quiet', 'Machine-readable output (just count)')
-  .option('--analyze', 'Process all found sessions sequentially')
+  .description('检查最近 N 天内未分析的会话')
+  .option('--days <n>', '回溯天数', '7')
+  .option('-q, --quiet', '机器可读输出（仅输出数量）')
+  .option('--analyze', '依次处理所有发现的会话')
   .action(async (opts) => {
     await insightsCheckCommand({
       days: opts.days ? parseInt(opts.days, 10) : 7,

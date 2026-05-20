@@ -16,28 +16,28 @@ const TIPS_STATE_FILE = '.tips-state.json';
  */
 const TIPS: Record<string, string[]> = {
   stats: [
-    'Try `code-insights stats cost` for a cost and token breakdown by session',
-    'Try `code-insights stats today` to see only today\'s activity',
-    'Try `code-insights stats models` to compare usage across AI models',
-    'Try `code-insights stats projects` to see which projects you\'ve worked on most',
-    'Run `code-insights dashboard` to explore your sessions in the built-in dashboard',
+    '试试 `code-insights stats cost` 查看按会话的成本和 token 分析',
+    '试试 `code-insights stats today` 仅查看今日活动',
+    '试试 `code-insights stats models` 比较不同 AI 模型的使用情况',
+    '试试 `code-insights stats projects` 查看你最常使用的项目',
+    '运行 `code-insights dashboard` 在内置控制台中探索你的会话',
   ],
   'stats cost': [
-    'Use `--period 30d` to see cost over the last 30 days (default is 7d)',
-    'Try `code-insights stats models` to break down cost by model',
-    'Try `code-insights stats` for a full activity overview',
+    '使用 `--period 30d` 查看最近 30 天的成本（默认为 7d）',
+    '试试 `code-insights stats models` 按模型查看成本分布',
+    '试试 `code-insights stats` 查看完整活动概览',
   ],
   'stats today': [
-    'Try `code-insights stats` for a full activity overview across all time',
-    'Try `code-insights stats cost` to see what today\'s sessions cost',
+    '试试 `code-insights stats` 查看所有时间的完整活动概览',
+    '试试 `code-insights stats cost` 查看今日会话的成本',
   ],
   'stats projects': [
-    'Use `--project <name>` to filter sessions to a specific project',
-    'Try `code-insights stats cost` to see how spend is distributed across projects',
+    '使用 `--project <name>` 筛选特定项目的会话',
+    '试试 `code-insights stats cost` 查看各项目的成本分布',
   ],
   'stats models': [
-    'Try `code-insights stats cost` to see per-session cost alongside model usage',
-    'Try `code-insights stats` for the full overview including all activity',
+    '试试 `code-insights stats cost` 查看每会话成本和模型使用情况',
+    '试试 `code-insights stats` 查看包含所有活动的完整概览',
   ],
 };
 

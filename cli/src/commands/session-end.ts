@@ -55,14 +55,14 @@ export async function sessionEndCommand(options: SessionEndOptions = {}): Promis
     parsed = JSON.parse(stdinData);
   } catch {
     if (!quiet) {
-      console.error(chalk.red('[Code Insights] session-end: invalid JSON on stdin'));
+      console.error(chalk.red('[Code Insights] session-end：stdin 上的 JSON 无效'));
     }
     return;
   }
 
   if (!parsed.session_id) {
     if (!quiet) {
-      console.error(chalk.red('[Code Insights] session-end: missing session_id in stdin JSON'));
+      console.error(chalk.red('[Code Insights] session-end：stdin JSON 中缺少 session_id'));
     }
     return;
   }
@@ -77,7 +77,7 @@ export async function sessionEndCommand(options: SessionEndOptions = {}): Promis
       // Sync failure is non-fatal: session may already be in DB from a previous sync.
       // Fall through to enqueue anyway so analysis still runs if the session is present.
       if (!quiet) {
-        console.error(chalk.yellow('[Code Insights] session-end: sync failed, enqueuing anyway'));
+        console.error(chalk.yellow('[Code Insights] session-end：同步失败，仍将加入队列'));
       }
     }
   }
@@ -114,7 +114,7 @@ function spawnWorker(quiet: boolean, model?: string): void {
     // Worker spawn failure is non-fatal — the item stays in the queue
     // and will be picked up by the next worker invocation.
     if (!quiet) {
-      console.error(chalk.yellow('[Code Insights] session-end: could not spawn analysis worker'));
+      console.error(chalk.yellow('[Code Insights] session-end：无法启动分析 worker'));
     }
   }
 }

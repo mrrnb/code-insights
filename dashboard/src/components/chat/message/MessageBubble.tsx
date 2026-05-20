@@ -4,6 +4,7 @@ import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { User, Bot } from 'lucide-react';
 import { ToolPanel } from '../tools/ToolPanel';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n';
 import type { Message, ToolCall, ToolResult } from '@/lib/types';
 import { parseJsonField } from '@/lib/types';
 import { ThinkingBlock } from './ThinkingBlock';
@@ -41,6 +42,7 @@ function getAssistantConfig(sourceTool?: string): { name: string; avatarColor: s
 }
 
 export function MessageBubble({ message, showHeader = true, nextToolResults = [], sourceTool, searchQuery, showRawMessages = false }: MessageBubbleProps) {
+  const { t } = useI18n();
   const isUser = message.type === 'user';
   const isSystem = message.type === 'system';
   const hasContent = message.content?.trim();
@@ -102,15 +104,15 @@ export function MessageBubble({ message, showHeader = true, nextToolResults = []
 
       case 'exit-command':
         if (!showRawMessages) return null;
-        return <RawMessageBlock label="Exit Command" content={message.content} />;
+        return <RawMessageBlock label={t('chat.exitCommand')} content={message.content} />;
 
       case 'skill-load':
         if (!showRawMessages) return null;
-        return <RawMessageBlock label="Skill Load" content={message.content} />;
+        return <RawMessageBlock label={t('chat.skillLoad')} content={message.content} />;
 
       case 'command-frame':
         if (!showRawMessages) return null;
-        return <RawMessageBlock label="Command Output" content={message.content} />;
+        return <RawMessageBlock label={t('chat.commandOutput')} content={message.content} />;
 
       case 'human':
       default:
@@ -120,7 +122,7 @@ export function MessageBubble({ message, showHeader = true, nextToolResults = []
               {showHeader && (
                 <div className="flex items-center justify-end gap-2 mb-1">
                   <span className="text-xs text-muted-foreground">{format(new Date(message.timestamp), 'h:mm a')}</span>
-                  <span className="font-medium text-sm">You</span>
+                  <span className="font-medium text-sm">{t('chat.you')}</span>
                   <div className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-blue-500">
                     <User className="h-3.5 w-3.5 text-white" />
                   </div>

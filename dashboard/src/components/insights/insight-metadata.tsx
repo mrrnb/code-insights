@@ -13,20 +13,24 @@ import {
   ArrowRightLeft,
   Clock,
 } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
 import type { InsightType, InsightMetadata } from '@/lib/types';
 import type { LucideIcon } from 'lucide-react';
 
 // --- Outcome Badge ---
 
-export const OUTCOME_CONFIG: Record<string, { label: string; className: string; icon: typeof CheckCircle2 }> = {
-  success: { label: 'Success', className: 'bg-green-500/10 text-green-600 border-green-500/20', icon: CheckCircle2 },
-  partial: { label: 'Partial', className: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20', icon: AlertCircle },
-  abandoned: { label: 'Abandoned', className: 'bg-gray-500/10 text-gray-500 border-gray-500/20', icon: XCircle },
-  blocked: { label: 'Blocked', className: 'bg-red-500/10 text-red-600 border-red-500/20', icon: Ban },
-};
+function getOutcomeConfig(t: (key: string) => string): Record<string, { label: string; className: string; icon: typeof CheckCircle2 }> {
+  return {
+    success: { label: t('insight.outcome.success'), className: 'bg-green-500/10 text-green-600 border-green-500/20', icon: CheckCircle2 },
+    partial: { label: t('insight.outcome.partial'), className: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20', icon: AlertCircle },
+    abandoned: { label: t('insight.outcome.abandoned'), className: 'bg-gray-500/10 text-gray-500 border-gray-500/20', icon: XCircle },
+    blocked: { label: t('insight.outcome.blocked'), className: 'bg-red-500/10 text-red-600 border-red-500/20', icon: Ban },
+  };
+}
 
 export function OutcomeBadge({ outcome }: { outcome: string }) {
-  const config = OUTCOME_CONFIG[outcome];
+  const { t } = useI18n();
+  const config = getOutcomeConfig(t)[outcome];
   if (!config) return null;
   const Icon = config.icon;
   return (
@@ -39,23 +43,27 @@ export function OutcomeBadge({ outcome }: { outcome: string }) {
 
 // --- Field icon config ---
 
-const FIELD_CONFIG: Record<string, { icon: LucideIcon; color: string }> = {
-  'What Happened': { icon: AlertCircle, color: 'text-muted-foreground' },
-  'Why': { icon: HelpCircle, color: 'text-muted-foreground' },
-  'Takeaway': { icon: Lightbulb, color: 'text-yellow-500' },
-  'Applies When': { icon: CalendarClock, color: 'text-muted-foreground' },
-  'Situation': { icon: FileText, color: 'text-muted-foreground' },
-  'Choice': { icon: CheckCircle2, color: 'text-blue-500' },
-  'Reasoning': { icon: Scale, color: 'text-muted-foreground' },
-  'Alternatives Considered': { icon: GitFork, color: 'text-muted-foreground' },
-  'Trade-offs': { icon: ArrowRightLeft, color: 'text-muted-foreground' },
-  'Revisit When': { icon: Clock, color: 'text-muted-foreground' },
-};
+function getFieldConfig(t: (key: string) => string): Record<string, { icon: LucideIcon; color: string }> {
+  return {
+    [t('insight.field.whatHappened')]: { icon: AlertCircle, color: 'text-muted-foreground' },
+    [t('insight.field.why')]: { icon: HelpCircle, color: 'text-muted-foreground' },
+    [t('insight.field.takeaway')]: { icon: Lightbulb, color: 'text-yellow-500' },
+    [t('insight.field.appliesWhen')]: { icon: CalendarClock, color: 'text-muted-foreground' },
+    [t('insight.field.situation')]: { icon: FileText, color: 'text-muted-foreground' },
+    [t('insight.field.choice')]: { icon: CheckCircle2, color: 'text-blue-500' },
+    [t('insight.field.reasoning')]: { icon: Scale, color: 'text-muted-foreground' },
+    [t('insight.field.alternatives')]: { icon: GitFork, color: 'text-muted-foreground' },
+    [t('insight.field.tradeoffs')]: { icon: ArrowRightLeft, color: 'text-muted-foreground' },
+    [t('insight.field.revisitWhen')]: { icon: Clock, color: 'text-muted-foreground' },
+    [t('insight.field.evidence')]: { icon: FileText, color: 'text-muted-foreground' },
+  };
+}
 
 // --- Shared metadata helpers ---
 
 export function MetadataSection({ label, children, prominent }: { label: string; children: React.ReactNode; prominent?: boolean }) {
-  const fieldConfig = FIELD_CONFIG[label];
+  const { t } = useI18n();
+  const fieldConfig = getFieldConfig(t)[label];
   const FieldIcon = fieldConfig?.icon;
 
   return (
@@ -86,26 +94,27 @@ export function formatAlternatives(alternatives: InsightMetadata['alternatives']
 // --- Type-specific content components ---
 
 export function DecisionContent({ metadata }: { metadata: InsightMetadata }) {
+  const { t } = useI18n();
   const hasStructured = metadata.situation || metadata.choice || metadata.reasoning;
   if (!hasStructured) return null;
 
   return (
     <div className="space-y-2.5">
-      {metadata.situation && <MetadataSection label="Situation">{metadata.situation}</MetadataSection>}
-      {metadata.choice && <MetadataSection label="Choice" prominent>{metadata.choice}</MetadataSection>}
-      {metadata.reasoning && <MetadataSection label="Reasoning">{metadata.reasoning}</MetadataSection>}
+      {metadata.situation && <MetadataSection label={t('insight.field.situation')}>{metadata.situation}</MetadataSection>}
+      {metadata.choice && <MetadataSection label={t('insight.field.choice')} prominent>{metadata.choice}</MetadataSection>}
+      {metadata.reasoning && <MetadataSection label={t('insight.field.reasoning')}>{metadata.reasoning}</MetadataSection>}
       {metadata.alternatives && metadata.alternatives.length > 0 && (
         <div className="space-y-0.5">
           <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
             <GitFork className="h-3 w-3 text-muted-foreground" />
-            Alternatives Considered
+            {t('insight.field.alternatives')}
           </span>
           <div className="flex flex-wrap gap-1.5 pt-0.5">
             {metadata.alternatives.map((alt, i) => {
               const label = typeof alt === 'string' ? alt : alt.option;
               const reason = typeof alt === 'string' ? undefined : alt.rejected_because;
               return (
-                <Badge key={i} variant="outline" className="text-xs font-normal" title={reason ? `Rejected: ${reason}` : undefined}>
+                <Badge key={i} variant="outline" className="text-xs font-normal" title={reason ? t('insight.rejected', { reason }) : undefined}>
                   {label}
                   {reason && <span className="ml-1 text-muted-foreground/60">- {reason}</span>}
                 </Badge>
@@ -114,27 +123,28 @@ export function DecisionContent({ metadata }: { metadata: InsightMetadata }) {
           </div>
         </div>
       )}
-      {metadata.trade_offs && <MetadataSection label="Trade-offs">{metadata.trade_offs}</MetadataSection>}
+      {metadata.trade_offs && <MetadataSection label={t('insight.field.tradeoffs')}>{metadata.trade_offs}</MetadataSection>}
       {metadata.revisit_when && metadata.revisit_when !== 'N/A' && (
-        <MetadataSection label="Revisit When">{metadata.revisit_when}</MetadataSection>
+        <MetadataSection label={t('insight.field.revisitWhen')}>{metadata.revisit_when}</MetadataSection>
       )}
       {metadata.evidence && metadata.evidence.length > 0 && (
-        <MetadataSection label="Evidence">{metadata.evidence.join(', ')}</MetadataSection>
+        <MetadataSection label={t('insight.field.evidence')}>{metadata.evidence.join(', ')}</MetadataSection>
       )}
     </div>
   );
 }
 
 export function LearningContent({ metadata }: { metadata: InsightMetadata }) {
+  const { t } = useI18n();
   const hasStructured = metadata.symptom || metadata.root_cause || metadata.takeaway;
   if (!hasStructured) return null;
 
   return (
     <div className="space-y-2.5">
-      {metadata.symptom && <MetadataSection label="What Happened">{metadata.symptom}</MetadataSection>}
-      {metadata.root_cause && <MetadataSection label="Why">{metadata.root_cause}</MetadataSection>}
-      {metadata.takeaway && <MetadataSection label="Takeaway" prominent>{metadata.takeaway}</MetadataSection>}
-      {metadata.applies_when && <MetadataSection label="Applies When">{metadata.applies_when}</MetadataSection>}
+      {metadata.symptom && <MetadataSection label={t('insight.field.whatHappened')}>{metadata.symptom}</MetadataSection>}
+      {metadata.root_cause && <MetadataSection label={t('insight.field.why')}>{metadata.root_cause}</MetadataSection>}
+      {metadata.takeaway && <MetadataSection label={t('insight.field.takeaway')} prominent>{metadata.takeaway}</MetadataSection>}
+      {metadata.applies_when && <MetadataSection label={t('insight.field.appliesWhen')}>{metadata.applies_when}</MetadataSection>}
     </div>
   );
 }

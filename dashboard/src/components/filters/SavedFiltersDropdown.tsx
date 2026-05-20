@@ -5,6 +5,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useI18n } from '@/lib/i18n';
 import type { SavedFilter } from '@/hooks/useSavedFilters';
 
 interface SavedFiltersDropdownProps {
@@ -23,20 +24,21 @@ export function SavedFiltersDropdown({
   onApply,
   onDelete,
 }: SavedFiltersDropdownProps) {
+  const { t } = useI18n();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 shrink-0">
           <Bookmark className="h-3.5 w-3.5" />
-          Saved
+          {t('savedFilters.saved')}
           <ChevronDown className="h-3 w-3 ml-0.5" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-72 p-1">
         {savedFilters.length === 0 ? (
           <div className="px-3 py-4 text-center text-xs text-muted-foreground">
-            <p className="font-medium">No saved filters yet.</p>
-            <p className="mt-0.5">Apply filters, then click Save.</p>
+            <p className="font-medium">{t('savedFilters.empty')}</p>
+            <p className="mt-0.5">{t('savedFilters.hint')}</p>
           </div>
         ) : (
           savedFilters.map((sf) => {
@@ -61,7 +63,7 @@ export function SavedFiltersDropdown({
                     onDelete(sf.id);
                   }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5 text-muted-foreground hover:text-destructive"
-                  aria-label="Delete saved filter"
+                  aria-label={t('savedFilters.delete')}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>

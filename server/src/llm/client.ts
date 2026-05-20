@@ -38,7 +38,7 @@ export function isLLMConfigured(): boolean {
 export function createLLMClient(): LLMClient {
   const config = loadLLMConfig();
   if (!config) {
-    throw new Error('LLM not configured. Run `code-insights config llm` to configure a provider.');
+    throw new Error('LLM 未配置。运行 `code-insights config llm` 配置提供商。');
   }
   return createClientFromConfig(config);
 }
@@ -61,7 +61,7 @@ export function createClientFromConfig(config: LLMProviderConfig): LLMClient {
     case 'llamacpp':
       return createLlamaCppClient(config.model, config.baseUrl);
     default:
-      throw new Error(`Unknown LLM provider: ${config.provider}`);
+      throw new Error(`未知的 LLM 提供商：${config.provider}`);
   }
 }
 
@@ -76,7 +76,7 @@ export async function testLLMConfig(config: LLMProviderConfig): Promise<{ succes
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : '未知错误',
     };
   }
 }

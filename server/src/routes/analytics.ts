@@ -12,7 +12,7 @@ app.get('/dashboard', (c) => {
   const { range = '7d' } = c.req.query();
 
   if (!VALID_RANGES.includes(range as Range)) {
-    return c.json({ error: `Invalid range. Must be one of: ${VALID_RANGES.join(', ')}` }, 400);
+    return c.json({ error: `无效的范围。必须是以下之一：${VALID_RANGES.join(', ')}` }, 400);
   }
 
   let periodStart: string | null = null;

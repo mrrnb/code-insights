@@ -30,10 +30,10 @@ import { useI18n } from '@/lib/i18n';
 type WizardStep = 1 | 2 | 3 | 4;
 
 const STEPS = [
-  { n: 1 as WizardStep, label: 'Scope' },
-  { n: 2 as WizardStep, label: 'Configure' },
-  { n: 3 as WizardStep, label: 'Generate' },
-  { n: 4 as WizardStep, label: 'Review' },
+  { n: 1 as WizardStep, label: 'exportPage.scope' },
+  { n: 2 as WizardStep, label: 'exportPage.configure' },
+  { n: 3 as WizardStep, label: 'exportPage.generate' },
+  { n: 4 as WizardStep, label: 'exportPage.review' },
 ];
 
 const DEPTH_CAPS: Record<ExportGenerateDepth, number> = {
@@ -173,7 +173,7 @@ export default function ExportPage() {
               }`}
             >
               <span>{s.n}</span>
-              <span>{s.label}</span>
+              <span>{t(s.label)}</span>
             </div>
             {i < STEPS.length - 1 && (
               <ChevronRight className="h-3 w-3 text-muted-foreground" />
@@ -259,15 +259,15 @@ export default function ExportPage() {
               />
               <ExportTypeCard
                 icon={NotebookPen}
-                title="Obsidian"
-                description="Markdown with YAML frontmatter and wikilinks"
+                title={t('export.obsidian')}
+                description={t('export.obsidianDesc')}
                 selected={format_ === 'obsidian'}
                 onSelect={() => setFormat('obsidian')}
               />
               <ExportTypeCard
                 icon={StickyNote}
-                title="Notion"
-                description="Notion-compatible markdown with toggle blocks and callouts"
+                title={t('export.notion')}
+                description={t('export.notionDesc')}
                 selected={format_ === 'notion'}
                 onSelect={() => setFormat('notion')}
               />
@@ -311,7 +311,7 @@ export default function ExportPage() {
             <div>
               <p className="text-lg font-bold">
                 {depthCappedCount < scopedInsights.length
-                  ? `~${depthCappedCount} of ${scopedInsights.length}`
+                  ? t('exportPage.insightCount', { used: depthCappedCount, total: scopedInsights.length })
                   : scopedInsights.length}
               </p>
               <p className="text-xs text-muted-foreground">{t('export.toSynthesize')}</p>
@@ -420,7 +420,7 @@ export default function ExportPage() {
             {isComplete && (
               <>
                 <Button variant="outline" onClick={handleCancelGeneration}>
-                  Back
+                  {t('export.back')}
                 </Button>
                 <Button onClick={handleGoToReview}>
                   {t('export.reviewExport')}
@@ -431,7 +431,7 @@ export default function ExportPage() {
             {isError && (
               <>
                 <Button variant="outline" onClick={handleCancelGeneration}>
-                  Back
+                  {t('export.back')}
                 </Button>
                 <Button onClick={handleStartGeneration}>
                   {t('export.tryAgain')}
@@ -453,9 +453,7 @@ export default function ExportPage() {
                   <CardDescription>
                     {exportState.metadata && (
                       <>
-                        {exportState.metadata.sessionCount} session{exportState.metadata.sessionCount !== 1 ? 's' : ''}{' '}
-                        &bull;{' '}
-                        {exportState.metadata.insightCount} insight{exportState.metadata.insightCount !== 1 ? 's' : ''} synthesized
+                        {t('export.synthesizedMeta', { sessions: exportState.metadata.sessionCount, insights: exportState.metadata.insightCount })}
                         {exportState.metadata.insightCount < exportState.metadata.totalInsights && (
                           <>{t('export.generatedMetaPartial', { total: exportState.metadata.totalInsights })}</>
                         )}

@@ -3,7 +3,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { MessageSquare, FileText, GitCommit, BookOpen, Target, Activity } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getSessionTitle } from '@/lib/utils';
-import { INSIGHT_TYPE_COLORS, SOURCE_TOOL_COLORS } from '@/lib/constants/colors';
+import { INSIGHT_TYPE_COLORS, INSIGHT_TYPE_LABELS, SOURCE_TOOL_COLORS } from '@/lib/constants/colors';
+import { useI18n } from '@/lib/i18n';
 import type { Session, Insight, InsightType } from '@/lib/types';
 
 type FeedItem =
@@ -24,15 +25,8 @@ const insightTypeIcons: Record<InsightType, typeof FileText> = {
   prompt_quality: Target,
 };
 
-const insightTypeLabels: Record<InsightType, string> = {
-  summary: 'Summary',
-  decision: 'Decision',
-  learning: 'Learning',
-  technique: 'Learning',
-  prompt_quality: 'Prompt Quality',
-};
-
 export function ActivityFeed({ sessions, insights, limit = 7 }: ActivityFeedProps) {
+  const { t } = useI18n();
   const feedItems: FeedItem[] = [
     ...sessions.map((s) => ({ kind: 'session' as const, session: s, timestamp: new Date(s.started_at) })),
     ...insights.map((i) => ({ kind: 'insight' as const, insight: i, timestamp: new Date(i.timestamp) })),
@@ -44,8 +38,8 @@ export function ActivityFeed({ sessions, insights, limit = 7 }: ActivityFeedProp
     return (
       <div className="flex flex-col items-center justify-center py-4 gap-1.5 text-center">
         <Activity className="h-8 w-8 text-muted-foreground/50" />
-        <p className="text-sm text-muted-foreground">No recent activity</p>
-        <p className="text-xs text-muted-foreground">Start an AI coding session and run code-insights sync to see it here.</p>
+        <p className="text-sm text-muted-foreground">{t('activityFeed.noRecent')}</p>
+        <p className="text-xs text-muted-foreground">{t('activityFeed.noRecentDesc')}</p>
       </div>
     );
   }
@@ -64,6 +58,7 @@ export function ActivityFeed({ sessions, insights, limit = 7 }: ActivityFeedProp
 }
 
 function SessionFeedItem({ session }: { session: Session }) {
+  const { t } = useI18n();
   const startedAt = new Date(session.started_at);
   const endedAt = new Date(session.ended_at);
   const durationMin = Math.round((endedAt.getTime() - startedAt.getTime()) / 60000);
@@ -89,7 +84,7 @@ function SessionFeedItem({ session }: { session: Session }) {
               </Badge>
             )}
             <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">
-              &middot; {session.message_count} msgs &middot; {durationMin}m
+              &middot; {session.message_count} {t('activityFeed.msgs')} &middot; {durationMin}{t('activityFeed.minutes')}
             </span>
           </div>
           <span className="text-xs text-muted-foreground shrink-0">
@@ -102,9 +97,10 @@ function SessionFeedItem({ session }: { session: Session }) {
 }
 
 function InsightFeedItem({ insight }: { insight: Insight }) {
+  const { t } = useI18n();
   const Icon = insightTypeIcons[insight.type];
   const colorClass = INSIGHT_TYPE_COLORS[insight.type];
-  const label = insightTypeLabels[insight.type];
+  const label = t(INSIGHT_TYPE_LABELS[insight.type]);
 
   return (
     <Link to={`/sessions?session=${insight.session_id}`} className="block group">

@@ -143,7 +143,7 @@ export function Header({ onOpenSearch }: HeaderProps) {
             >
               <span className="flex items-center gap-1.5">
                 <Search className="h-3.5 w-3.5" />
-                Search...
+                {t('header.search')}
               </span>
               <kbd className="text-[10px] bg-muted px-1.5 py-0.5 rounded border font-mono">
                 ⌘K

@@ -60,7 +60,7 @@ export function createLlamaCppClient(model: string, baseUrl?: string): LLMClient
           const cause = (err as { cause?: { code?: string } })?.cause;
           if (cause?.code === 'ECONNREFUSED' || (err instanceof TypeError && err.message.includes('fetch'))) {
             throw new Error(
-              `Cannot connect to llama-server at ${url} — is it running? Start it with: llama-server -m <model.gguf>`
+              `无法连接到 llama-server（${url}）— 是否已启动？运行 llama-server -m <model.gguf> 启动`
             );
           }
           throw err;
@@ -70,7 +70,7 @@ export function createLlamaCppClient(model: string, baseUrl?: string): LLMClient
           const detail = await res.text().catch(() => '');
           if (res.status === 401 || res.status === 403) {
             throw new Error(
-              `llama-server returned HTTP ${res.status} — check your server configuration.${detail ? ` (${detail})` : ''}`
+              `llama-server 返回 HTTP ${res.status} — 请检查服务器配置。${detail ? ` (${detail})` : ''}`
             );
           }
           // Detect exceed_context_size_error: llama-server returns this when the request's
@@ -85,17 +85,17 @@ export function createLlamaCppClient(model: string, baseUrl?: string): LLMClient
                 ? ` (${nPrompt} tokens requested, server context is ${nCtx})`
                 : '';
               throw new Error(
-                `Session too large for llama-server context window${tokenInfo}. ` +
-                `Start llama-server with a larger context: llama-server -m <model.gguf> -c 32768`
+                `会话超出 llama-server 上下文窗口${tokenInfo}。` +
+                `请使用更大的上下文启动：llama-server -m <model.gguf> -c 32768`
               );
             }
           }
           if (res.status >= 500) {
             throw new Error(
-              `llama-server error (HTTP ${res.status}). Is the model loaded?${detail ? ` (${detail})` : ''}`
+              `llama-server 错误（HTTP ${res.status}）。模型是否已加载？${detail ? ` (${detail})` : ''}`
             );
           }
-          throw new Error(`llama-server API error (HTTP ${res.status})${detail ? ` - ${detail}` : ''}`);
+          throw new Error(`llama-server API 错误（HTTP ${res.status}）${detail ? ` - ${detail}` : ''}`);
         }
 
         let data: {
@@ -107,7 +107,7 @@ export function createLlamaCppClient(model: string, baseUrl?: string): LLMClient
         } catch {
           const preview = await res.text().catch(() => '');
           throw new Error(
-            `llama-server returned a non-JSON response (HTTP ${res.status}).${preview ? ` Body starts with: ${preview.slice(0, 120)}` : ''}`
+            `llama-server 返回了非 JSON 响应（HTTP ${res.status}）。${preview ? ` 响应开头：${preview.slice(0, 120)}` : ''}`
           );
         }
 
@@ -162,8 +162,8 @@ export function createLlamaCppClient(model: string, baseUrl?: string): LLMClient
 
         if (!retryValid) {
           throw new Error(
-            `llama-server returned invalid JSON on both attempts. ` +
-            `Response preview: ${retry.content.slice(0, 200)}`
+            `llama-server 两次尝试均返回无效 JSON。` +
+            `响应预览：${retry.content.slice(0, 200)}`
           );
         }
 

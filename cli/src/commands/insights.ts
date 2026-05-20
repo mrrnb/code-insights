@@ -122,7 +122,7 @@ export async function runInsightsCommand(options: InsightsCommandOptions): Promi
   // 2. Load session from DB
   const session = loadSessionForAnalysis(options.sessionId);
   if (!session) {
-    throw new Error(`Session '${options.sessionId}' not found in local database.`);
+    throw new Error(`会话 '${options.sessionId}' 在本地数据库中未找到。`);
   }
 
   // SessionData is the shared type accepted by analysis-db converters.
@@ -180,7 +180,7 @@ export async function runInsightsCommand(options: InsightsCommandOptions): Promi
 
   const parsedSession = parseAnalysisResponse(sessionResult.rawJson);
   if (!parsedSession.success) {
-    throw new Error(`Session analysis failed: ${parsedSession.error.error_message}`);
+    throw new Error(`会话分析失败：${parsedSession.error.error_message}`);
   }
 
   // Save session insights (upsert: insert new, delete old)
@@ -226,7 +226,7 @@ export async function runInsightsCommand(options: InsightsCommandOptions): Promi
 
   const parsedPQ = parsePromptQualityResponse(pqResult.rawJson);
   if (!parsedPQ.success) {
-    throw new Error(`Prompt quality analysis failed: ${parsedPQ.error.error_message}`);
+    throw new Error(`提示词质量分析失败：${parsedPQ.error.error_message}`);
   }
 
   const pqInsight = convertPQToInsightRow(parsedPQ.data, sessionData);
@@ -255,7 +255,7 @@ export async function runInsightsCommand(options: InsightsCommandOptions): Promi
   // Non-PQ insight count (excludes summary's own entry which is always saved)
   const insightCount = sessionInsights.length;
   const pqScore = parsedPQ.data.efficiency_score;
-  log(chalk.green(`[Code Insights] Session analyzed: ${insightCount} insights, PQ ${pqScore}/100`));
+  log(chalk.green(`[Code Insights] 会话已分析：${insightCount} 条洞察，PQ ${pqScore}/100`));
 }
 
 // ── CLI command entry point ───────────────────────────────────────────────────
@@ -277,13 +277,13 @@ export async function insightsCommand(
     if (opts.hook) {
       // --hook was removed in v4.9. Show a clear error so users know what to do.
       console.error(chalk.red(
-        'The --hook flag has been removed. Run `code-insights install-hook` to install the updated hook.'
+        '--hook 标志已移除。请运行 `code-insights install-hook` 安装更新后的 hook。'
       ));
       process.exit(1);
     }
 
     if (!sessionId) {
-      throw new Error('Session ID is required');
+      throw new Error('缺少会话 ID');
     }
 
     await runInsightsCommand({
@@ -296,7 +296,7 @@ export async function insightsCommand(
     });
   } catch (error) {
     if (!quiet) {
-      console.error(chalk.red(`[Code Insights] ${error instanceof Error ? error.message : 'Analysis failed'}`));
+      console.error(chalk.red(`[Code Insights] ${error instanceof Error ? error.message : '分析失败'}`));
     }
     process.exit(1);
   }
@@ -356,15 +356,15 @@ export async function insightsCheckCommand(opts: {
         try {
           await runInsightsCommand({ sessionId: row.id, native: false, quiet: true, _runner: runner });
           const elapsed = Math.round((Date.now() - start) / 1000);
-          process.stdout.write(`done (${elapsed}s)\n`);
+          process.stdout.write(`完成（${elapsed}s）\n`);
           successCount++;
         } catch (err) {
-          process.stdout.write('failed\n');
-          console.error(chalk.red(`  [Code Insights] ${err instanceof Error ? err.message : 'Analysis failed'}`));
+          process.stdout.write('失败\n');
+          console.error(chalk.red(`  [Code Insights] ${err instanceof Error ? err.message : '分析失败'}`));
         }
       }
 
-      log(chalk.green(`Analyzed ${successCount} session${successCount !== 1 ? 's' : ''}.`));
+      log(chalk.green(`已分析 ${successCount} 个会话。`));
       return;
     }
 
@@ -383,21 +383,21 @@ export async function insightsCheckCommand(opts: {
 
     // 3-10: print count + suggestion
     if (count <= 10) {
-      log(chalk.yellow(`[Code Insights] ${count} unanalyzed session${count > 1 ? 's' : ''} in the last ${days} days.`));
-      log(chalk.dim(`  Run: code-insights insights check --analyze to process them`));
+      log(chalk.yellow(`[Code Insights] 最近 ${days} 天有 ${count} 个未分析的会话。`));
+      log(chalk.dim(`  运行：code-insights insights check --analyze 处理它们`));
       return;
     }
 
     // 11+: print count + time estimate
     const estimateSecs = count * SECONDS_PER_SESSION;
     const estimateMins = Math.round(estimateSecs / 60);
-    const timeLabel = estimateMins < 2 ? `~${estimateSecs}s` : `~${estimateMins} min`;
-    log(chalk.yellow(`[Code Insights] ${count} unanalyzed session${count > 1 ? 's' : ''} in the last ${days} days.`));
-    log(chalk.dim(`  Estimated time: ${timeLabel} (~${SECONDS_PER_SESSION}s each)`));
-    log(chalk.dim(`  Run: code-insights insights check --analyze to process them`));
+    const timeLabel = estimateMins < 2 ? `~${estimateSecs}s` : `~${estimateMins} 分钟`;
+    log(chalk.yellow(`[Code Insights] 最近 ${days} 天有 ${count} 个未分析的会话。`));
+    log(chalk.dim(`  预计耗时：${timeLabel}（每个约 ${SECONDS_PER_SESSION}s）`));
+    log(chalk.dim(`  运行：code-insights insights check --analyze 处理它们`));
   } catch (error) {
     if (!quiet) {
-      console.error(chalk.red(`[Code Insights] ${error instanceof Error ? error.message : 'Check failed'}`));
+      console.error(chalk.red(`[Code Insights] ${error instanceof Error ? error.message : '检查失败'}`));
     }
     process.exit(1);
   }

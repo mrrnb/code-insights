@@ -48,7 +48,7 @@ app.put('/llm', async (c) => {
   if (body.dashboardPort !== undefined) {
     const port = body.dashboardPort;
     if (typeof port !== 'number' || !Number.isInteger(port) || port < 1 || port > 65535) {
-      return c.json({ error: 'dashboardPort must be an integer between 1 and 65535' }, 400);
+      return c.json({ error: 'dashboardPort 必须是 1 到 65535 之间的整数' }, 400);
     }
     config.dashboard = { ...config.dashboard, port };
     changed = true;
@@ -60,7 +60,7 @@ app.put('/llm', async (c) => {
 
   if (hasLLMField) {
     if (body.provider !== undefined && !VALID_PROVIDERS.includes(body.provider as typeof VALID_PROVIDERS[number])) {
-      return c.json({ error: `provider must be one of: ${VALID_PROVIDERS.join(', ')}` }, 400);
+      return c.json({ error: `provider 必须是以下之一：${VALID_PROVIDERS.join(', ')}` }, 400);
     }
 
     const existingLlm = config.dashboard?.llm ?? {} as Partial<LLMProviderConfig>;
@@ -78,11 +78,11 @@ app.put('/llm', async (c) => {
     };
 
     if (!updatedLlm.model) {
-      return c.json({ error: 'model is required when setting LLM config' }, 400);
+      return c.json({ error: '设置 LLM 配置时，model 为必填项' }, 400);
     }
 
     if (updatedLlm.provider === 'custom' && !updatedLlm.baseUrl) {
-      return c.json({ error: 'baseUrl is required for custom provider' }, 400);
+      return c.json({ error: '自定义提供商需要 baseUrl' }, 400);
     }
 
     config.dashboard = { ...config.dashboard, llm: updatedLlm };
@@ -123,7 +123,7 @@ app.post('/llm/test', async (c) => {
   if (!testConfig) {
     return c.json({
       success: false,
-      error: 'No LLM config found. Run `code-insights config llm` or provide config in request body.',
+      error: '未找到 LLM 配置。运行 `code-insights config llm` 或在请求体中提供配置。',
     }, 400);
   }
 

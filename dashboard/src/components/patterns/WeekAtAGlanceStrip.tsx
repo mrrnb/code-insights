@@ -13,6 +13,7 @@ import { SESSION_CHARACTER_COLORS, SESSION_CHARACTER_LABELS } from '@/lib/consta
 import { downloadShareCard } from '@/lib/share-card-utils';
 import { ProfilePromptDialog } from '@/components/ProfilePromptDialog';
 import { useUserProfile, isProfileComplete } from '@/hooks/useUserProfile';
+import { useI18n } from '@/lib/i18n';
 import type { UserProfile } from '@/hooks/useUserProfile';
 import type { PQDimensionScores } from '@/lib/api';
 
@@ -44,12 +45,7 @@ const OUTCOME_COLORS: Record<string, string> = {
   abandoned: '#ef4444', // red-500
 };
 
-const OUTCOME_LABELS: Record<string, string> = {
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
-  abandoned: 'Abandoned',
-};
+// OUTCOME_LABELS moved inside component to use i18n
 
 const MAX_TAGLINE_CHARS = 80;
 const MAX_CHARACTER_BADGES = 3;
@@ -72,6 +68,13 @@ export function WeekAtAGlanceStrip({
   totalTokens,
   effectivePatterns,
 }: WeekAtAGlanceStripProps) {
+  const { t } = useI18n();
+  const OUTCOME_LABELS: Record<string, string> = {
+    high: t('weekStrip.high'),
+    medium: t('weekStrip.medium'),
+    low: t('weekStrip.low'),
+    abandoned: t('weekStrip.abandoned'),
+  };
   const outcomeTotal = Object.values(outcomeDistribution).reduce((s, v) => s + v, 0);
   const hasOutcomes = outcomeTotal > 0;
 
@@ -128,9 +131,9 @@ export function WeekAtAGlanceStrip({
         effectivePatterns,
         userProfile,
       });
-      toast.success('AI Fluency Score card downloaded');
+      toast.success(t('weekStrip.cardDownloaded'));
     } catch {
-      toast.error('Failed to generate card');
+      toast.error(t('weekStrip.cardFailed'));
     } finally {
       setIsDownloading(false);
     }
@@ -180,7 +183,7 @@ export function WeekAtAGlanceStrip({
               </p>
             ) : (
               <p className="text-sm text-muted-foreground italic">
-                Generate patterns to discover your working style
+                {t('weekStrip.generatePrompt')}
               </p>
             )}
           </div>
@@ -188,7 +191,7 @@ export function WeekAtAGlanceStrip({
             {showStreak && (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-xs font-medium border border-amber-500/20">
                 <Flame className="h-3 w-3" />
-                {streak}d streak
+                {t('weekStrip.streak', { count: streak })}
               </span>
             )}
             {(rateLimitCount ?? 0) > 0 && (
@@ -200,7 +203,7 @@ export function WeekAtAGlanceStrip({
                 }
               >
                 <Zap className="h-3 w-3" />
-                {rateLimitCount} rate limit{rateLimitCount !== 1 ? 's' : ''}
+                {t('weekStrip.rateLimits', { count: rateLimitCount ?? 0 })}
               </span>
             )}
             {/* Download button — only visible after reflection is generated */}
@@ -209,10 +212,10 @@ export function WeekAtAGlanceStrip({
                 onClick={handleDownload}
                 disabled={isDownloading}
                 className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 text-xs font-medium border border-blue-500/20 hover:bg-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                title="Download working style card"
+                title={t('weekStrip.downloadCard')}
               >
                 <Download className="h-3 w-3" />
-                {isDownloading ? 'Generating…' : 'Share'}
+                {isDownloading ? t('weekStrip.generating') : t('weekStrip.share')}
               </button>
             )}
           </div>
@@ -224,9 +227,9 @@ export function WeekAtAGlanceStrip({
             <Activity className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-xl font-bold tabular-nums">{totalSessions}</span>
             <span className="text-xs text-muted-foreground">
-              {totalSessions === 1 ? 'session' : 'sessions'}
+              {t('weekStrip.sessions')}
               {totalAllSessions > totalSessions && (
-                <> of {totalAllSessions}</>
+                <> {t('weekStrip.of')} {totalAllSessions}</>
               )}
             </span>
           </div>
@@ -234,14 +237,14 @@ export function WeekAtAGlanceStrip({
             <div className="flex items-center gap-1.5">
               <LayoutGrid className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xl font-bold tabular-nums">{coveragePct}%</span>
-              <span className="text-xs text-muted-foreground">analyzed</span>
+              <span className="text-xs text-muted-foreground">{t('weekStrip.analyzed')}</span>
             </div>
           )}
           {totalSessions > 0 && (
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
               <span className="text-xl font-bold tabular-nums">{successCount}</span>
-              <span className="text-xs text-muted-foreground">high-quality</span>
+              <span className="text-xs text-muted-foreground">{t('weekStrip.highQuality')}</span>
             </div>
           )}
         </div>
@@ -263,7 +266,7 @@ export function WeekAtAGlanceStrip({
         {/* Outcome stacked bar */}
         {hasOutcomes && (
           <div>
-            <p className="text-xs text-muted-foreground mb-1">Outcomes</p>
+            <p className="text-xs text-muted-foreground mb-1">{t('weekStrip.outcomes')}</p>
             <div className="flex h-2 rounded-full overflow-hidden" role="img" aria-label="Outcome distribution">
               {segments.map(({ key, pct }) => (
                 <div

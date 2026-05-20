@@ -70,7 +70,7 @@ app.post('/generate', requireLLM(), async (c) => {
     try {
       await stream.writeSSE({
         event: 'progress',
-        data: JSON.stringify({ phase: 'aggregating', message: 'Aggregating facets...' }),
+        data: JSON.stringify({ phase: 'aggregating', message: '正在聚合 facets...' }),
       });
 
       const aggregated = getAggregatedData(db, where, params, body.project, body.source);
@@ -78,7 +78,7 @@ app.post('/generate', requireLLM(), async (c) => {
       if (aggregated.totalSessions === 0) {
         await stream.writeSSE({
           event: 'error',
-          data: JSON.stringify({ error: 'No sessions with facets found. Run analysis first.' }),
+          data: JSON.stringify({ error: '未找到包含 facets 的会话。请先运行分析。' }),
         });
         return;
       }
@@ -87,7 +87,7 @@ app.post('/generate', requireLLM(), async (c) => {
         await stream.writeSSE({
           event: 'error',
           data: JSON.stringify({
-            error: `Need at least ${MIN_FACETS_FOR_REFLECT} analyzed sessions for meaningful pattern synthesis. Currently have ${aggregated.totalSessions}. Run session analysis on more sessions first.`,
+            error: `至少需要 ${MIN_FACETS_FOR_REFLECT} 个已分析的会话才能进行有意义的模式整合。当前有 ${aggregated.totalSessions} 个。请先分析更多会话。`,
             code: 'INSUFFICIENT_FACETS',
             current: aggregated.totalSessions,
             required: MIN_FACETS_FOR_REFLECT,
@@ -105,7 +105,7 @@ app.post('/generate', requireLLM(), async (c) => {
 
         await stream.writeSSE({
           event: 'progress',
-          data: JSON.stringify({ phase: 'synthesizing', section, message: `Generating ${section}...` }),
+          data: JSON.stringify({ phase: 'synthesizing', section, message: `正在生成 ${section}...` }),
         });
 
         if (section === 'friction-wins') {
@@ -231,7 +231,7 @@ app.post('/generate', requireLLM(), async (c) => {
         data: JSON.stringify({ results }),
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
+      const message = err instanceof Error ? err.message : '未知错误';
       await stream.writeSSE({
         event: 'error',
         data: JSON.stringify({ error: message }),

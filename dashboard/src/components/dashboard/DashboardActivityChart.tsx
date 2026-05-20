@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useThemeColors } from '@/lib/hooks/useThemeColors';
 import { CHART_COLORS } from '@/lib/constants/colors';
+import { useI18n } from '@/lib/i18n';
 import type { DailyStats } from '@/lib/types';
 
 type DashboardRange = '7d' | '30d' | '90d' | 'all';
@@ -22,14 +23,15 @@ interface DashboardActivityChartProps {
   onRangeChange: (range: DashboardRange) => void;
 }
 
-const rangeOptions: { value: DashboardRange; label: string }[] = [
-  { value: '7d', label: '7d' },
-  { value: '30d', label: '30d' },
-  { value: '90d', label: '90d' },
-  { value: 'all', label: 'All' },
-];
-
 export function DashboardActivityChart({ data, range, onRangeChange }: DashboardActivityChartProps) {
+  const { t } = useI18n();
+
+  const rangeOptions: { value: DashboardRange; label: string }[] = [
+    { value: '7d', label: '7d' },
+    { value: '30d', label: '30d' },
+    { value: '90d', label: '90d' },
+    { value: 'all', label: t('analytics.allProjects') },
+  ];
   const { tooltipBg, tooltipBorder } = useThemeColors();
 
   const chartData = useMemo(
@@ -50,7 +52,7 @@ export function DashboardActivityChart({ data, range, onRangeChange }: Dashboard
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-1">
-        <CardTitle className="text-sm font-medium">Activity</CardTitle>
+        <CardTitle className="text-sm font-medium">{t('dashboardChart.activity')}</CardTitle>
         <div className="flex gap-1">
           {rangeOptions.map(({ value, label }) => (
             <Button
@@ -107,7 +109,7 @@ export function DashboardActivityChart({ data, range, onRangeChange }: Dashboard
                 <Area
                   type="monotone"
                   dataKey="sessionCount"
-                  name="Sessions"
+                  name={t('chart.sessions')}
                   stroke={CHART_COLORS.activity.sessions}
                   fillOpacity={1}
                   fill="url(#dashColorSessions)"
@@ -115,7 +117,7 @@ export function DashboardActivityChart({ data, range, onRangeChange }: Dashboard
                 <Area
                   type="monotone"
                   dataKey="insightCount"
-                  name="Insights"
+                  name={t('chart.insights')}
                   stroke={CHART_COLORS.activity.insights}
                   fillOpacity={1}
                   fill="url(#dashColorInsights)"
@@ -124,7 +126,7 @@ export function DashboardActivityChart({ data, range, onRangeChange }: Dashboard
             </ResponsiveContainer>
           ) : (
             <div className="flex h-full items-center justify-center">
-              <p className="text-sm text-muted-foreground">No activity data yet</p>
+              <p className="text-sm text-muted-foreground">{t('dashboardChart.noData')}</p>
             </div>
           )}
         </div>

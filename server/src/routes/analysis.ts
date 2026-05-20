@@ -24,7 +24,7 @@ const app = new Hono();
 app.get('/usage', async (c) => {
   const sessionId = c.req.query('sessionId');
   if (!sessionId) {
-    return c.json({ error: 'Missing required query param: sessionId' }, 400);
+    return c.json({ error: '缺少必需的查询参数：sessionId' }, 400);
   }
 
   const usage = getSessionAnalysisUsage(sessionId);
@@ -68,14 +68,14 @@ app.get('/usage', async (c) => {
 app.post('/session', requireLLM(), async (c) => {
   const body = await c.req.json<{ sessionId?: string }>();
   if (!body.sessionId || typeof body.sessionId !== 'string') {
-    return c.json({ error: 'Missing required field: sessionId' }, 400);
+    return c.json({ error: '缺少必需的字段：sessionId' }, 400);
   }
 
   const db = getDb();
   const session = loadSessionForAnalysis(db, body.sessionId);
 
   if (!session) {
-    return c.json({ error: 'Session not found' }, 404);
+    return c.json({ error: '会话未找到' }, 404);
   }
 
   const messages = loadSessionMessages(db, body.sessionId);
@@ -98,14 +98,14 @@ app.post('/session', requireLLM(), async (c) => {
 app.get('/session/stream', requireLLM(), async (c) => {
   const sessionId = c.req.query('sessionId');
   if (!sessionId) {
-    return c.json({ error: 'Missing required query param: sessionId' }, 400);
+    return c.json({ error: '缺少必需的查询参数：sessionId' }, 400);
   }
 
   const db = getDb();
   const session = loadSessionForAnalysis(db, sessionId);
 
   if (!session) {
-    return c.json({ error: 'Session not found' }, 404);
+    return c.json({ error: '会话未找到' }, 404);
   }
 
   const messages = loadSessionMessages(db, sessionId);
@@ -115,10 +115,10 @@ app.get('/session/stream', requireLLM(), async (c) => {
     analysisFn: analyzeSession,
     progressMessage: (progress) =>
       progress.phase === 'saving'
-        ? 'Saving insights...'
+        ? '正在保存 insights...'
         : progress.currentChunk && progress.totalChunks
-          ? `Analyzing... (${progress.currentChunk} of ${progress.totalChunks})`
-          : 'Analyzing...',
+          ? `正在分析... (${progress.currentChunk}/${progress.totalChunks})`
+          : '正在分析...',
     onSuccess: (result) => {
       trackEvent('insight_generated', { type: 'session', count: result.insights.length });
       applyGeneratedTitle(sessionId, result.insights);
@@ -132,14 +132,14 @@ app.get('/session/stream', requireLLM(), async (c) => {
 app.post('/prompt-quality', requireLLM(), async (c) => {
   const body = await c.req.json<{ sessionId?: string }>();
   if (!body.sessionId || typeof body.sessionId !== 'string') {
-    return c.json({ error: 'Missing required field: sessionId' }, 400);
+    return c.json({ error: '缺少必需的字段：sessionId' }, 400);
   }
 
   const db = getDb();
   const session = loadSessionForAnalysis(db, body.sessionId);
 
   if (!session) {
-    return c.json({ error: 'Session not found' }, 404);
+    return c.json({ error: '会话未找到' }, 404);
   }
 
   const messages = loadSessionMessages(db, body.sessionId);
@@ -161,14 +161,14 @@ app.post('/prompt-quality', requireLLM(), async (c) => {
 app.get('/prompt-quality/stream', requireLLM(), async (c) => {
   const sessionId = c.req.query('sessionId');
   if (!sessionId) {
-    return c.json({ error: 'Missing required query param: sessionId' }, 400);
+    return c.json({ error: '缺少必需的查询参数：sessionId' }, 400);
   }
 
   const db = getDb();
   const session = loadSessionForAnalysis(db, sessionId);
 
   if (!session) {
-    return c.json({ error: 'Session not found' }, 404);
+    return c.json({ error: '会话未找到' }, 404);
   }
 
   const messages = loadSessionMessages(db, sessionId);
@@ -177,7 +177,7 @@ app.get('/prompt-quality/stream', requireLLM(), async (c) => {
     analysisType: 'prompt-quality',
     analysisFn: analyzePromptQuality,
     progressMessage: (progress) =>
-      progress.phase === 'saving' ? 'Saving insights...' : 'Analyzing prompt quality...',
+      progress.phase === 'saving' ? '正在保存 insights...' : '正在分析提示词质量...',
     onSuccess: (result) => {
       trackEvent('insight_generated', { type: 'prompt_quality', count: result.insights.length });
     },

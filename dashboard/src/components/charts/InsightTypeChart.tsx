@@ -2,6 +2,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useThemeColors } from '@/lib/hooks/useThemeColors';
 import { CHART_COLORS } from '@/lib/constants/colors';
+import { useI18n } from '@/lib/i18n';
 
 interface InsightTypeChartProps {
   data: {
@@ -14,19 +15,23 @@ interface InsightTypeChartProps {
 
 const COLORS = CHART_COLORS.insightTypes;
 
-const LABELS = {
-  summary: 'Summaries',
-  decision: 'Decisions',
-  learning: 'Learnings',
-  prompt_quality: 'Prompt Quality',
-};
+function getLabels(t: (key: string) => string) {
+  return {
+    summary: t('insightType.summary'),
+    decision: t('insightType.decision'),
+    learning: t('insightType.learning'),
+    prompt_quality: t('insightType.prompt_quality'),
+  };
+}
 
 export function InsightTypeChart({ data }: InsightTypeChartProps) {
+  const { t } = useI18n();
   const { tooltipBg, tooltipBorder } = useThemeColors();
+  const labels = getLabels(t);
   const chartData = Object.entries(data)
     .filter(([_, value]) => value > 0)
     .map(([name, value]) => ({
-      name: LABELS[name as keyof typeof LABELS],
+      name: labels[name as keyof typeof labels],
       value,
       color: COLORS[name as keyof typeof COLORS],
     }));
@@ -35,11 +40,11 @@ export function InsightTypeChart({ data }: InsightTypeChartProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Insight Types</CardTitle>
+          <CardTitle className="text-base">{t('chart.insightTypes')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex h-[200px] items-center justify-center">
-            <p className="text-sm text-muted-foreground">No insights yet</p>
+            <p className="text-sm text-muted-foreground">{t('chart.noInsights')}</p>
           </div>
         </CardContent>
       </Card>
@@ -49,7 +54,7 @@ export function InsightTypeChart({ data }: InsightTypeChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Insight Types</CardTitle>
+        <CardTitle className="text-base">{t('chart.insightTypes')}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[200px]">

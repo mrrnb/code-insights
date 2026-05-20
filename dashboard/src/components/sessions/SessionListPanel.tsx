@@ -25,6 +25,7 @@ import { SaveFilterPopover } from '@/components/filters/SaveFilterPopover';
 import { SavedFiltersDropdown } from '@/components/filters/SavedFiltersDropdown';
 import { SourceToolSelect } from '@/components/filters/SourceToolSelect';
 import { useSavedFilters } from '@/hooks/useSavedFilters';
+import { useI18n } from '@/lib/i18n';
 import { subDays, startOfDay, formatISO } from 'date-fns';
 
 const SESSION_CHARACTERS = [
@@ -35,22 +36,6 @@ const SESSION_CHARACTERS = [
   'refactor',
   'learning',
   'quick_task',
-] as const;
-
-const DATE_PRESETS = [
-  { label: 'Last 7 days', value: '7d' },
-  { label: 'Last 30 days', value: '30d' },
-  { label: 'Last 90 days', value: '90d' },
-  { label: 'All time', value: 'all' },
-  { label: 'Custom range...', value: 'custom' },
-] as const;
-
-const OUTCOME_OPTIONS = [
-  { label: 'All Outcomes', value: 'all' },
-  { label: 'Success', value: 'success', color: 'text-emerald-600' },
-  { label: 'Partial', value: 'partial', color: 'text-amber-600' },
-  { label: 'Blocked', value: 'blocked', color: 'text-red-600' },
-  { label: 'Abandoned', value: 'abandoned', color: 'text-red-600' },
 ] as const;
 
 interface SessionListPanelProps {
@@ -94,8 +79,25 @@ export function SessionListPanel({
   loading,
   missingFacetIds,
 }: SessionListPanelProps) {
+  const { t } = useI18n();
   const [customDateOpen, setCustomDateOpen] = useState(false);
   const { savedFilters, saveFilter, deleteFilter } = useSavedFilters('sessions');
+
+  const datePresets = useMemo(() => [
+    { label: t('sessionList.last7'), value: '7d' },
+    { label: t('sessionList.last30'), value: '30d' },
+    { label: t('sessionList.last90'), value: '90d' },
+    { label: t('sessionList.allTime'), value: 'all' },
+    { label: t('sessionList.customRangeOption'), value: 'custom' },
+  ] as const, [t]);
+
+  const outcomeOptions = useMemo(() => [
+    { label: t('sessionList.allOutcomes'), value: 'all' },
+    { label: t('sessionList.success'), value: 'success', color: 'text-emerald-600' },
+    { label: t('sessionList.partial'), value: 'partial', color: 'text-amber-600' },
+    { label: t('sessionList.blocked'), value: 'blocked', color: 'text-red-600' },
+    { label: t('sessionList.abandoned'), value: 'abandoned', color: 'text-red-600' },
+  ] as const, [t]);
 
   const { data: deletedCount = 0 } = useDeletedSessionCount(projectId);
   const queuedSessionIds = useQueuedSessionIds();
@@ -204,15 +206,15 @@ export function SessionListPanel({
   };
 
   const dateRangeLabel = useMemo(() => {
-    if (!filters.dateRange || filters.dateRange === 'all') return 'All time';
+    if (!filters.dateRange || filters.dateRange === 'all') return t('sessionList.allTime');
     if (filters.dateRange === 'custom') {
       if (filters.dateFrom && filters.dateTo) return `${filters.dateFrom} – ${filters.dateTo}`;
-      if (filters.dateFrom) return `From ${filters.dateFrom}`;
-      if (filters.dateTo) return `To ${filters.dateTo}`;
-      return 'Custom';
+      if (filters.dateFrom) return t('sessionList.from', { date: filters.dateFrom });
+      if (filters.dateTo) return t('sessionList.to', { date: filters.dateTo });
+      return t('sessionList.custom');
     }
-    return DATE_PRESETS.find((p) => p.value === filters.dateRange)?.label ?? filters.dateRange;
-  }, [filters.dateRange, filters.dateFrom, filters.dateTo]);
+    return datePresets.find((p) => p.value === filters.dateRange)?.label ?? filters.dateRange;
+  }, [filters.dateRange, filters.dateFrom, filters.dateTo, t, datePresets]);
 
   return (
     <div className="flex flex-col h-full">
@@ -226,7 +228,7 @@ export function SessionListPanel({
             onDelete={deleteFilter}
           />
           <Input
-            placeholder="Search sessions..."
+            placeholder={t('sessionList.search')}
             value={filters.q}
             onChange={(e) => onFilterChange('q', e.target.value)}
             className="h-8 text-xs flex-1"
@@ -240,10 +242,10 @@ export function SessionListPanel({
             onValueChange={(v) => onFilterChange('character', v)}
           >
             <SelectTrigger className="h-7 text-xs flex-1">
-              <SelectValue placeholder="Type" />
+              <SelectValue placeholder={t('sessionList.type')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="all">{t('sessionList.allTypes')}</SelectItem>
               {SESSION_CHARACTERS.map((c) => (
                 <SelectItem key={c} value={c} className="capitalize text-xs">
                   {c.replace(/_/g, ' ')}
@@ -256,12 +258,12 @@ export function SessionListPanel({
             onValueChange={(v) => onFilterChange('status', v)}
           >
             <SelectTrigger className="h-7 text-xs flex-1">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder={t('sessionList.status')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="analyzed">Analyzed</SelectItem>
-              <SelectItem value="unanalyzed">Not Analyzed</SelectItem>
+              <SelectItem value="all">{t('sessionList.allStatus')}</SelectItem>
+              <SelectItem value="analyzed">{t('sessionList.analyzed')}</SelectItem>
+              <SelectItem value="unanalyzed">{t('sessionList.unanalyzed')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -277,14 +279,14 @@ export function SessionListPanel({
               </Button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-52 p-1">
-              {DATE_PRESETS.map((preset) => {
+              {datePresets.map((preset) => {
                 if (preset.value === 'custom') {
                   return (
                     <div key="custom" className="border-t mt-1 pt-1">
-                      <div className="text-xs text-muted-foreground px-2 py-1">Custom range</div>
+                      <div className="text-xs text-muted-foreground px-2 py-1">{t('sessionList.customRangeLabel')}</div>
                       <div className="px-2 space-y-1.5 pb-1">
                         <Input
-                          placeholder="From (YYYY-MM-DD)"
+                          placeholder={t('sessionList.fromPlaceholder')}
                           value={filters.dateFrom}
                           onChange={(e) => {
                             onFilterChange('dateFrom', e.target.value);
@@ -293,7 +295,7 @@ export function SessionListPanel({
                           className="h-7 text-xs"
                         />
                         <Input
-                          placeholder="To (YYYY-MM-DD)"
+                          placeholder={t('sessionList.toPlaceholder')}
                           value={filters.dateTo}
                           onChange={(e) => {
                             onFilterChange('dateTo', e.target.value);
@@ -331,10 +333,10 @@ export function SessionListPanel({
             onValueChange={(v) => onFilterChange('outcome', v)}
           >
             <SelectTrigger className="h-7 text-xs flex-1">
-              <SelectValue placeholder="Outcome" />
+              <SelectValue placeholder={t('sessionList.outcome')} />
             </SelectTrigger>
             <SelectContent>
-              {OUTCOME_OPTIONS.map((o) => (
+              {outcomeOptions.map((o) => (
                 <SelectItem key={o.value} value={o.value} className="text-xs">
                   {o.label}
                 </SelectItem>
@@ -372,17 +374,17 @@ export function SessionListPanel({
           hasClientFilters ? (
             <div className="flex flex-col items-center justify-center py-12 text-center px-4 space-y-2">
               <SearchX className="h-6 w-6 text-muted-foreground" />
-              <p className="text-sm font-medium">No matching sessions</p>
+              <p className="text-sm font-medium">{t('sessionList.noMatch')}</p>
               <Button variant="outline" size="sm" onClick={onClearFilters}>
-                Clear filters
+                {t('sessionList.clearFilters')}
               </Button>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center px-4 space-y-2">
               <Terminal className="h-6 w-6 text-muted-foreground" />
-              <p className="text-sm font-medium">No sessions yet</p>
+              <p className="text-sm font-medium">{t('sessionList.empty')}</p>
               <p className="text-xs text-muted-foreground">
-                Run code-insights sync to get started.
+                {t('sessionList.runSync')}
               </p>
             </div>
           )
@@ -419,7 +421,7 @@ export function SessionListPanel({
       {projectId && deletedCount > 0 && (
         <div className="shrink-0 border-t px-3 py-2 flex items-center gap-1.5 text-xs text-muted-foreground">
           <EyeOff className="h-3 w-3 shrink-0" />
-          <span>{deletedCount} hidden session{deletedCount !== 1 ? 's' : ''}</span>
+          <span>{t('sessionList.hidden', { count: deletedCount })}</span>
         </div>
       )}
     </div>

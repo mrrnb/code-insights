@@ -54,35 +54,35 @@ app.post('/generate', requireLLM(), async (c) => {
 
   // Validate insightIds
   if (!Array.isArray(body.insightIds)) {
-    return c.json({ error: 'insightIds must be an array' }, 400);
+    return c.json({ error: 'insightIds 必须是数组' }, 400);
   }
   const insightIds = body.insightIds as unknown[];
   if (insightIds.some((id) => typeof id !== 'string')) {
-    return c.json({ error: 'insightIds must contain only strings' }, 400);
+    return c.json({ error: 'insightIds 只能包含字符串' }, 400);
   }
   if (insightIds.length < 3) {
-    return c.json({ error: 'Select at least 3 insights to generate a post' }, 400);
+    return c.json({ error: '至少选择 3 个 insights 才能生成文章' }, 400);
   }
   if (insightIds.length > 8) {
-    return c.json({ error: 'For the best post, keep it to 8 or fewer insights' }, 400);
+    return c.json({ error: '为获得最佳效果，请选择不超过 8 个 insights' }, 400);
   }
 
   // Validate context
   if (typeof body.context !== 'string' || body.context.trim().length === 0) {
-    return c.json({ error: 'context is required' }, 400);
+    return c.json({ error: 'context 为必填项' }, 400);
   }
   if (body.context.length > 500) {
-    return c.json({ error: 'context must be 500 characters or fewer' }, 400);
+    return c.json({ error: 'context 不能超过 500 个字符' }, 400);
   }
 
   // Validate tone
   if (!VALID_TONES.includes(body.tone as DispatchTone)) {
-    return c.json({ error: `tone must be one of: ${VALID_TONES.join(', ')}` }, 400);
+    return c.json({ error: `tone 必须是以下之一：${VALID_TONES.join(', ')}` }, 400);
   }
 
   // Validate format
   if (!VALID_FORMATS.includes(body.format as DispatchFormat)) {
-    return c.json({ error: `format must be one of: ${VALID_FORMATS.join(', ')}` }, 400);
+    return c.json({ error: `format 必须是以下之一：${VALID_FORMATS.join(', ')}` }, 400);
   }
 
   const tone = body.tone as DispatchTone;
@@ -99,7 +99,7 @@ app.post('/generate', requireLLM(), async (c) => {
   ).all(...typedIds) as InsightRow[];
 
   if (rows.length === 0) {
-    return c.json({ error: 'No insights found for the provided IDs' }, 404);
+    return c.json({ error: '未找到提供的 ID 对应的 insights' }, 404);
   }
 
   // Preserve the caller's ordering
@@ -119,7 +119,7 @@ app.post('/generate', requireLLM(), async (c) => {
     });
 
   if (orderedInsights.length < 3) {
-    return c.json({ error: 'Select at least 3 insights to generate a post' }, 400);
+    return c.json({ error: '至少选择 3 个 insights 才能生成文章' }, 400);
   }
 
   // Fetch session backgrounds when requested
@@ -193,7 +193,7 @@ app.post('/generate', requireLLM(), async (c) => {
     markdown,
     body: bodyText,
     format,
-    frontmatter: parsed.frontmatter ?? { title: 'Untitled', tags: [], tldr: '' },
+    frontmatter: parsed.frontmatter ?? { title: '未命名', tags: [], tldr: '' },
     wordCount,
     characterCount,
     degraded: parsed.degraded ?? false,
@@ -217,13 +217,13 @@ app.post('/image-prompt', requireLLM(), async (c) => {
   }>();
 
   if (typeof body.title !== 'string' || body.title.trim().length === 0) {
-    return c.json({ error: 'title is required' }, 400);
+    return c.json({ error: 'title 为必填项' }, 400);
   }
   if (typeof body.tldr !== 'string' || body.tldr.trim().length === 0) {
-    return c.json({ error: 'tldr is required' }, 400);
+    return c.json({ error: 'tldr 为必填项' }, 400);
   }
   if (!VALID_FORMATS.includes(body.format as DispatchFormat)) {
-    return c.json({ error: `format must be one of: ${VALID_FORMATS.join(', ')}` }, 400);
+    return c.json({ error: `format 必须是以下之一：${VALID_FORMATS.join(', ')}` }, 400);
   }
   const tags = Array.isArray(body.tags) ? (body.tags as unknown[]).filter((t): t is string => typeof t === 'string') : [];
 
@@ -245,7 +245,7 @@ app.post('/image-prompt', requireLLM(), async (c) => {
   const parsed = parseImagePromptOutput(response.content);
 
   if (!parsed.ok) {
-    return c.json({ error: 'Failed to generate image prompt', detail: parsed.error }, 500);
+    return c.json({ error: '生成图片提示词失败', detail: parsed.error }, 500);
   }
 
   return c.json({

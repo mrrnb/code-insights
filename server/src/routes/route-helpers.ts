@@ -46,7 +46,7 @@ export function requireLLM(): MiddlewareHandler {
   return async (c, next) => {
     if (!isLLMConfigured()) {
       return c.json({
-        error: 'LLM not configured. Run `code-insights config llm` to configure a provider.',
+        error: 'LLM 未配置。运行 `code-insights config llm` 配置提供商。',
       }, 400);
     }
     await next();
@@ -169,7 +169,7 @@ export function streamSessionAnalysis(
 
       await stream.writeSSE({
         event: 'progress',
-        data: JSON.stringify({ phase: 'loading_messages', message: 'Loading messages...' }),
+        data: JSON.stringify({ phase: 'loading_messages', message: '正在加载消息...' }),
       });
 
       const result = await opts.analysisFn(session, messages, {
@@ -202,7 +202,7 @@ export function streamSessionAnalysis(
         });
         await stream.writeSSE({
           event: 'error',
-          data: JSON.stringify({ error: result.error ?? `${opts.analysisType} analysis failed` }),
+          data: JSON.stringify({ error: result.error ?? `${opts.analysisType} 分析失败` }),
         });
       } else {
         trackEvent('analysis_run', baseProperties);
@@ -234,7 +234,7 @@ export function streamSessionAnalysis(
         });
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
+      const message = err instanceof Error ? err.message : '未知错误';
       // Normalize hyphens to underscores so 'prompt-quality_stream' becomes
       // 'prompt_quality_stream' — matching the original per-handler telemetry strings.
       const telemetryType = opts.analysisType.replace(/-/g, '_');
@@ -277,8 +277,8 @@ export interface StreamBatchBackfillOptions {
 
 /**
  * Shared SSE lifecycle for batch backfill endpoints (facets backfill and PQ backfill).
- * Iterates sessionIds one-by-one, streaming per-session progress events and a final
- * complete event. Preserves the exact SSE payload shapes the dashboard expects:
+ * Iterates sessionIds with configurable concurrency, streaming per-session progress
+ * events and a final complete event. Preserves the exact SSE payload shapes:
  *   progress → { completed, failed, total, currentSessionId, error? }
  *   complete → { completed, failed, total }
  *
@@ -290,6 +290,7 @@ export function streamBatchBackfill(
   sessionIds: string[],
   force: boolean,
   opts: StreamBatchBackfillOptions,
+  concurrency: number = 1,
 ): ReturnType<typeof streamSSE> {
   const db = getDb();
 
@@ -298,29 +299,22 @@ export function streamBatchBackfill(
     let completed = 0;
     let failed = 0;
     const total = sessionIds.length;
+    let nextIndex = 0;
+    let activeWorkers = 0;
+    const effectiveConcurrency = Math.min(Math.max(1, concurrency), 10);
 
-    for (const sessionId of sessionIds) {
-      if (abortSignal.aborted) break;
+    async function processOne(sessionId: string): Promise<void> {
+      if (abortSignal.aborted) return;
 
       const session = loadSessionForAnalysis(db, sessionId);
 
       if (!session) {
-        failed++;
-        await stream.writeSSE({
-          event: 'progress',
-          data: JSON.stringify({ completed, failed, total, currentSessionId: sessionId }),
-        });
-        continue;
+        return;
       }
 
       // Skip sessions that already have work done unless force=true.
       if (!force && opts.shouldSkip(sessionId)) {
-        completed++;
-        await stream.writeSSE({
-          event: 'progress',
-          data: JSON.stringify({ completed, failed, total, currentSessionId: sessionId }),
-        });
-        continue;
+        return;
       }
 
       const messages = loadSessionMessages(db, sessionId);
@@ -338,11 +332,35 @@ export function streamBatchBackfill(
           completed,
           failed,
           total,
+          activeWorkers,
+          concurrency: effectiveConcurrency,
           currentSessionId: sessionId,
           ...(result.success ? {} : { error: result.error }),
         }),
       });
     }
+
+    // Worker pool: each worker pulls the next available session ID
+    // and processes it until there are no more.
+    async function worker(): Promise<void> {
+      while (!abortSignal.aborted) {
+        const idx = nextIndex++;
+        if (idx >= sessionIds.length) break;
+        activeWorkers++;
+        try {
+          await processOne(sessionIds[idx]);
+        } finally {
+          activeWorkers--;
+        }
+      }
+    }
+
+    // Launch concurrent workers (capped at 10)
+    const workers: Promise<void>[] = [];
+    for (let i = 0; i < effectiveConcurrency; i++) {
+      workers.push(worker());
+    }
+    await Promise.all(workers);
 
     await stream.writeSSE({
       event: 'complete',

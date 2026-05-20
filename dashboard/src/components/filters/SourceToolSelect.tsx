@@ -6,6 +6,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SOURCE_TOOL_COLORS } from '@/lib/constants/colors';
+import { useI18n } from '@/lib/i18n';
 
 export const SOURCE_TOOLS = [
   { value: 'claude-code', label: 'Claude Code' },
@@ -32,13 +33,14 @@ interface SourceToolSelectProps {
 }
 
 export function SourceToolSelect({ value, onValueChange, className }: SourceToolSelectProps) {
+  const { t } = useI18n();
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger className={className}>
-        <SelectValue placeholder="All Sources" />
+        <SelectValue placeholder={t('projectNav.allSources')} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all">All Sources</SelectItem>
+        <SelectItem value="all">{t('projectNav.allSources')}</SelectItem>
         {SOURCE_TOOLS.map((tool) => (
           <SelectItem key={tool.value} value={tool.value}>
             <span className="flex items-center gap-1.5">

@@ -35,7 +35,7 @@ export async function findRecurringInsights(
   }>
 ): Promise<RecurringInsightResult> {
   if (!isLLMConfigured()) {
-    return { success: false, groups: [], updatedCount: 0, error: 'LLM not configured.' };
+    return { success: false, groups: [], updatedCount: 0, error: 'LLM 未配置。' };
   }
 
   const candidates = insights
@@ -47,7 +47,7 @@ export async function findRecurringInsights(
       success: false,
       groups: [],
       updatedCount: 0,
-      error: 'Need at least 2 non-summary insights to find patterns.',
+      error: '至少需要 2 条非摘要洞察才能发现模式。',
     };
   }
 
@@ -96,7 +96,7 @@ Respond with valid JSON only:
 
     const jsonMatch = response.content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      return { success: false, groups: [], updatedCount: 0, error: 'Failed to parse recurring insights response.' };
+      return { success: false, groups: [], updatedCount: 0, error: '重复洞察响应解析失败。' };
     }
 
     const parsed = JSON.parse(jsonMatch[0]) as { groups: RecurringInsightGroup[] };
@@ -154,7 +154,7 @@ Respond with valid JSON only:
       success: false,
       groups: [],
       updatedCount: 0,
-      error: error instanceof Error ? error.message : 'Failed to find recurring insights',
+      error: error instanceof Error ? error.message : '查找重复洞察失败',
     };
   }
 }

@@ -29,8 +29,8 @@ async function checkServer(baseUrl: string): Promise<void> {
   try {
     await fetch(`${baseUrl}/api/health`);
   } catch {
-    console.log(chalk.yellow('  Dashboard server is not running.'));
-    console.log(chalk.dim('  Start it with: code-insights dashboard'));
+    console.log(chalk.yellow('  控制台服务未运行。'));
+    console.log(chalk.dim('  启动方式：code-insights dashboard'));
     console.log();
     process.exit(1);
   }
@@ -42,8 +42,8 @@ async function checkLlmConfigured(baseUrl: string): Promise<void> {
     if (res.ok) {
       const data = await res.json() as { provider?: string; model?: string };
       if (!data.provider || !data.model) {
-        console.log(chalk.yellow('  LLM provider is not configured.'));
-        console.log(chalk.dim('  Configure it with: code-insights config llm'));
+        console.log(chalk.yellow('  LLM 提供者未配置。'));
+        console.log(chalk.dim('  配置方式：code-insights config llm'));
         console.log();
         process.exit(1);
       }
@@ -78,7 +78,7 @@ async function fetchWithSSE(url: string, body: Record<string, unknown>, signal?:
   let currentData = '';
   let result: Record<string, unknown> = {};
 
-  const spinner = ora({ text: 'Starting...', indent: 2 }).start();
+  const spinner = ora({ text: '正在启动...', indent: 2 }).start();
 
   try {
     while (true) {
@@ -99,12 +99,12 @@ async function fetchWithSSE(url: string, body: Record<string, unknown>, signal?:
             const data = JSON.parse(currentData) as Record<string, unknown>;
 
             if (currentEvent === 'progress') {
-              spinner.text = (data.message as string) || 'Processing...';
+              spinner.text = (data.message as string) || '处理中...';
             } else if (currentEvent === 'complete') {
-              spinner.succeed('Analysis complete');
+              spinner.succeed('分析完成');
               result = data;
             } else if (currentEvent === 'error') {
-              spinner.fail((data.error as string) || 'Generation failed');
+              spinner.fail((data.error as string) || '生成失败');
             }
           } catch {
             // Skip malformed SSE events (e.g., truncated JSON from network issues)
@@ -127,9 +127,10 @@ async function backfillBatch(
   sessionIds: string[],
   offset: number,
   total: number,
+  concurrency: number,
   signal?: AbortSignal
 ): Promise<{ completed: number; failed: number }> {
-  return backfillBatchToEndpoint(baseUrl, '/api/facets/backfill', sessionIds, offset, total, signal);
+  return backfillBatchToEndpoint(baseUrl, '/api/facets/backfill', sessionIds, offset, total, concurrency, signal);
 }
 
 async function backfillPqBatch(
@@ -137,9 +138,10 @@ async function backfillPqBatch(
   sessionIds: string[],
   offset: number,
   total: number,
+  concurrency: number,
   signal?: AbortSignal
 ): Promise<{ completed: number; failed: number }> {
-  return backfillBatchToEndpoint(baseUrl, '/api/facets/backfill-pq', sessionIds, offset, total, signal);
+  return backfillBatchToEndpoint(baseUrl, '/api/facets/backfill-pq', sessionIds, offset, total, concurrency, signal);
 }
 
 async function backfillBatchToEndpoint(
@@ -148,6 +150,7 @@ async function backfillBatchToEndpoint(
   sessionIds: string[],
   offset: number,
   total: number,
+  concurrency: number,
   signal?: AbortSignal
 ): Promise<{ completed: number; failed: number }> {
   const res = await fetch(`${baseUrl}${endpoint}`, {
@@ -155,7 +158,7 @@ async function backfillBatchToEndpoint(
     headers: { 'Content-Type': 'application/json' },
     // force=true so outdated sessions (which already have facets) are re-processed.
     // Missing sessions are unaffected — the guard only fires when a row exists.
-    body: JSON.stringify({ sessionIds, force: true }),
+    body: JSON.stringify({ sessionIds, force: true, concurrency }),
     signal,
   });
 
@@ -171,7 +174,7 @@ async function backfillBatchToEndpoint(
   let currentData = '';
   let result = { completed: 0, failed: 0 };
 
-  const spinner = ora({ text: `  Backfilling ${offset + 1}-${offset + sessionIds.length} of ${total}...`, indent: 2 }).start();
+  const spinner = ora({ text: `  正在回填 ${offset + 1}-${offset + sessionIds.length} / ${total}...`, indent: 2 }).start();
 
   try {
     while (true) {
@@ -190,10 +193,13 @@ async function backfillBatchToEndpoint(
             const data = JSON.parse(currentData) as Record<string, unknown>;
             if (currentEvent === 'progress') {
               const processed = (data.completed as number) + (data.failed as number);
-              spinner.text = `  Backfilling ${offset + processed + 1} of ${total}...`;
+              const concurrency = data.concurrency as number | undefined;
+              const active = data.activeWorkers as number | undefined;
+              const suffix = concurrency && concurrency > 1 ? ` (${active ?? '?'}/${concurrency} 并发)` : '';
+              spinner.text = `  正在回填 ${offset + processed + 1} / ${total}${suffix}...`;
             } else if (currentEvent === 'complete') {
               result = { completed: data.completed as number, failed: data.failed as number };
-              spinner.succeed(`  Batch complete: ${result.completed} extracted, ${result.failed} failed`);
+              spinner.succeed(`  批次完成：${result.completed} 条已提取，${result.failed} 条失败`);
             }
           } catch { /* skip malformed */ }
           currentEvent = '';
@@ -227,8 +233,8 @@ async function reflectAction(options: {
     const year = match ? parseInt(match[1], 10) : 0;
     const weekNum = match ? parseInt(match[2], 10) : 0;
     if (!match || weekNum < 1 || weekNum > 53 || year < 2020 || year > 2100) {
-      console.log(chalk.red('  Invalid week format: "' + options.week + '"'));
-      console.log(chalk.dim('  Use YYYY-WNN format with year 2020-2100, e.g., 2026-W10'));
+      console.log(chalk.red('  无效的周格式："' + options.week + '"'));
+      console.log(chalk.dim('  使用 YYYY-WNN 格式，年份 2020-2100，如 2026-W10'));
       console.log();
       process.exit(1);
     }
@@ -236,7 +242,7 @@ async function reflectAction(options: {
 
   await checkServer(baseUrl);
 
-  console.log(chalk.dim(`  Generating reflection for ${week}...`));
+  console.log(chalk.dim(`  正在为 ${week} 生成反思报告...`));
 
   // Check minimum session threshold
   const checkParams = new URLSearchParams();
@@ -246,16 +252,16 @@ async function reflectAction(options: {
   if (aggRes.ok) {
     const agg = await aggRes.json() as { totalSessions: number; totalAllSessions: number };
     if (agg.totalSessions < 8) {
-      console.log(chalk.yellow(`  Not enough analyzed sessions for meaningful synthesis.`));
-      console.log(chalk.dim(`  Need at least 8 sessions with facets this week (currently ${agg.totalSessions}).`));
-      console.log(chalk.dim(`  Run session analysis to extract facets from more sessions.`));
+      console.log(chalk.yellow(`  已分析的会话不足以进行有意义的综合。`));
+      console.log(chalk.dim(`  本周至少需要 8 个带 facets 的会话（当前 ${agg.totalSessions} 个）。`));
+      console.log(chalk.dim(`  请运行会话分析以从更多会话中提取 facets。`));
       console.log();
       process.exit(1);
     }
 
     if (agg.totalAllSessions > 0 && agg.totalSessions / agg.totalAllSessions < 0.5) {
-      console.log(chalk.yellow(`  Note: Only ${agg.totalSessions} of ${agg.totalAllSessions} sessions are analyzed.`));
-      console.log(chalk.dim(`  Results may not represent your full patterns.`));
+      console.log(chalk.yellow(`  注意：${agg.totalAllSessions} 个会话中仅 ${agg.totalSessions} 个已分析。`));
+      console.log(chalk.dim(`  结果可能无法代表你的完整模式。`));
       console.log();
     }
   }
@@ -276,7 +282,7 @@ async function reflectAction(options: {
   // Display results summary
   const results = data.results as Record<string, Record<string, unknown>> | undefined;
   if (!results) {
-    console.log(chalk.dim('  No results generated.'));
+    console.log(chalk.dim('  未生成结果。'));
     return;
   }
 
@@ -285,7 +291,7 @@ async function reflectAction(options: {
   // Friction & Wins summary
   const frictionWins = results['friction-wins'];
   if (frictionWins) {
-    console.log(chalk.bold('  Friction & Wins'));
+    console.log(chalk.bold('  摩擦与收获'));
     if (frictionWins.narrative) {
       const lines = String(frictionWins.narrative).split('\n');
       for (const line of lines) {
@@ -298,17 +304,17 @@ async function reflectAction(options: {
   // Rules & Hooks summary
   const rulesSkills = results['rules-skills'];
   if (rulesSkills) {
-    console.log(chalk.bold('  Rules & Hooks'));
+    console.log(chalk.bold('  规则与 Hooks'));
     const rules = rulesSkills.claudeMdRules as Array<{ rule: string }> | undefined;
     if (rules && rules.length > 0) {
-      console.log(chalk.dim('  CLAUDE.md rules:'));
+      console.log(chalk.dim('  CLAUDE.md 规则：'));
       for (const r of rules) {
         console.log(`    ${chalk.cyan('→')} ${r.rule}`);
       }
     }
     const hooks = rulesSkills.hookConfigs as Array<{ event: string; command: string }> | undefined;
     if (hooks && hooks.length > 0) {
-      console.log(chalk.dim('  Hooks:'));
+      console.log(chalk.dim('  Hooks：'));
       for (const h of hooks) {
         console.log(`    ${chalk.cyan('→')} ${h.event}: ${h.command}`);
       }
@@ -319,7 +325,7 @@ async function reflectAction(options: {
   // Working Style summary
   const workingStyle = results['working-style'];
   if (workingStyle) {
-    console.log(chalk.bold('  Working Style'));
+    console.log(chalk.bold('  工作风格'));
     if (workingStyle.narrative) {
       const lines = String(workingStyle.narrative).split('\n');
       for (const line of lines) {
@@ -329,7 +335,7 @@ async function reflectAction(options: {
     console.log();
   }
 
-  console.log(chalk.dim('  View full results: code-insights dashboard → Patterns'));
+  console.log(chalk.dim('  查看完整结果：code-insights dashboard → Patterns'));
   console.log();
 }
 
@@ -341,6 +347,7 @@ async function backfillAction(options: {
   dryRun?: boolean;
   sessionId?: string[];
   yes?: boolean;
+  concurrency?: number;
 }): Promise<void> {
   const baseUrl = getBaseUrl();
   await checkServer(baseUrl);
@@ -385,33 +392,33 @@ async function backfillAction(options: {
 
   console.log();
   if (count === 0) {
-    console.log(chalk.green('  All analyzed sessions already have up-to-date facets.'));
+    console.log(chalk.green('  所有已分析的会话都已有最新的 facets。'));
     console.log();
     return;
   }
 
   if (options.sessionId && options.sessionId.length > 0) {
-    console.log(chalk.cyan(`  Processing ${count} explicitly selected session${count !== 1 ? 's' : ''}.`));
+    console.log(chalk.cyan(`  正在处理 ${count} 个手动选定的会话。`));
   } else if (missingCount > 0 && outdatedCount > 0) {
-    console.log(chalk.cyan(`  Found ${missingCount} session${missingCount !== 1 ? 's' : ''} missing facets and ${outdatedCount} with outdated analysis. Processing ${count} total.`));
+    console.log(chalk.cyan(`  发现 ${missingCount} 个缺少 facets 的会话和 ${outdatedCount} 个分析过期的会话。共处理 ${count} 个。`));
   } else if (missingCount > 0) {
-    console.log(chalk.cyan(`  Found ${missingCount} session${missingCount !== 1 ? 's' : ''} missing facets.`));
+    console.log(chalk.cyan(`  发现 ${missingCount} 个缺少 facets 的会话。`));
   } else {
-    console.log(chalk.cyan(`  Found ${outdatedCount} session${outdatedCount !== 1 ? 's' : ''} with outdated analysis.`));
+    console.log(chalk.cyan(`  发现 ${outdatedCount} 个分析过期的会话。`));
   }
-  console.log(chalk.dim(`  This will make ${count} LLM call${count !== 1 ? 's' : ''}.`));
+  console.log(chalk.dim(`  将进行 ${count} 次 LLM 调用。`));
 
   if (options.dryRun) {
-    console.log(chalk.dim('  (dry run — no changes made)'));
+    console.log(chalk.dim('  （试运行 — 未做任何更改）'));
     console.log();
     return;
   }
 
   // Confirm before proceeding — each call costs tokens
   if (!options.yes) {
-    const confirmed = await confirmPrompt('  Continue?');
+    const confirmed = await confirmPrompt('  继续？');
     if (!confirmed) {
-      console.log(chalk.dim('  Aborted.'));
+      console.log(chalk.dim('  已中止。'));
       console.log();
       return;
     }
@@ -424,16 +431,16 @@ async function backfillAction(options: {
 
   for (let i = 0; i < sessionIds.length; i += BACKFILL_BATCH_SIZE) {
     const batch = sessionIds.slice(i, i + BACKFILL_BATCH_SIZE);
-    const { completed, failed } = await backfillBatch(baseUrl, batch, i, sessionIds.length);
+    const { completed, failed } = await backfillBatch(baseUrl, batch, i, sessionIds.length, options.concurrency ?? 1);
     totalCompleted += completed;
     totalFailed += failed;
   }
 
   console.log();
-  console.log(chalk.bold('  Summary'));
-  console.log(chalk.green(`    ${totalCompleted} sessions backfilled`));
+  console.log(chalk.bold('  摘要'));
+  console.log(chalk.green(`    ${totalCompleted} 个会话已回填`));
   if (totalFailed > 0) {
-    console.log(chalk.yellow(`    ${totalFailed} sessions failed`));
+    console.log(chalk.yellow(`    ${totalFailed} 个会话失败`));
   }
   console.log();
 }
@@ -442,6 +449,7 @@ async function backfillPqAction(options: {
   period?: string;
   project?: string;
   dryRun?: boolean;
+  concurrency?: number;
 }): Promise<void> {
   const baseUrl = getBaseUrl();
   await checkServer(baseUrl);
@@ -477,30 +485,30 @@ async function backfillPqAction(options: {
 
   console.log();
   if (count === 0) {
-    console.log(chalk.green('  All sessions already have up-to-date PQ analysis.'));
+    console.log(chalk.green('  所有会话都已有最新的 PQ 分析。'));
     console.log();
     return;
   }
 
   if (missingCount > 0 && outdatedCount > 0) {
-    console.log(chalk.cyan(`  Found ${missingCount} session${missingCount !== 1 ? 's' : ''} missing PQ analysis and ${outdatedCount} with outdated analysis. Processing ${count} total.`));
+    console.log(chalk.cyan(`  发现 ${missingCount} 个缺少 PQ 分析的会话和 ${outdatedCount} 个分析过期的会话。共处理 ${count} 个。`));
   } else if (missingCount > 0) {
-    console.log(chalk.cyan(`  Found ${missingCount} session${missingCount !== 1 ? 's' : ''} missing PQ analysis.`));
+    console.log(chalk.cyan(`  发现 ${missingCount} 个缺少 PQ 分析的会话。`));
   } else {
-    console.log(chalk.cyan(`  Found ${outdatedCount} session${outdatedCount !== 1 ? 's' : ''} with outdated PQ analysis.`));
+    console.log(chalk.cyan(`  发现 ${outdatedCount} 个 PQ 分析过期的会话。`));
   }
-  console.log(chalk.dim(`  This will make ${count} LLM call${count !== 1 ? 's' : ''}.`));
+  console.log(chalk.dim(`  将进行 ${count} 次 LLM 调用。`));
 
   if (options.dryRun) {
-    console.log(chalk.dim('  (dry run — no changes made)'));
+    console.log(chalk.dim('  （试运行 — 未做任何更改）'));
     console.log();
     return;
   }
 
   // Confirm before proceeding — each call costs tokens
-  const confirmed = await confirmPrompt('  Continue?');
+  const confirmed = await confirmPrompt('  继续？');
   if (!confirmed) {
-    console.log(chalk.dim('  Aborted.'));
+    console.log(chalk.dim('  已中止。'));
     console.log();
     return;
   }
@@ -512,16 +520,16 @@ async function backfillPqAction(options: {
 
   for (let i = 0; i < sessionIds.length; i += BACKFILL_BATCH_SIZE) {
     const batch = sessionIds.slice(i, i + BACKFILL_BATCH_SIZE);
-    const { completed, failed } = await backfillPqBatch(baseUrl, batch, i, sessionIds.length);
+    const { completed, failed } = await backfillPqBatch(baseUrl, batch, i, sessionIds.length, options.concurrency ?? 1);
     totalCompleted += completed;
     totalFailed += failed;
   }
 
   console.log();
-  console.log(chalk.bold('  Summary'));
-  console.log(chalk.green(`    ${totalCompleted} sessions analyzed`));
+  console.log(chalk.bold('  摘要'));
+  console.log(chalk.green(`    ${totalCompleted} 个会话已分析`));
   if (totalFailed > 0) {
-    console.log(chalk.yellow(`    ${totalFailed} sessions failed`));
+    console.log(chalk.yellow(`    ${totalFailed} 个会话失败`));
   }
   console.log();
 }
@@ -531,24 +539,37 @@ async function backfillPqAction(options: {
 // ---------------------------------------------------------------------------
 
 const backfillCommand = new Command('backfill')
-  .description('Extract facets for sessions that are missing pattern data')
-  .option('-p, --period <period>', 'Time range: 7d, 30d, 90d, all', 'all')
-  .option('--project <name>', 'Scope to a single project')
-  .option('--session-id <ids...>', 'Backfill specific session IDs directly')
-  .option('--dry-run', 'Show count without backfilling')
-  .option('-y, --yes', 'Skip confirmation prompt')
-  .option('--prompt-quality', 'Run prompt quality analysis instead of facet extraction')
-  .action((options) => {
+  .description('为缺少模式数据的会话提取 facets')
+  .option('-p, --period <period>', '时间范围：7d, 30d, 90d, all', 'all')
+  .option('--session-id <ids...>', '直接回填指定的会话 ID')
+  .option('--dry-run', '显示数量但不执行回填')
+  .option('-y, --yes', '跳过确认提示')
+  .option('--prompt-quality', '运行 Prompt 质量分析而非 facet 提取')
+  .option('-c, --concurrency <n>', '并发 worker 数量（1-10）', '1')
+  .action(function (this: Command) {
+    const options = this.optsWithGlobals() as {
+      period?: string;
+      project?: string;
+      dryRun?: boolean;
+      sessionId?: string[];
+      yes?: boolean;
+      promptQuality?: boolean;
+      concurrency?: string;
+    };
+    const parsedOptions = {
+      ...options,
+      concurrency: Math.min(Math.max(1, parseInt(options.concurrency ?? '1', 10) || 1), 10),
+    };
     if (options.promptQuality) {
-      return backfillPqAction(options);
+      return backfillPqAction(parsedOptions);
     }
-    return backfillAction(options);
+    return backfillAction(parsedOptions);
   });
 
 export const reflectCommand = new Command('reflect')
-  .description('Generate cross-session analysis (friction, rules, working style)')
-  .option('--section <name>', 'Generate specific section: friction-wins, rules-skills, working-style')
-  .option('--week <week>', 'ISO week to reflect on (e.g., 2026-W10), defaults to current week')
-  .option('--project <name>', 'Scope to a single project')
+  .description('生成跨会话分析（摩擦、规则、工作风格）')
+  .option('--section <name>', '生成指定部分：friction-wins, rules-skills, working-style')
+  .option('--week <week>', '要反思的 ISO 周（如 2026-W10），默认为当前周')
+  .option('--project <name>', '限定为单个项目')
   .addCommand(backfillCommand)
   .action(reflectAction);

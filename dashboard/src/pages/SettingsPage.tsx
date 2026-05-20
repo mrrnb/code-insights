@@ -33,75 +33,78 @@ interface ProviderInfo {
   models: Array<{ id: string; name: string; description?: string }>;
 }
 
-const PROVIDERS: ProviderInfo[] = [
-  {
-    id: 'openai',
-    name: 'OpenAI',
-    requiresApiKey: true,
-    apiKeyLink: 'https://platform.openai.com/api-keys',
-    models: [
-      { id: 'gpt-4.1', name: 'GPT-4.1', description: '最佳' },
-      { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini', description: '快且便宜' },
-      { id: 'gpt-4o', name: 'GPT-4o', description: '备用' },
-    ],
-  },
-  {
-    id: 'anthropic',
-    name: 'Anthropic',
-    requiresApiKey: true,
-    apiKeyLink: 'https://console.anthropic.com/settings/keys',
-    models: [
-      { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', description: '能力最强' },
-      { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', description: '综合最均衡' },
-      { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', description: '快且便宜' },
-    ],
-  },
-  {
-    id: 'gemini',
-    name: 'Google Gemini',
-    requiresApiKey: true,
-    apiKeyLink: 'https://aistudio.google.com/app/apikey',
-    models: [
-      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: '快速' },
-      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: '更强' },
-      { id: 'gemma-3-27b-it', name: 'Gemma 4 27B IT', description: '通过 Gemini API 免费使用' },
-    ],
-  },
-  {
-    id: 'ollama',
-    name: 'Ollama（本地）',
-    requiresApiKey: false,
-    models: [
-      { id: 'llama3.3', name: 'Llama 3.3' },
-      { id: 'qwen3:14b', name: 'Qwen3 14B' },
-      { id: 'mistral', name: 'Mistral' },
-      { id: 'qwen2.5-coder', name: 'Qwen 2.5 Coder' },
-      { id: 'gemma4', name: 'Gemma 4 12B' },
-      { id: 'gemma4:27b', name: 'Gemma 4 27B' },
-    ],
-  },
-  {
-    id: 'llamacpp',
-    name: 'llama.cpp (Local)',
-    requiresApiKey: false,
-    models: [
-      { id: 'gemma-4-12b', name: 'Gemma 4 12B (Q4_K_M)', description: 'Flagship local model' },
-      { id: 'gemma-4-27b', name: 'Gemma 4 27B (Q4_K_M)', description: 'Large local model' },
-      { id: 'custom', name: 'Custom model', description: 'Any GGUF loaded in llama-server' },
-    ],
-  },
-  {
-    id: 'custom',
-    name: '自定义 OpenAI 兼容接口',
-    requiresApiKey: true,
-    models: [
-      { id: 'custom-model', name: '自定义模型', description: '支持任意兼容 Chat Completions 的接口' },
-    ],
-  },
-];
+function getProviders(t: (key: string) => string): ProviderInfo[] {
+  return [
+    {
+      id: 'openai',
+      name: 'OpenAI',
+      requiresApiKey: true,
+      apiKeyLink: 'https://platform.openai.com/api-keys',
+      models: [
+        { id: 'gpt-4.1', name: 'GPT-4.1', description: '最佳' },
+        { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini', description: '快且便宜' },
+        { id: 'gpt-4o', name: 'GPT-4o', description: '备用' },
+      ],
+    },
+    {
+      id: 'anthropic',
+      name: 'Anthropic',
+      requiresApiKey: true,
+      apiKeyLink: 'https://console.anthropic.com/settings/keys',
+      models: [
+        { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', description: '能力最强' },
+        { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', description: '综合最均衡' },
+        { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', description: '快且便宜' },
+      ],
+    },
+    {
+      id: 'gemini',
+      name: 'Google Gemini',
+      requiresApiKey: true,
+      apiKeyLink: 'https://aistudio.google.com/app/apikey',
+      models: [
+        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: '快速' },
+        { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: '更强' },
+        { id: 'gemma-3-27b-it', name: 'Gemma 4 27B IT', description: '通过 Gemini API 免费使用' },
+      ],
+    },
+    {
+      id: 'ollama',
+      name: 'Ollama（本地）',
+      requiresApiKey: false,
+      models: [
+        { id: 'llama3.3', name: 'Llama 3.3' },
+        { id: 'qwen3:14b', name: 'Qwen3 14B' },
+        { id: 'mistral', name: 'Mistral' },
+        { id: 'qwen2.5-coder', name: 'Qwen 2.5 Coder' },
+        { id: 'gemma4', name: 'Gemma 4 12B' },
+        { id: 'gemma4:27b', name: 'Gemma 4 27B' },
+      ],
+    },
+    {
+      id: 'llamacpp',
+      name: t('settings.llamaCpp'),
+      requiresApiKey: false,
+      models: [
+        { id: 'gemma-4-12b', name: 'Gemma 4 12B (Q4_K_M)', description: t('settings.flagshipLocal') },
+        { id: 'gemma-4-27b', name: 'Gemma 4 27B (Q4_K_M)', description: t('settings.largeLocal') },
+        { id: 'custom', name: t('settings.customModel'), description: t('settings.anyGguf') },
+      ],
+    },
+    {
+      id: 'custom',
+      name: '自定义 OpenAI 兼容接口',
+      requiresApiKey: true,
+      models: [
+        { id: 'custom-model', name: '自定义模型', description: '支持任意兼容 Chat Completions 的接口' },
+      ],
+    },
+  ];
+}
 
 export default function SettingsPage() {
   const { t, language } = useI18n();
+  const PROVIDERS = getProviders(t);
   const { data: llmConfig, isLoading: configLoading } = useLlmConfig();
   const saveMutation = useSaveLlmConfig();
   const { profile, saveProfile } = useUserProfile();
@@ -125,7 +128,7 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async () => {
     await saveProfile(profileName, profileGithubUsername);
-    toast.success('Profile saved');
+    toast.success(t('settings.profileSaved'));
   };
 
   const [llmProvider, setLlmProvider] = useState<LLMProvider>('openai');
@@ -303,10 +306,10 @@ export default function SettingsPage() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            <CardTitle className="text-base">Your Profile</CardTitle>
+            <CardTitle className="text-base">{t('settings.profile')}</CardTitle>
           </div>
           <CardDescription>
-            Your name and GitHub avatar appear in the footer of downloaded share cards
+            {t('settings.profileDesc')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -316,7 +319,7 @@ export default function SettingsPage() {
               {profileAvatarUrl && !profileAvatarError ? (
                 <img
                   src={profileAvatarUrl}
-                  alt="GitHub avatar preview"
+                  alt={t('settings.githubAvatarPreview')}
                   className="h-full w-full object-cover"
                   onError={() => setProfileAvatarError(true)}
                   onLoad={() => setProfileAvatarError(false)}
@@ -328,30 +331,30 @@ export default function SettingsPage() {
               )}
             </div>
             <div className="text-sm">
-              <p className="font-medium">{profileName.trim() || 'Your Name'}</p>
+              <p className="font-medium">{profileName.trim() || t('settings.profileName')}</p>
               {profileNormalizedUsername ? (
                 <p className="text-muted-foreground text-xs">@{profileNormalizedUsername}</p>
               ) : (
-                <p className="text-muted-foreground text-xs italic">Enter your GitHub username</p>
+                <p className="text-muted-foreground text-xs italic">{t('settings.enterGithub')}</p>
               )}
             </div>
           </div>
 
           <div>
-            <label className="text-sm font-medium">Display Name</label>
+            <label className="text-sm font-medium">{t('settings.displayName')}</label>
             <Input
               className="mt-1"
-              placeholder="e.g. Srikanth Rao"
+              placeholder={t('settings.namePlaceholder')}
               value={profileName}
               onChange={(e) => setProfileName(e.target.value)}
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium">GitHub Username</label>
+            <label className="text-sm font-medium">{t('settings.githubUsername')}</label>
             <Input
               className="mt-1"
-              placeholder="e.g. melagiri"
+              placeholder={t('settings.githubPlaceholder')}
               value={profileGithubUsername}
               onChange={(e) => {
                 setProfileGithubUsername(e.target.value);
@@ -359,7 +362,7 @@ export default function SettingsPage() {
               }}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Used to load your GitHub avatar on share cards. No @ prefix needed.
+              {t('settings.githubHelp')}
             </p>
           </div>
 
@@ -367,7 +370,7 @@ export default function SettingsPage() {
             onClick={handleSaveProfile}
             disabled={!profileName.trim() || !profileNormalizedUsername}
           >
-            Save Profile
+            {t('settings.saveProfile')}
           </Button>
         </CardContent>
       </Card>
@@ -476,7 +479,7 @@ export default function SettingsPage() {
                 <Input
                   value={llmModel}
                   onChange={(e) => setLlmModel(e.target.value)}
-                  placeholder="Type any model name (e.g. gemma-4-12b)"
+                  placeholder={t('settings.modelPlaceholder')}
                 />
                 {(() => {
                   const hardcoded =
@@ -484,7 +487,7 @@ export default function SettingsPage() {
                   const suggestions = [...new Set([...hardcoded, ...llamacppDiscoveredModels])];
                   return suggestions.length > 0 ? (
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1.5">Suggestions:</p>
+                      <p className="text-xs text-muted-foreground mb-1.5">{t('settings.suggestions')}</p>
                       <div className="flex flex-wrap gap-1.5">
                         {suggestions.map((name) => (
                           <button
@@ -543,7 +546,7 @@ export default function SettingsPage() {
           {/* API Key (if required) */}
           {PROVIDERS.find((p) => p.id === llmProvider)?.requiresApiKey && (
             <div>
-              <label className="text-sm font-medium">API Key</label>
+              <label className="text-sm font-medium">{t('settings.apiKey')}</label>
               <Input
                 type="password"
                 value={llmApiKey}
@@ -582,7 +585,7 @@ export default function SettingsPage() {
           {llmProvider === 'llamacpp' && (
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-medium">Base URL (optional)</label>
+                <label className="text-sm font-medium">{t('settings.llamaBaseUrl')}</label>
                 <Input
                   value={llmBaseUrl}
                   onChange={(e) => setLlmBaseUrl(e.target.value)}
@@ -590,7 +593,7 @@ export default function SettingsPage() {
                   className="mt-1"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Leave empty for default (localhost:8080). Start llama-server with:{' '}
+                  {t('settings.llamaBaseUrlHelp')}{' '}
                   <code className="bg-muted px-0.5 rounded">llama-server -m &lt;model.gguf&gt;</code>
                 </p>
               </div>
@@ -605,14 +608,14 @@ export default function SettingsPage() {
                   {llamacppDiscovering ? (
                     <>
                       <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                      Discovering...
+                      {t('settings.discovering')}
                     </>
                   ) : (
-                    'Discover Loaded Model'
+                    t('settings.discoverModel')
                   )}
                 </Button>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Queries the running llama-server instance to detect the currently loaded model.
+                  {t('settings.discoverModelDesc')}
                 </p>
               </div>
             </div>
@@ -668,7 +671,7 @@ export default function SettingsPage() {
 
           {llmProvider === 'custom' && (
             <div>
-              <label className="text-sm font-medium">Base URL</label>
+              <label className="text-sm font-medium">{t('settings.baseUrl')}</label>
               <Input
                 value={llmBaseUrl}
                 onChange={(e) => setLlmBaseUrl(e.target.value)}

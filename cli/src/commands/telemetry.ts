@@ -20,21 +20,21 @@ const MINIMAL_CONFIG: ClaudeInsightConfig = {
 function statusAction(): void {
   const enabled = isTelemetryEnabled();
 
-  console.log(chalk.cyan('\n  Telemetry\n'));
-  console.log(chalk.white(`  Status: ${enabled ? chalk.green('ENABLED') : chalk.yellow('DISABLED')}`));
+  console.log(chalk.cyan('\n  遥测\n'));
+  console.log(chalk.white(`  状态：${enabled ? chalk.green('已启用') : chalk.yellow('已禁用')}`));
 
   // Surface environment-variable overrides so users know why the config value
   // might appear to have no effect.
   if (process.env.CODE_INSIGHTS_TELEMETRY_DISABLED === '1') {
-    console.log(chalk.gray('  (Disabled via CODE_INSIGHTS_TELEMETRY_DISABLED env var)'));
+    console.log(chalk.gray('  （通过 CODE_INSIGHTS_TELEMETRY_DISABLED 环境变量禁用）'));
   }
   if (process.env.DO_NOT_TRACK === '1') {
-    console.log(chalk.gray('  (Disabled via DO_NOT_TRACK env var)'));
+    console.log(chalk.gray('  （通过 DO_NOT_TRACK 环境变量禁用）'));
   }
 
   const preview = buildEventPreview();
 
-  console.log(chalk.white('\n  What we collect (and nothing else):'));
+  console.log(chalk.white('\n  我们收集的内容（仅此而已）：'));
   const fields: [string, string][] = [
     ['distinct_id', `${preview.distinct_id} (stable hash of hostname+username, never transmitted as PII)`],
     ['cli_version', String(preview.cli_version)],
@@ -49,17 +49,17 @@ function statusAction(): void {
     console.log(chalk.gray(`    ${key.padEnd(18)} ${value}`));
   }
 
-  console.log(chalk.white('\n  What we NEVER collect:'));
-  console.log(chalk.gray('    File paths, project names, session content, API keys,'));
-  console.log(chalk.gray('    git URLs, raw hostnames/usernames, or anything personally identifiable.'));
+  console.log(chalk.white('\n  我们绝不收集的内容：'));
+  console.log(chalk.gray('    文件路径、项目名称、会话内容、API keys、'));
+  console.log(chalk.gray('    git URL、原始主机名/用户名，或任何可识别个人身份的信息。'));
 
   // Only show the live event preview when telemetry is on
   if (enabled) {
-    console.log(chalk.white('\n  Event preview (what would be sent now):'));
+    console.log(chalk.white('\n  事件预览（当前将发送的内容）：'));
     console.log(chalk.gray(`    ${JSON.stringify(preview, null, 2).split('\n').join('\n    ')}`));
   }
 
-  console.log(chalk.white('\n  To change:'));
+  console.log(chalk.white('\n  如需更改：'));
   console.log(chalk.gray('    code-insights telemetry disable'));
   console.log(chalk.gray('    code-insights telemetry enable'));
   console.log(chalk.gray('    Or set env: CODE_INSIGHTS_TELEMETRY_DISABLED=1\n'));
@@ -83,7 +83,7 @@ async function disableAction(): Promise<void> {
   const config = loadConfig() ?? { ...MINIMAL_CONFIG };
   config.telemetry = false;
   saveConfig(config);
-  console.log(chalk.green('\n  Telemetry disabled.\n'));
+  console.log(chalk.green('\n  遥测已禁用。\n'));
 }
 
 /**
@@ -97,32 +97,32 @@ function enableAction(): void {
   config.telemetry = true;
   saveConfig(config);
   trackEvent('telemetry_opted_in');
-  console.log(chalk.green('\n  Telemetry enabled.\n'));
+  console.log(chalk.green('\n  遥测已启用。\n'));
 }
 
 export const telemetryCommand = new Command('telemetry')
-  .description('View or manage anonymous usage telemetry')
+  .description('查看或管理匿名使用遥测')
   .action(() => {
     statusAction();
   });
 
 telemetryCommand
   .command('status')
-  .description('Show telemetry state and what data is collected')
+  .description('显示遥测状态及收集的数据')
   .action(() => {
     statusAction();
   });
 
 telemetryCommand
   .command('disable')
-  .description('Disable anonymous telemetry')
+  .description('禁用匿名遥测')
   .action(async () => {
     await disableAction();
   });
 
 telemetryCommand
   .command('enable')
-  .description('Enable anonymous telemetry')
+  .description('启用匿名遥测')
   .action(() => {
     enableAction();
   });

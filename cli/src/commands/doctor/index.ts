@@ -68,14 +68,14 @@ export async function doctorCommand(opts: DoctorOptions = {}): Promise<void> {
   }
 
   const sections: Section[] = [
-    { label: 'Environment', checks: environmentChecks() },
-    { label: 'Database', checks: databaseChecks() },
-    { label: 'Config', checks: configChecks() },
-    { label: 'Session Sources', checks: providerChecks() },
-    { label: 'AI Analysis', checks: analysisChecks() },
+    { label: '环境', checks: environmentChecks() },
+    { label: '数据库', checks: databaseChecks() },
+    { label: '配置', checks: configChecks() },
+    { label: '会话来源', checks: providerChecks() },
+    { label: 'AI 分析', checks: analysisChecks() },
     { label: 'Hooks', checks: hooksChecks() },
-    { label: 'Sync State', checks: syncChecks() },
-    { label: 'Dashboard', checks: dashboardChecks() },
+    { label: '同步状态', checks: syncChecks() },
+    { label: '控制台', checks: dashboardChecks() },
   ];
 
   const { results, hasFail } = await runChecks(sections, {

@@ -52,15 +52,15 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
     ? () => noopSpinner
     : ora;
 
-  log(chalk.cyan('\n  Code Insights Sync\n'));
+  log(chalk.cyan('\n  Code Insights 同步\n'));
 
   // Initialize database (runs migrations if needed)
-  const spinner = createSpinner('Initializing database...').start();
+  const spinner = createSpinner('正在初始化数据库...').start();
   try {
     getDb();
-    spinner.succeed('Database ready');
+    spinner.succeed('数据库就绪');
   } catch (error) {
-    spinner.fail('Failed to initialize database');
+    spinner.fail('数据库初始化失败');
     throw new Error(`Database error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
@@ -88,7 +88,7 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
 
   // Dry-run banner
   if (options.dryRun) {
-    log(chalk.yellow('\n  Dry run -- no changes will be made'));
+    log(chalk.yellow('\n  试运行 — 不会做任何更改'));
   }
 
   // Set verbose flag for providers (e.g., gates Cursor diagnostic warnings)
@@ -141,11 +141,11 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
     const providerName = provider.getProviderName();
     try {
       if (providers.length > 1) {
-        log(chalk.cyan(`\n  Syncing ${providerName}...`));
+        log(chalk.cyan(`\n  正在同步 ${providerName}...`));
       }
 
       // Discovery
-      spinner.start(`Discovering ${providerName} sessions...`);
+      spinner.start(`正在发现 ${providerName} 会话...`);
       const sessionFiles = await provider.discover({ projectFilter: options.project });
       spinner.stop();
 
@@ -155,13 +155,13 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
       const filesToSync = filterFilesToSync(sessionFiles, syncState, options.force);
 
       if (filesToSync.length === 0) {
-        log(chalk.gray(`  ✔ Up to date (${sessionFiles.length} sessions)`));
+        log(chalk.gray(`  ✔ 已是最新（${sessionFiles.length} 个会话）`));
         continue;
       }
 
       if (options.dryRun) {
         for (const file of filesToSync) {
-          log(chalk.gray(`  Would sync: ${path.basename(file)}`));
+          log(chalk.gray(`  将同步：${path.basename(file)}`));
         }
         continue;
       }
@@ -173,7 +173,7 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
 
       for (const filePath of filesToSync) {
         const fileName = path.basename(filePath);
-        spinner.start(`Processing ${fileName}...`);
+        spinner.start(`正在处理 ${fileName}...`);
 
         try {
           // Parse session
@@ -212,7 +212,7 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
           totalMessageCount += session.messages.length;
         } catch (error) {
           totalErrorCount++;
-          spinner.fail(`Failed to sync ${fileName}`);
+          spinner.fail(`同步 ${fileName} 失败`);
           if (!options.quiet) {
             console.error(chalk.red(`  ${error instanceof Error ? error.message : 'Unknown error'}`));
           }
@@ -226,15 +226,15 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
       if (providerSyncedCount > 0) {
         const providerNewCount = providerSyncedCount - providerUpdatedCount;
         const parts: string[] = [];
-        if (providerNewCount > 0) parts.push(`${providerNewCount} new`);
-        if (providerUpdatedCount > 0) parts.push(`${providerUpdatedCount} updated`);
-        if (parts.length === 0) parts.push('0 synced');
-        const syncedPart = `${parts.join(', ')}${providerMessageCount > 0 ? ` (${providerMessageCount.toLocaleString()} messages)` : ''}`;
-        log(chalk.gray(`  ✔ Synced ${syncedPart}`));
+        if (providerNewCount > 0) parts.push(`${providerNewCount} 个新增`);
+        if (providerUpdatedCount > 0) parts.push(`${providerUpdatedCount} 个更新`);
+        if (parts.length === 0) parts.push('0 个同步');
+        const syncedPart = `${parts.join(', ')}${providerMessageCount > 0 ? `（${providerMessageCount.toLocaleString()} 条消息）` : ''}`;
+        log(chalk.gray(`  ✔ 已同步 ${syncedPart}`));
       }
     } catch (error) {
       totalErrorCount++;
-      spinner.fail(`Failed to sync ${providerName}`);
+      spinner.fail(`同步 ${providerName} 失败`);
       if (!options.quiet) {
         console.error(chalk.red(`  ${error instanceof Error ? error.message : 'Unknown error'}`));
       }
@@ -253,12 +253,12 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
     : totalUpdatedExisting > 0;
 
   if (shouldRecalculateUsageStats) {
-    spinner.start('Recalculating usage stats...');
+    spinner.start('正在重新计算使用统计...');
     try {
       recalculateUsageStats();
       spinner.stop();
     } catch (error) {
-      spinner.warn('Could not reconcile usage stats');
+      spinner.warn('无法重新计算使用统计');
       if (!options.quiet) {
         console.error(chalk.red(`  ${error instanceof Error ? error.message : 'Unknown error'}`));
       }
@@ -306,7 +306,7 @@ export async function syncCommand(options: SyncOptions = {}): Promise<void> {
 
     // Summary (only if not quiet)
     if (result.syncedCount === 0 && result.errorCount === 0) {
-      log(chalk.green('\n  Already up to date!'));
+      log(chalk.green('\n  已是最新！'));
       trackEvent('cli_sync', {
         duration_ms,
         sessions_synced: 0,
@@ -317,17 +317,17 @@ export async function syncCommand(options: SyncOptions = {}): Promise<void> {
       });
       return;
     }
-    log(chalk.cyan('\n  Sync Summary'));
+    log(chalk.cyan('\n  同步摘要'));
     const newCount = Math.max(result.syncedCount - result.updatedExistingCount, 0);
-    log(chalk.white(`  Sessions new: ${newCount}`));
+    log(chalk.white(`  新增会话：${newCount}`));
     if (result.updatedExistingCount > 0) {
-      log(chalk.white(`  Sessions updated: ${result.updatedExistingCount}`));
+      log(chalk.white(`  更新会话：${result.updatedExistingCount}`));
     }
-    log(chalk.white(`  Messages synced: ${result.messageCount}`));
+    log(chalk.white(`  已同步消息：${result.messageCount}`));
     if (result.errorCount > 0) {
-      log(chalk.red(`  Errors: ${result.errorCount}`));
+      log(chalk.red(`  错误：${result.errorCount}`));
     }
-    log(chalk.green('\n  Sync complete!'));
+    log(chalk.green('\n  同步完成！'));
     trackEvent('cli_sync', {
       duration_ms,
       sessions_synced: result.syncedCount,
@@ -351,7 +351,7 @@ export async function syncCommand(options: SyncOptions = {}): Promise<void> {
     });
     captureError(error, { command: 'sync', error_type, source_filter: options.source ?? null });
     if (!options.quiet) {
-      console.error(chalk.red(error instanceof Error ? error.message : 'Sync failed'));
+      console.error(chalk.red(error instanceof Error ? error.message : '同步失败'));
     }
     process.exit(1);
   }

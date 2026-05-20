@@ -104,7 +104,7 @@ app.get('/', (c) => {
 
   // Build session title from title_source priority: custom_title > generated_title > fallback
   const sessionResults = sessions.map((s) => {
-    const title = s.custom_title || s.generated_title || 'Untitled session';
+    const title = s.custom_title || s.generated_title || '未命名会话';
     const sourceText = s.match_field === 'summary' && s.summary
       ? s.summary
       : title;

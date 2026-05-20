@@ -65,7 +65,7 @@ export async function analyzeSession(
     return {
       success: false,
       insights: [],
-      error: 'LLM not configured. Run `code-insights config llm` to configure a provider.',
+      error: 'LLM 未配置。运行 `code-insights config llm` 配置提供商。',
     };
   }
 
@@ -73,7 +73,7 @@ export async function analyzeSession(
     return {
       success: false,
       insights: [],
-      error: 'No messages found for this session.',
+      error: '未找到此会话的消息。',
     };
   }
 
@@ -129,7 +129,7 @@ export async function analyzeSession(
         return {
           success: false,
           insights: [],
-          error: 'All chunks failed to parse LLM response',
+          error: '所有分块均无法解析 LLM 响应',
           error_type: 'json_parse_error',
           usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
         };
@@ -146,7 +146,7 @@ export async function analyzeSession(
           const facetTokens = client.estimateTokens(facetMessages);
           if (facetTokens > maxInputTokens) {
             const targetLength = Math.floor((maxInputTokens / facetTokens) * facetMessages.length * 0.8);
-            facetMessages = facetMessages.slice(0, targetLength) + '\n\n[... conversation truncated for analysis ...]';
+            facetMessages = facetMessages.slice(0, targetLength) + '\n\n[... 对话已截断以供分析 ...]';
           }
           const facetResponse = await client.chat([
             { role: 'system', content: SHARED_ANALYST_SYSTEM_PROMPT },
@@ -202,7 +202,7 @@ export async function analyzeSession(
         return {
           success: false,
           insights: [],
-          error: 'Failed to parse LLM response. Please try again.',
+          error: 'LLM 响应解析失败，请重试。',
           error_type: parsed.error.error_type,
           response_length: parsed.error.response_length,
           response_preview: parsed.error.response_preview,
@@ -266,12 +266,12 @@ export async function analyzeSession(
     };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      return { success: false, insights: [], error: 'Analysis cancelled', error_type: 'abort' };
+      return { success: false, insights: [], error: '分析已取消', error_type: 'abort' };
     }
     return {
       success: false,
       insights: [],
-      error: error instanceof Error ? error.message : 'Analysis failed',
+      error: error instanceof Error ? error.message : '分析失败',
       error_type: 'api_error',
     };
   }

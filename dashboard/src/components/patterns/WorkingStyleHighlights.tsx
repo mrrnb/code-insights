@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, CheckCircle2, AlertTriangle, Sparkles, User } from 'lucide-react';
 import { SESSION_CHARACTER_COLORS } from '@/lib/constants/colors';
+import { useI18n } from '@/lib/i18n';
 
 interface WorkingStyleHighlightsProps {
   narrative?: string;
@@ -29,6 +30,7 @@ export function WorkingStyleHighlights({
   topFriction,
   topPattern,
 }: WorkingStyleHighlightsProps) {
+  const { t } = useI18n();
   const [showNarrative, setShowNarrative] = useState(false);
 
   // Build pill data from available props
@@ -43,7 +45,7 @@ export function WorkingStyleHighlights({
     pills.push({
       icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
       value: `${successCount}/${totalSessions}`,
-      sublabel: 'high-quality',
+      sublabel: t('weekStrip.highQuality'),
       className: 'bg-emerald-500/10 border-emerald-500/20',
     });
   }
@@ -108,9 +110,9 @@ export function WorkingStyleHighlights({
             onClick={() => setShowNarrative(prev => !prev)}
           >
             {showNarrative ? (
-              <><ChevronUp className="h-3.5 w-3.5" />Hide full analysis</>
+              <><ChevronUp className="h-3.5 w-3.5" />{t('styleHighlights.hideAnalysis')}</>
             ) : (
-              <><ChevronDown className="h-3.5 w-3.5" />Show full analysis</>
+              <><ChevronDown className="h-3.5 w-3.5" />{t('styleHighlights.showAnalysis')}</>
             )}
           </button>
 

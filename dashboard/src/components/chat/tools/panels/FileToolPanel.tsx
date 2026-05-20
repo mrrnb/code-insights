@@ -4,6 +4,7 @@ import { parseToolInput } from '../utils';
 import { usePreviewText } from '../usePreview';
 import { CollapsibleToolPanel } from '../CollapsibleToolPanel';
 import { Badge } from '@/components/ui/badge';
+import { useI18n } from '@/lib/i18n';
 
 interface FileToolPanelProps {
   toolCall: ToolCall;
@@ -26,6 +27,7 @@ function detectLanguage(filePath: string): string | null {
 }
 
 export function FileToolPanel({ toolCall, result }: FileToolPanelProps) {
+  const { t } = useI18n();
   const input = parseToolInput(toolCall.input);
   const filePath = (input.file_path as string) || '';
   const fileName = getFileName(filePath);
@@ -58,7 +60,7 @@ export function FileToolPanel({ toolCall, result }: FileToolPanelProps) {
   return (
     <CollapsibleToolPanel
       icon={<Icon className="h-3.5 w-3.5 text-blue-500 shrink-0" />}
-      label="File"
+      label={t('chat.file')}
       summary={summary}
     >
       {isEdit && (oldString || newString) && (

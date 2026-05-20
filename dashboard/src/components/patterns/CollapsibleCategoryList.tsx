@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { DRIVER_LABELS, DRIVER_STYLES } from '@/lib/constants/patterns';
+import { useI18n } from '@/lib/i18n';
 
 export interface CategoryItem {
   category: string;
@@ -33,6 +34,7 @@ export function CollapsibleCategoryList({
   variant,
   maxVisible = 5,
 }: CollapsibleCategoryListProps) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
 
@@ -123,7 +125,7 @@ export function CollapsibleCategoryList({
                 ))}
                 {item.descriptions.length > MAX_DESC_VISIBLE && (
                   <li className="text-xs text-muted-foreground italic">
-                    +{item.descriptions.length - MAX_DESC_VISIBLE} more
+                    {t('categoryList.more', { count: item.descriptions.length - MAX_DESC_VISIBLE })}
                   </li>
                 )}
               </ul>
@@ -140,7 +142,7 @@ export function CollapsibleCategoryList({
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             onClick={() => setShowAll(true)}
           >
-            +{hiddenCount} more
+            {t('categoryList.more', { count: hiddenCount })}
           </button>
         </li>
       )}
@@ -151,7 +153,7 @@ export function CollapsibleCategoryList({
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             onClick={() => setShowAll(false)}
           >
-            Show less
+            {t('categoryList.showLess')}
           </button>
         </li>
       )}

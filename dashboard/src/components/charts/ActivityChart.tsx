@@ -12,12 +12,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { DailyStats } from '@/lib/types';
 import { useThemeColors } from '@/lib/hooks/useThemeColors';
 import { CHART_COLORS } from '@/lib/constants/colors';
+import { useI18n } from '@/lib/i18n';
 
 interface ActivityChartProps {
   data: DailyStats[];
 }
 
 export function ActivityChart({ data }: ActivityChartProps) {
+  const { t } = useI18n();
   const { tooltipBg, tooltipBorder } = useThemeColors();
 
   const chartData = useMemo(
@@ -38,7 +40,7 @@ export function ActivityChart({ data }: ActivityChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Activity Over Time</CardTitle>
+        <CardTitle className="text-base">{t('chart.activityOverTime')}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[300px]">
@@ -79,7 +81,7 @@ export function ActivityChart({ data }: ActivityChartProps) {
               <Area
                 type="monotone"
                 dataKey="sessionCount"
-                name="Sessions"
+                name={t('chart.sessions')}
                 stroke={CHART_COLORS.activity.sessions}
                 fillOpacity={1}
                 fill="url(#colorSessions)"
@@ -87,7 +89,7 @@ export function ActivityChart({ data }: ActivityChartProps) {
               <Area
                 type="monotone"
                 dataKey="insightCount"
-                name="Insights"
+                name={t('chart.insights')}
                 stroke={CHART_COLORS.activity.insights}
                 fillOpacity={1}
                 fill="url(#colorInsights)"

@@ -29,8 +29,8 @@ async function checkServer(baseUrl: string): Promise<void> {
   try {
     await fetch(`${baseUrl}/api/health`);
   } catch {
-    console.log(chalk.yellow('  Dashboard server is not running.'));
-    console.log(chalk.dim('  Start it with: code-insights dashboard'));
+    console.log(chalk.yellow('  控制台服务未运行。'));
+    console.log(chalk.dim('  启动方式：code-insights dashboard'));
     console.log();
     process.exit(1);
   }
@@ -42,8 +42,8 @@ async function checkLlmConfigured(baseUrl: string): Promise<void> {
     if (res.ok) {
       const data = await res.json() as { provider?: string; model?: string };
       if (!data.provider || !data.model) {
-        console.log(chalk.yellow('  LLM provider is not configured.'));
-        console.log(chalk.dim('  Configure it with: code-insights config llm'));
+        console.log(chalk.yellow('  LLM 提供者未配置。'));
+        console.log(chalk.dim('  配置方式：code-insights config llm'));
         console.log();
         process.exit(1);
       }
@@ -65,7 +65,7 @@ async function analyzeSessionStream(baseUrl: string, sessionId: string): Promise
     throw new Error('No response body');
   }
 
-  const spinner = ora({ text: `Analyzing ${sessionId}...`, indent: 2 }).start();
+  const spinner = ora({ text: `正在分析 ${sessionId}...`, indent: 2 }).start();
   const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
   let buffer = '';
   let currentEvent = '';
@@ -91,13 +91,13 @@ async function analyzeSessionStream(baseUrl: string, sessionId: string): Promise
             const data = JSON.parse(currentData) as { message?: string; error?: string; insightCount?: number };
 
             if (currentEvent === 'progress') {
-              spinner.text = data.message || `Analyzing ${sessionId}...`;
+              spinner.text = data.message || `正在分析 ${sessionId}...`;
             } else if (currentEvent === 'complete') {
               result = { insightCount: data.insightCount ?? 0 };
-              spinner.succeed(`Analysis complete for ${sessionId} (${result.insightCount} insights)`);
+              spinner.succeed(`${sessionId} 分析完成（${result.insightCount} 条洞察）`);
             } else if (currentEvent === 'error') {
-              spinner.fail(data.error || `Analysis failed for ${sessionId}`);
-              throw new Error(data.error || `Analysis failed for ${sessionId}`);
+              spinner.fail(data.error || `${sessionId} 分析失败`);
+              throw new Error(data.error || `${sessionId} 分析失败`);
             }
           } catch (error) {
             if (error instanceof Error) throw error;
@@ -119,7 +119,7 @@ async function analyzeAction(options: AnalyzeOptions): Promise<void> {
   const sessionIds = Array.from(new Set(options.sessionId ?? []));
 
   if (sessionIds.length === 0) {
-    console.log(chalk.red('  Provide at least one --session-id.'));
+    console.log(chalk.red('  请提供至少一个 --session-id。'));
     console.log();
     process.exit(1);
   }
@@ -129,12 +129,12 @@ async function analyzeAction(options: AnalyzeOptions): Promise<void> {
   await checkLlmConfigured(baseUrl);
 
   console.log();
-  console.log(chalk.cyan(`  Preparing to analyze ${sessionIds.length} session${sessionIds.length !== 1 ? 's' : ''}.`));
+  console.log(chalk.cyan(`  准备分析 ${sessionIds.length} 个会话。`));
 
   if (!options.yes) {
-    const confirmed = await confirmPrompt('  Continue?');
+    const confirmed = await confirmPrompt('  继续？');
     if (!confirmed) {
-      console.log(chalk.dim('  Aborted.'));
+      console.log(chalk.dim('  已中止。'));
       console.log();
       return;
     }
@@ -152,21 +152,21 @@ async function analyzeAction(options: AnalyzeOptions): Promise<void> {
     } catch (error) {
       failed++;
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.log(chalk.yellow(`  Failed ${sessionId}: ${message}`));
+      console.log(chalk.yellow(`  ${sessionId} 失败：${message}`));
     }
   }
 
   console.log();
-  console.log(chalk.bold('  Summary'));
-  console.log(chalk.green(`    ${succeeded} sessions analyzed`));
+  console.log(chalk.bold('  摘要'));
+  console.log(chalk.green(`    ${succeeded} 个会话已分析`));
   if (failed > 0) {
-    console.log(chalk.yellow(`    ${failed} sessions failed`));
+    console.log(chalk.yellow(`    ${failed} 个会话分析失败`));
   }
   console.log();
 }
 
 export const analyzeCommand = new Command('analyze')
-  .description('Run LLM session analysis for specific sessions')
-  .requiredOption('--session-id <ids...>', 'One or more session IDs to analyze')
-  .option('-y, --yes', 'Skip confirmation prompt')
+  .description('对指定会话运行 LLM 分析')
+  .requiredOption('--session-id <ids...>', '一个或多个要分析的会话 ID')
+  .option('-y, --yes', '跳过确认提示')
   .action(analyzeAction);

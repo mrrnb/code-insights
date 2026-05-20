@@ -8,6 +8,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { toast } from 'sonner';
+import { useI18n } from '@/lib/i18n';
 
 interface SaveFilterPopoverProps {
   activeFilters: Record<string, string>;
@@ -16,7 +17,7 @@ interface SaveFilterPopoverProps {
 }
 
 /** Generate a human-readable name from active filter values. */
-function generateName(activeFilters: Record<string, string>, defaults: Record<string, string>): string {
+function generateName(activeFilters: Record<string, string>, defaults: Record<string, string>, defaultName: string): string {
   const parts: string[] = [];
   for (const [key, value] of Object.entries(activeFilters)) {
     if (value !== defaults[key] && value && value !== 'all') {
@@ -25,7 +26,7 @@ function generateName(activeFilters: Record<string, string>, defaults: Record<st
       parts.push(label);
     }
   }
-  return parts.slice(0, 3).join(' / ') || 'My filter';
+  return parts.slice(0, 3).join(' / ') || defaultName;
 }
 
 /**
@@ -33,6 +34,7 @@ function generateName(activeFilters: Record<string, string>, defaults: Record<st
  * Only visible when at least one non-default filter is active.
  */
 export function SaveFilterPopover({ activeFilters, defaultFilterValues, onSave }: SaveFilterPopoverProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
 
@@ -50,7 +52,7 @@ export function SaveFilterPopover({ activeFilters, defaultFilterValues, onSave }
 
   function handleOpen(nextOpen: boolean) {
     if (nextOpen) {
-      setName(generateName(activeFilters, defaultFilterValues));
+      setName(generateName(activeFilters, defaultFilterValues, t('filter.defaultName')));
     }
     setOpen(nextOpen);
   }
@@ -60,7 +62,7 @@ export function SaveFilterPopover({ activeFilters, defaultFilterValues, onSave }
     if (!trimmed) return;
     onSave(trimmed, nonDefaultFilters);
     setOpen(false);
-    toast.success('Filter saved');
+    toast.success(t('filter.saved'));
   }
 
   return (
@@ -68,15 +70,15 @@ export function SaveFilterPopover({ activeFilters, defaultFilterValues, onSave }
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5 shrink-0">
           <Bookmark className="h-3.5 w-3.5" />
-          Save
+          {t('filter.save')}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-4" align="end">
         <div className="space-y-3">
-          <div className="text-sm font-medium">Save current filters</div>
+          <div className="text-sm font-medium">{t('filter.saveCurrent')}</div>
 
           <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">Name</label>
+            <label className="text-xs text-muted-foreground">{t('filter.name')}</label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -87,7 +89,7 @@ export function SaveFilterPopover({ activeFilters, defaultFilterValues, onSave }
           </div>
 
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground">Filters:</div>
+            <div className="text-xs text-muted-foreground">{t('filter.filters')}</div>
             <div className="space-y-0.5">
               {Object.entries(nonDefaultFilters).map(([key, value]) => (
                 <div key={key} className="text-xs text-muted-foreground/80">
@@ -100,10 +102,10 @@ export function SaveFilterPopover({ activeFilters, defaultFilterValues, onSave }
 
           <div className="flex gap-2 justify-end pt-1">
             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setOpen(false)}>
-              Cancel
+              {t('filter.cancel')}
             </Button>
             <Button size="sm" className="h-7 text-xs" onClick={handleSave} disabled={!name.trim()}>
-              Save
+              {t('filter.save')}
             </Button>
           </div>
         </div>

@@ -7,11 +7,11 @@ import { getSyncStatePath } from '../utils/config.js';
 import { trackEvent, captureError, classifyError } from '../utils/telemetry.js';
 
 export const resetCommand = new Command('reset')
-  .description('Delete all synced data from the local SQLite database and reset sync state')
-  .option('--confirm', 'Skip confirmation prompt')
+  .description('删除本地 SQLite 数据库中的所有同步数据并重置同步状态')
+  .option('--confirm', '跳过确认提示')
   .action(async (options) => {
-    console.log(chalk.red.bold('\n  WARNING: This will permanently delete ALL synced data from your local database!'));
-    console.log(chalk.yellow('  Tables to be cleared: projects, sessions, messages, insights, session_facets, reflect_snapshots, usage_stats\n'));
+    console.log(chalk.red.bold('\n  警告：这将永久删除本地数据库中的所有同步数据！'));
+    console.log(chalk.yellow('  将清空的表：projects, sessions, messages, insights, session_facets, reflect_snapshots, usage_stats\n'));
 
     if (!options.confirm) {
       const readline = await import('readline');
@@ -21,12 +21,12 @@ export const resetCommand = new Command('reset')
       });
 
       const answer = await new Promise<string>((resolve) => {
-        rl.question(chalk.cyan('Type "DELETE" to confirm: '), resolve);
+        rl.question(chalk.cyan('输入 "DELETE" 确认：'), resolve);
       });
       rl.close();
 
       if (answer !== 'DELETE') {
-        console.log(chalk.gray('\nAborted. No data was deleted.'));
+        console.log(chalk.gray('\n已中止。没有数据被删除。'));
         process.exit(0);
       }
     }
@@ -36,7 +36,7 @@ export const resetCommand = new Command('reset')
     // Delete SQLite data — all 5 DELETEs wrapped in a single transaction.
     // If any DELETE fails, the transaction rolls back atomically and we do NOT
     // proceed to delete the sync state file (which would leave them out of sync).
-    const dbSpinner = ora('Clearing database...').start();
+    const dbSpinner = ora('正在清空数据库...').start();
     try {
       const db = getDb();
       const clearAll = db.transaction(() => {
@@ -50,11 +50,11 @@ export const resetCommand = new Command('reset')
         db.prepare('DELETE FROM usage_stats').run();
       });
       clearAll();
-      dbSpinner.succeed(`Database cleared (${getDbPath()})`);
+      dbSpinner.succeed(`数据库已清空（${getDbPath()}）`);
     } catch (error) {
-      dbSpinner.fail(`Failed to clear database: ${error instanceof Error ? error.message : error}`);
-      console.error(chalk.red('\nAborted. Sync state was NOT deleted to avoid inconsistency.'));
-      console.error(chalk.dim('Run `code-insights doctor` if the problem persists.'));
+      dbSpinner.fail(`清空数据库失败：${error instanceof Error ? error.message : error}`);
+      console.error(chalk.red('\n已中止。同步状态未被删除，以避免不一致。'));
+      console.error(chalk.dim('如问题持续，请运行 `code-insights doctor`。'));
       const { error_type, error_message } = classifyError(error);
       trackEvent('cli_reset', { success: false, error_type, error_message });
       captureError(error, { command: 'reset', error_type });
@@ -63,16 +63,16 @@ export const resetCommand = new Command('reset')
 
     // Delete local sync state — only reached if DB clear succeeded
     const syncStatePath = getSyncStatePath();
-    const syncSpinner = ora('Removing local sync state...').start();
+    const syncSpinner = ora('正在删除本地同步状态...').start();
     try {
       if (existsSync(syncStatePath)) {
         unlinkSync(syncStatePath);
-        syncSpinner.succeed('Removed local sync state');
+        syncSpinner.succeed('已删除本地同步状态');
       } else {
-        syncSpinner.info('No local sync state file found');
+        syncSpinner.info('未找到本地同步状态文件');
       }
     } catch (error) {
-      syncSpinner.fail(`Failed to remove sync state: ${error}`);
+      syncSpinner.fail(`删除同步状态失败：${error}`);
     }
 
     // Collect stats for telemetry before resetting
@@ -82,6 +82,6 @@ export const resetCommand = new Command('reset')
       // non-fatal
     }
 
-    console.log(chalk.green('\n  Reset complete. Run `code-insights sync` to re-sync all sessions.\n'));
+    console.log(chalk.green('\n  重置完成。运行 `code-insights sync` 重新同步所有会话。\n'));
     process.exit(0);
   });

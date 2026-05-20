@@ -22,6 +22,7 @@ import { useAnalysis } from './AnalysisContext';
 import { useLlmConfig } from '@/hooks/useConfig';
 import { useAnalysisCost } from '@/hooks/useAnalysisCost';
 import { estimateAnalysisCost, formatCost, formatEstimatedInputTokens } from '@/lib/cost-utils';
+import { useI18n } from '@/lib/i18n';
 import type { Session } from '@/lib/types';
 
 interface AnalyzeDropdownProps {
@@ -42,6 +43,7 @@ export function AnalyzeDropdown({
   const { getAnalysisState, startAnalysis, cancelAnalysis } = useAnalysis();
   const { data: llmConfig } = useLlmConfig();
   const { data: costData } = useAnalysisCost(session.id);
+  const { t } = useI18n();
 
   const configured = !!(llmConfig?.provider && llmConfig?.model);
   // Local providers with no per-token cost
@@ -110,7 +112,7 @@ export function AnalyzeDropdown({
         to="/settings"
         className="text-xs text-muted-foreground underline hover:text-foreground"
       >
-        Configure AI in Settings
+        {t('analysis.configureAi')}
       </Link>
     );
   }
@@ -124,9 +126,9 @@ export function AnalyzeDropdown({
         <Button disabled variant="outline" size="sm" className="h-8 gap-2">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           <span className="hidden sm:inline">
-            {activeState?.progress?.message || 'Analyzing...'}
+            {activeState?.progress?.message || t('analysis.analyzing')}
           </span>
-          <span className="sm:hidden">Analyzing...</span>
+          <span className="sm:hidden">{t('analysis.analyzing')}</span>
         </Button>
         <Button
           variant="ghost"
@@ -135,7 +137,7 @@ export function AnalyzeDropdown({
           onClick={() => cancelAnalysis(session.id, activeType)}
         >
           <X className="h-3.5 w-3.5" />
-          <span className="sr-only sm:not-sr-only">Cancel</span>
+          <span className="sr-only sm:not-sr-only">{t('analysis.cancel')}</span>
         </Button>
       </div>
     );
@@ -149,18 +151,18 @@ export function AnalyzeDropdown({
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="h-8 gap-1.5">
             <Sparkles className="h-3.5 w-3.5" />
-            Analyze
+            {t('analysis.analyze')}
             <ChevronDown className="h-3 w-3 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={handleSessionClick}>
             <Sparkles className="h-4 w-4" />
-            {hasExistingInsights ? 'Re-analyze Session' : 'Analyze Session'}
+            {hasExistingInsights ? t('analysis.reanalyze') : t('analysis.analyze')}
             {sessionCostEstimate !== null && (
               <div className="text-xs text-muted-foreground pl-7 pb-1 w-full">
                 {isOllama
-                  ? 'free (local)'
+                  ? t('analysis.free')
                   : `~${formatCost(sessionCostEstimate)}${inputTokensLabel ? ` · ${inputTokensLabel}` : ''}`}
               </div>
             )}
@@ -168,16 +170,16 @@ export function AnalyzeDropdown({
           {showPromptOption && (
             <DropdownMenuItem onClick={handlePromptClick}>
               <Target className="h-4 w-4" />
-              {hasExistingPromptQuality ? 'Re-analyze Prompt Quality' : 'Analyze Prompt Quality'}
+              {hasExistingPromptQuality ? t('analysis.reanalyzePromptQuality') : t('analysis.analyzePromptQuality')}
               {pqCostEstimate !== null && (
                 <div className="text-xs text-muted-foreground pl-7 pb-0.5 w-full">
-                  {isOllama ? 'free (local)' : `~${formatCost(pqCostEstimate)} · same conversation`}
+                  {isOllama ? t('analysis.free') : `~${formatCost(pqCostEstimate)} · ${t('analysis.sameConversation')}`}
                 </div>
               )}
               {showCacheHint && (
                 <div className="text-[10px] text-muted-foreground/60 pl-7 italic flex items-center gap-1 pb-1 w-full">
                   <Info className="h-3 w-3 shrink-0" />
-                  ~90% cheaper if run right after (Anthropic cache)
+                  {t('analysis.cheaper')}
                 </div>
               )}
             </DropdownMenuItem>
@@ -188,24 +190,23 @@ export function AnalyzeDropdown({
       <AlertDialog open={confirmSessionOpen} onOpenChange={setConfirmSessionOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Re-analyze this session?</AlertDialogTitle>
+            <AlertDialogTitle>{t('analysis.confirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div>
                 <p>
-                  This will replace {insightCount ?? 0} existing insight{(insightCount ?? 0) !== 1 ? 's' : ''} with new ones.
-                  This uses LLM tokens and cannot be undone.
+                  {t('analysis.confirmDesc', { count: insightCount ?? 0 })}
                 </p>
                 {sessionCostEstimate !== null && !isOllama && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    Estimated cost: ~{formatCost(sessionCostEstimate)}
+                    {t('analysis.estimatedCost', { cost: formatCost(sessionCostEstimate) })}
                   </p>
                 )}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSessionAnalyze}>Re-analyze</AlertDialogAction>
+            <AlertDialogCancel>{t('analysis.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSessionAnalyze}>{t('analysis.reanalyze')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -213,24 +214,23 @@ export function AnalyzeDropdown({
       <AlertDialog open={confirmPromptOpen} onOpenChange={setConfirmPromptOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Re-analyze prompt quality?</AlertDialogTitle>
+            <AlertDialogTitle>{t('analysis.reanalyzePromptTitle')}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div>
                 <p>
-                  This will replace the current prompt quality score with a new one.
-                  This uses LLM tokens and cannot be undone.
+                  {t('analysis.reanalyzePromptDesc')}
                 </p>
                 {pqCostEstimate !== null && !isOllama && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    Estimated cost: ~{formatCost(pqCostEstimate)}
+                    {t('analysis.estimatedCost', { cost: formatCost(pqCostEstimate) })}
                   </p>
                 )}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handlePromptAnalyze}>Re-analyze</AlertDialogAction>
+            <AlertDialogCancel>{t('analysis.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handlePromptAnalyze}>{t('analysis.reanalyze')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

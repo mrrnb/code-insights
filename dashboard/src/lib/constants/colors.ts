@@ -21,13 +21,13 @@ export const INSIGHT_TYPE_COLORS: Record<InsightType, string> = {
   prompt_quality: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
 };
 
-/** Human-readable labels for insight types. */
+/** I18n keys for insight type labels — use with t(). */
 export const INSIGHT_TYPE_LABELS: Record<InsightType, string> = {
-  summary: 'Summary',
-  decision: 'Decision',
-  learning: 'Learning',
-  technique: 'Learning',    // display as Learning for backward compat
-  prompt_quality: 'Prompt Quality',
+  summary: 'insightType.summary',
+  decision: 'insightType.decision',
+  learning: 'insightType.learning',
+  technique: 'insightType.learning',    // display as Learning for backward compat
+  prompt_quality: 'insightType.prompt_quality',
 };
 
 export const SESSION_CHARACTER_COLORS: Record<string, string> = {
@@ -40,15 +40,15 @@ export const SESSION_CHARACTER_COLORS: Record<string, string> = {
   quick_task: 'bg-slate-500/10 text-slate-600 border-slate-500/20',
 };
 
-/** Human-readable labels for session character types. */
+/** I18n keys for session character type labels — use with t(). */
 export const SESSION_CHARACTER_LABELS: Record<string, string> = {
-  deep_focus: 'Deep Focus',
-  bug_hunt: 'Bug Hunt',
-  feature_build: 'Feature Build',
-  exploration: 'Exploration',
-  refactor: 'Refactor',
-  learning: 'Learning',
-  quick_task: 'Quick Task',
+  deep_focus: 'sessionChar.deep_focus',
+  bug_hunt: 'sessionChar.bug_hunt',
+  feature_build: 'sessionChar.feature_build',
+  exploration: 'sessionChar.exploration',
+  refactor: 'sessionChar.refactor',
+  learning: 'sessionChar.learning',
+  quick_task: 'sessionChar.quick_task',
 };
 
 /** Visual identity for agent participants in chat conversations. */
@@ -73,10 +73,10 @@ export const AGENT_DEFAULT_COLOR = 'bg-gray-500 text-white';
  * values ('high' | 'medium' | 'low' | 'abandoned') used on the Patterns page.
  */
 export const OUTCOME_DOT: Record<string, { color: string; label: string }> = {
-  success: { color: 'bg-emerald-500', label: 'Completed successfully' },
-  partial: { color: 'bg-amber-500', label: 'Partially completed' },
-  abandoned: { color: 'bg-red-500', label: 'Abandoned' },
-  blocked: { color: 'bg-red-500', label: 'Blocked' },
+  success: { color: 'bg-emerald-500', label: 'outcome.success' },
+  partial: { color: 'bg-amber-500', label: 'outcome.partial' },
+  abandoned: { color: 'bg-red-500', label: 'outcome.abandoned' },
+  blocked: { color: 'bg-red-500', label: 'outcome.blocked' },
 };
 
 /** Badge colors for source tool indicators. */

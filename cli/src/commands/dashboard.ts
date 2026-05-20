@@ -54,8 +54,8 @@ export async function dashboardCommand(options: DashboardOptions): Promise<void>
       void identifyUser();
     } catch (err) {
       // Sync failure is non-fatal — dashboard still opens with whatever data exists
-      console.warn(chalk.yellow(`  Sync warning: ${err instanceof Error ? err.message : String(err)}`));
-      console.warn(chalk.dim('  Use --no-sync to skip sync, or run `code-insights sync` separately.'));
+      console.warn(chalk.yellow(`  同步警告：${err instanceof Error ? err.message : String(err)}`));
+      console.warn(chalk.dim('  使用 --no-sync 跳过同步，或单独运行 `code-insights sync`。'));
     }
   } else {
     // --no-sync: runSync is skipped so auto-detect doesn't run through that path.
@@ -67,18 +67,18 @@ export async function dashboardCommand(options: DashboardOptions): Promise<void>
   const port = parseInt(options.port, 10);
 
   if (isNaN(port) || port < 1 || port > 65535) {
-    console.error(chalk.red(`  Invalid port: ${options.port}`));
+    console.error(chalk.red(`  无效端口：${options.port}`));
     process.exit(1);
   }
 
   const inUse = await isPortInUse(port);
   if (inUse) {
-    console.error(chalk.red(`  Port ${port} is already in use.`));
-    console.error(chalk.dim(`  Try: code-insights dashboard --port <number>`));
+    console.error(chalk.red(`  端口 ${port} 已被占用。`));
+    console.error(chalk.dim(`  尝试：code-insights dashboard --port <number>`));
     process.exit(1);
   }
 
-  const spinner = ora('Starting Code Insights dashboard...').start();
+  const spinner = ora('正在启动 Code Insights 控制台...').start();
 
   try {
     const __filename = fileURLToPath(import.meta.url);
@@ -99,11 +99,11 @@ export async function dashboardCommand(options: DashboardOptions): Promise<void>
     }
 
     if (!existsSync(serverEntryPath)) {
-      spinner.fail('Dashboard server not found.');
+      spinner.fail('未找到控制台服务。');
       console.error(chalk.dim(
-        '  Run from a workspace checkout: pnpm install && pnpm build\n' +
-        '  Or install globally: npm install -g @code-insights/cli\n' +
-        '  See: https://github.com/melagiri/code-insights#development',
+        '  从工作区运行：pnpm install && pnpm build\n' +
+        '  或全局安装：npm install -g @code-insights/cli\n' +
+        '  参考：https://github.com/melagiri/code-insights#development',
       ));
       process.exit(1);
     }
@@ -116,13 +116,13 @@ export async function dashboardCommand(options: DashboardOptions): Promise<void>
     spinner.stop();
     printBanner();
     console.log(chalk.white(`  Dashboard:  `) + chalk.cyan.underline(`http://localhost:${port}`));
-    console.log(chalk.dim(`  Press Ctrl+C to stop`));
+    console.log(chalk.dim(`  按 Ctrl+C 停止`));
     console.log('');
 
     trackEvent('cli_dashboard', { port: port, success: true });
     await startServer({ port, staticDir, openBrowser: options.open });
   } catch (err) {
-    spinner.fail('Failed to start dashboard server.');
+    spinner.fail('启动控制台服务失败。');
     console.error(chalk.red(err instanceof Error ? err.message : String(err)));
     const { error_type, error_message } = classifyError(err);
     trackEvent('cli_dashboard', { success: false, error_type, error_message });

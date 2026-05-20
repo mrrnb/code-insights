@@ -27,11 +27,11 @@ export async function extractFacetsOnly(
   options?: { signal?: AbortSignal }
 ): Promise<{ success: boolean; error?: string }> {
   if (!isLLMConfigured()) {
-    return { success: false, error: 'LLM not configured.' };
+    return { success: false, error: 'LLM 未配置。' };
   }
 
   if (messages.length === 0) {
-    return { success: false, error: 'No messages found.' };
+    return { success: false, error: '未找到消息。' };
   }
 
   try {
@@ -44,7 +44,7 @@ export async function extractFacetsOnly(
     const estimatedTokens = client.estimateTokens(formattedMessages);
     if (estimatedTokens > maxInputTokens) {
       const targetLength = Math.floor((maxInputTokens / estimatedTokens) * formattedMessages.length * 0.8);
-      formattedMessages = formattedMessages.slice(0, targetLength) + '\n\n[... conversation truncated for analysis ...]';
+      formattedMessages = formattedMessages.slice(0, targetLength) + '\n\n[... 对话已截断以供分析 ...]';
     }
 
     const sessionMeta = buildSessionMeta(session);
@@ -58,7 +58,7 @@ export async function extractFacetsOnly(
 
     const jsonPayload = extractJsonPayload(response.content);
     if (!jsonPayload) {
-      return { success: false, error: 'No JSON in facet response.' };
+      return { success: false, error: 'Facet 响应中无 JSON 数据。' };
     }
 
     let facets: AnalysisResponse['facets'];
@@ -99,11 +99,11 @@ export async function extractFacetsOnly(
     return { success: true };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      return { success: false, error: 'Cancelled' };
+      return { success: false, error: '已取消' };
     }
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Facet extraction failed',
+      error: error instanceof Error ? error.message : 'Facet 提取失败',
     };
   }
 }

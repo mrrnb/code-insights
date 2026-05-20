@@ -5,6 +5,7 @@ import { formatDuration, getSessionTitle, cn } from '@/lib/utils';
 import { Sparkles, Target, Loader2 } from 'lucide-react';
 import type { Session } from '@/lib/types';
 import { getScoreTier } from '@/lib/score-utils';
+import { useI18n } from '@/lib/i18n';
 
 const SOURCE_LABELS: Record<string, string> = {
   'claude-code': 'Claude Code',
@@ -44,6 +45,7 @@ export function CompactSessionRow({
   isQueued = false,
   onClick,
 }: CompactSessionRowProps) {
+  const { t } = useI18n();
   const startedAt = new Date(session.started_at);
   const endedAt = new Date(session.ended_at);
   const title = getSessionTitle(session);
@@ -80,7 +82,7 @@ export function CompactSessionRow({
         {isQueued && (
           <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-blue-600 border-blue-300 gap-0.5">
             <Loader2 className="h-2.5 w-2.5 animate-spin" />
-            Analyzing...
+            {t('compactSession.analyzing')}
           </Badge>
         )}
         {outcome && OUTCOME_DOT[outcome] && (
@@ -88,7 +90,7 @@ export function CompactSessionRow({
             <TooltipTrigger asChild>
               <span className={cn('w-2 h-2 rounded-full shrink-0', OUTCOME_DOT[outcome].color)} />
             </TooltipTrigger>
-            <TooltipContent side="right" className="text-xs">{OUTCOME_DOT[outcome].label}</TooltipContent>
+            <TooltipContent side="right" className="text-xs">{t(OUTCOME_DOT[outcome].label)}</TooltipContent>
           </Tooltip>
         )}
         {session.session_character && characterColor && (
@@ -106,7 +108,7 @@ export function CompactSessionRow({
             <span className="text-muted-foreground/30">&middot;</span>
           </>
         )}
-        <span>{session.message_count} msgs</span>
+        <span>{session.message_count} {t('activityFeed.msgs')}</span>
         <span className="text-muted-foreground/30">&middot;</span>
         <span>{formatDuration(startedAt, endedAt)}</span>
         {session.estimated_cost_usd != null && (
@@ -127,7 +129,7 @@ export function CompactSessionRow({
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="text-xs max-w-[200px]">
-                  Missing pattern data — re-analyze or run <code className="text-[10px]">reflect backfill</code>
+                  {t('compactSession.missingPattern')}
                 </TooltipContent>
               </Tooltip>
             ) : (

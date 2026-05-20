@@ -22,16 +22,18 @@ import {
 } from 'recharts';
 import type { DailyStats } from '@/lib/types';
 import { useThemeColors } from '@/lib/hooks/useThemeColors';
+import { useI18n } from '@/lib/i18n';
 
 type AnalyticsRange = '7d' | '30d' | '90d' | 'all';
-const rangeOptions: { value: AnalyticsRange; label: string }[] = [
-  { value: '7d', label: '7d' },
-  { value: '30d', label: '30d' },
-  { value: '90d', label: '90d' },
-  { value: 'all', label: 'All' },
-];
 
 export default function AnalyticsPage() {
+  const { t } = useI18n();
+  const rangeOptions: { value: AnalyticsRange; label: string }[] = [
+    { value: '7d', label: '7d' },
+    { value: '30d', label: '30d' },
+    { value: '90d', label: '90d' },
+    { value: 'all', label: t('analytics.allProjects') },
+  ];
   const [range, setRange] = useState<AnalyticsRange>('7d');
   const [source, setSource] = useState<string>('all');
   const { data: sessions = [], isLoading: sessionsLoading, isError: sessionsError, refetch: refetchSessions } = useSessions({
@@ -185,10 +187,10 @@ export default function AnalyticsPage() {
     return (
       <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Analytics</h1>
-          <p className="text-muted-foreground">Visualize your AI coding usage patterns</p>
+          <h1 className="text-2xl font-bold">{t('analytics.title')}</h1>
+          <p className="text-muted-foreground">{t('analytics.desc')}</p>
         </div>
-        <ErrorCard message="Failed to load analytics data" onRetry={retryAll} />
+        <ErrorCard message={t('analytics.error')} onRetry={retryAll} />
       </div>
     );
   }
@@ -197,8 +199,8 @@ export default function AnalyticsPage() {
     return (
       <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Analytics</h1>
-          <p className="text-muted-foreground">Visualize your AI coding usage patterns</p>
+          <h1 className="text-2xl font-bold">{t('analytics.title')}</h1>
+          <p className="text-muted-foreground">{t('analytics.desc')}</p>
         </div>
         <div className="grid gap-4 md:grid-cols-4">
           {[...Array(4)].map((_, i) => (
@@ -221,8 +223,8 @@ export default function AnalyticsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Analytics</h1>
-          <p className="text-muted-foreground">Visualize your AI coding usage patterns</p>
+          <h1 className="text-2xl font-bold">{t('analytics.title')}</h1>
+          <p className="text-muted-foreground">{t('analytics.desc')}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex gap-1">
@@ -250,7 +252,7 @@ export default function AnalyticsPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.totalSessions')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{totalSessions}</div>
@@ -259,7 +261,7 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Insights</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.totalInsights')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{totalInsights}</div>
@@ -268,7 +270,7 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.activeProjects')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{projectStats.length}</div>
@@ -278,7 +280,7 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">
-              {totalCost > 0 ? 'Estimated Cost' : 'Total Tokens'}
+              {totalCost > 0 ? t('analytics.estimatedCost') : t('analytics.totalTokens')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -303,7 +305,7 @@ export default function AnalyticsPage() {
         {/* Sessions by Project */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Top Projects</CardTitle>
+            <CardTitle className="text-base">{t('analytics.topProjects')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[200px]">
@@ -329,13 +331,13 @@ export default function AnalyticsPage() {
                     <Bar
                       dataKey="sessions"
                       fill={CHART_COLORS.projects.sessions}
-                      name="Sessions"
+                      name={t('chart.sessions')}
                     />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="flex h-full items-center justify-center">
-                  <p className="text-sm text-muted-foreground">No project data yet</p>
+                  <p className="text-sm text-muted-foreground">{t('analytics.noProjectData')}</p>
                 </div>
               )}
             </div>
@@ -347,7 +349,7 @@ export default function AnalyticsPage() {
       {Object.keys(modelDistribution).length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Model Distribution</CardTitle>
+            <CardTitle className="text-base">{t('analytics.modelDistribution')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -379,20 +381,20 @@ export default function AnalyticsPage() {
       {/* Project Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">All Projects</CardTitle>
+          <CardTitle className="text-base">{t('analytics.allProjects')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="py-3 text-left font-medium">Project</th>
-                  <th className="py-3 text-right font-medium">Sessions</th>
-                  <th className="py-3 text-right font-medium">Summaries</th>
-                  <th className="py-3 text-right font-medium">Decisions</th>
-                  <th className="py-3 text-right font-medium">Learnings</th>
-                  <th className="py-3 text-right font-medium">Est. Cost</th>
-                  <th className="py-3 text-right font-medium">Tokens</th>
+                  <th className="py-3 text-left font-medium">{t('analytics.table.project')}</th>
+                  <th className="py-3 text-right font-medium">{t('analytics.table.sessions')}</th>
+                  <th className="py-3 text-right font-medium">{t('analytics.table.summaries')}</th>
+                  <th className="py-3 text-right font-medium">{t('analytics.table.decisions')}</th>
+                  <th className="py-3 text-right font-medium">{t('analytics.table.learnings')}</th>
+                  <th className="py-3 text-right font-medium">{t('analytics.table.cost')}</th>
+                  <th className="py-3 text-right font-medium">{t('analytics.table.tokens')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -420,7 +422,7 @@ export default function AnalyticsPage() {
                 {projectStats.length === 0 && (
                   <tr>
                     <td colSpan={7} className="py-8 text-center text-muted-foreground text-sm">
-                      No project data yet. Sync sessions to see analytics.
+                      {t('analytics.noProjectRows')}
                     </td>
                   </tr>
                 )}

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Terminal } from 'lucide-react';
 import type { ToolCall, ToolResult } from '@/lib/types';
 import { CollapsibleToolPanel } from '../CollapsibleToolPanel';
+import { useI18n } from '@/lib/i18n';
 
 interface GenericToolPanelProps {
   toolCall: ToolCall;
@@ -9,6 +10,7 @@ interface GenericToolPanelProps {
 }
 
 export function GenericToolPanel({ toolCall, result }: GenericToolPanelProps) {
+  const { t } = useI18n();
   const [showResult, setShowResult] = useState(false);
 
   let formattedInput = toolCall.input;
@@ -31,7 +33,7 @@ export function GenericToolPanel({ toolCall, result }: GenericToolPanelProps) {
   return (
     <CollapsibleToolPanel
       icon={<Terminal className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-      label="Tool"
+      label={t('chat.tool')}
       summary={summary}
     >
       <pre className="px-3 py-2 text-xs font-mono text-muted-foreground overflow-x-auto max-h-48 whitespace-pre-wrap">

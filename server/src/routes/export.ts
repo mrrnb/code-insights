@@ -56,16 +56,16 @@ app.post('/markdown', async (c) => {
   const { sessionIds, projectId, template = 'knowledge-base' } = body;
 
   if (template !== 'knowledge-base' && template !== 'agent-rules') {
-    return c.json({ error: 'template must be "knowledge-base" or "agent-rules"' }, 400);
+    return c.json({ error: 'template 必须是 "knowledge-base" 或 "agent-rules"' }, 400);
   }
   if (sessionIds !== undefined && !Array.isArray(sessionIds)) {
-    return c.json({ error: 'sessionIds must be an array' }, 400);
+    return c.json({ error: 'sessionIds 必须是数组' }, 400);
   }
   if (sessionIds && (sessionIds as unknown[]).some((id) => typeof id !== 'string')) {
-    return c.json({ error: 'sessionIds must contain only strings' }, 400);
+    return c.json({ error: 'sessionIds 只能包含字符串' }, 400);
   }
   if (sessionIds && sessionIds.length > 100) {
-    return c.json({ error: 'Maximum 100 session IDs per export request' }, 400);
+    return c.json({ error: '每个导出请求最多 100 个 session ID' }, 400);
   }
 
   let sessions: SessionRow[];
@@ -203,16 +203,16 @@ app.post('/generate', requireLLM(), async (c) => {
   const { scope, projectId, format, depth = 'standard' } = body;
 
   if (scope !== 'project' && scope !== 'all') {
-    return c.json({ error: 'scope must be "project" or "all"' }, 400);
+    return c.json({ error: 'scope 必须是 "project" 或 "all"' }, 400);
   }
   if (scope === 'project' && !projectId) {
-    return c.json({ error: 'projectId is required when scope is "project"' }, 400);
+    return c.json({ error: '当 scope 为 "project" 时，projectId 为必填项' }, 400);
   }
   if (!['agent-rules', 'knowledge-brief', 'obsidian', 'notion'].includes(format)) {
-    return c.json({ error: 'format must be one of: agent-rules, knowledge-brief, obsidian, notion' }, 400);
+    return c.json({ error: 'format 必须是以下之一：agent-rules, knowledge-brief, obsidian, notion' }, 400);
   }
   if (!['essential', 'standard', 'comprehensive'].includes(depth)) {
-    return c.json({ error: 'depth must be one of: essential, standard, comprehensive' }, 400);
+    return c.json({ error: 'depth 必须是以下之一：essential, standard, comprehensive' }, 400);
   }
 
   const db = getDb();
@@ -270,9 +270,9 @@ app.post('/generate', requireLLM(), async (c) => {
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       // Client disconnected — 422 is the closest Hono allows; client ignores this on abort
-      return c.json({ error: 'Export cancelled' }, 422);
+      return c.json({ error: '导出已取消' }, 422);
     }
-    const message = error instanceof Error ? error.message : 'Export generation failed';
+    const message = error instanceof Error ? error.message : '导出生成失败';
     trackEvent('export_run', {
       format: `llm-${format}`,
       scope,
@@ -299,16 +299,16 @@ app.get('/generate/stream', requireLLM(), async (c) => {
   const depth = (c.req.query('depth') ?? 'standard') as ExportDepth;
 
   if (scope !== 'project' && scope !== 'all') {
-    return c.json({ error: 'scope must be "project" or "all"' }, 400);
+    return c.json({ error: 'scope 必须是 "project" 或 "all"' }, 400);
   }
   if (scope === 'project' && !projectId) {
-    return c.json({ error: 'projectId is required when scope is "project"' }, 400);
+    return c.json({ error: '当 scope 为 "project" 时，projectId 为必填项' }, 400);
   }
   if (!format || !['agent-rules', 'knowledge-brief', 'obsidian', 'notion'].includes(format)) {
-    return c.json({ error: 'format must be one of: agent-rules, knowledge-brief, obsidian, notion' }, 400);
+    return c.json({ error: 'format 必须是以下之一：agent-rules, knowledge-brief, obsidian, notion' }, 400);
   }
   if (!['essential', 'standard', 'comprehensive'].includes(depth)) {
-    return c.json({ error: 'depth must be one of: essential, standard, comprehensive' }, 400);
+    return c.json({ error: 'depth 必须是以下之一：essential, standard, comprehensive' }, 400);
   }
 
   const db = getDb();
@@ -335,7 +335,7 @@ app.get('/generate/stream', requireLLM(), async (c) => {
       if (capped.length === 0) {
         await stream.writeSSE({
           event: 'error',
-          data: JSON.stringify({ error: 'No insights found for the selected scope. Run analysis on some sessions first.' }),
+          data: JSON.stringify({ error: '所选范围内未找到 insights。请先对会话运行分析。' }),
         });
         return;
       }
@@ -343,7 +343,7 @@ app.get('/generate/stream', requireLLM(), async (c) => {
       // Phase 2: synthesizing
       void stream.writeSSE({
         event: 'progress',
-        data: JSON.stringify({ phase: 'synthesizing', progress: 'Sending to LLM...' }),
+        data: JSON.stringify({ phase: 'synthesizing', progress: '正在发送到 LLM...' }),
       }).catch(() => {});
 
       const sessionCtx = fetchSessionContext(db, scope, projectId);
@@ -395,7 +395,7 @@ app.get('/generate/stream', requireLLM(), async (c) => {
         data: JSON.stringify({ content: response.content, metadata }),
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
+      const message = err instanceof Error ? err.message : '未知错误';
       trackEvent('export_run', {
         format: `llm-${format}`,
         scope,

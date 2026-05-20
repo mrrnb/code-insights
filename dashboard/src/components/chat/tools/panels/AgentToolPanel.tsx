@@ -8,6 +8,7 @@ import type { ToolCall, ToolResult } from '@/lib/types';
 import { parseToolInput } from '../utils';
 import { usePreviewText } from '../usePreview';
 import { CollapsibleToolPanel } from '../CollapsibleToolPanel';
+import { useI18n } from '@/lib/i18n';
 
 interface AgentToolPanelProps {
   toolCall: ToolCall;
@@ -27,6 +28,7 @@ function getAgentInitials(name: string): string {
 }
 
 export function AgentToolPanel({ toolCall, result }: AgentToolPanelProps) {
+  const { t } = useI18n();
   const [showPrompt, setShowPrompt] = useState(false);
   const input = parseToolInput(toolCall.input);
 
@@ -61,7 +63,7 @@ export function AgentToolPanel({ toolCall, result }: AgentToolPanelProps) {
     <div className="my-3">
       <CollapsibleToolPanel
         icon={<Users className="h-3.5 w-3.5 text-purple-500 shrink-0" />}
-        label="Agent"
+        label={t('chat.agent')}
         summary={summary}
         className="border-purple-500/20"
       >

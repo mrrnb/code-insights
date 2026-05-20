@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useAnalysis } from './AnalysisContext';
 import { useLlmConfig } from '@/hooks/useConfig';
+import { useI18n } from '@/lib/i18n';
 import type { Session } from '@/lib/types';
 
 interface AnalyzePromptQualityButtonProps {
@@ -24,6 +25,7 @@ export function AnalyzePromptQualityButton({ session, hasExistingScore }: Analyz
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { getAnalysisState, startAnalysis, cancelAnalysis } = useAnalysis();
   const { data: llmConfig } = useLlmConfig();
+  const { t } = useI18n();
 
   const configured = !!(llmConfig?.provider && llmConfig?.model);
 
@@ -60,7 +62,7 @@ export function AnalyzePromptQualityButton({ session, hasExistingScore }: Analyz
         <div className="flex items-center gap-2">
           <Button disabled variant="outline" size="sm" className="gap-2">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            {analysisState?.progress?.message || 'Analyzing prompts...'}
+            {analysisState?.progress?.message || t('analysis.analyzingPrompts')}
           </Button>
           <Button
             variant="ghost"
@@ -69,7 +71,7 @@ export function AnalyzePromptQualityButton({ session, hasExistingScore }: Analyz
             onClick={() => cancelAnalysis(session.id, 'prompt_quality')}
           >
             <X className="h-3 w-3" />
-            Cancel
+            {t('analysis.cancel')}
           </Button>
         </div>
       </div>
@@ -87,41 +89,40 @@ export function AnalyzePromptQualityButton({ session, hasExistingScore }: Analyz
         {isReanalyze ? (
           <>
             <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-            Re-analyze Prompts
+            {t('analysis.reanalyzePrompts')}
           </>
         ) : (
           <>
             <Target className="h-3.5 w-3.5" />
-            Analyze Prompt Quality
+            {t('analysis.analyzePromptQuality')}
           </>
         )}
       </Button>
 
       {isReanalyze && !isCompleteForThisSession && (
         <p className="text-xs text-muted-foreground">
-          Replaces current score. Uses LLM tokens.
+          {t('analysis.replaceScore')}
         </p>
       )}
 
       {isCompleteForThisSession && !analysisState?.result?.success && (
         <div className="flex items-start gap-2 text-sm text-red-500">
           <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-          <span>{analysisState?.result?.error || 'Analysis failed'}</span>
+          <span>{analysisState?.result?.error || t('analysis.failedText')}</span>
         </div>
       )}
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Re-analyze prompt quality?</AlertDialogTitle>
+            <AlertDialogTitle>{t('analysis.reanalyzePromptTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will replace the current prompt quality score with a new one.
-              This uses LLM tokens and cannot be undone.
+              {t('analysis.reanalyzePromptDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleAnalyze}>Re-analyze</AlertDialogAction>
+            <AlertDialogCancel>{t('analysis.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAnalyze}>{t('analysis.reanalyze')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

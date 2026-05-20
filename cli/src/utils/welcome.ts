@@ -31,12 +31,12 @@ export async function showWelcomeIfFirstRun(): Promise<boolean> {
 
     if (sessionCount > 0) {
       console.log(
-        chalk.dim('  Found ') +
+        chalk.dim('  在你的开发工具中发现 ') +
         chalk.white.bold(sessionCount) +
-        chalk.dim(` session${sessionCount === 1 ? '' : 's'} across your dev tools`)
+        chalk.dim(' 个会话')
       );
     } else {
-      console.log(chalk.dim('  No sessions found yet across your dev tools'));
+      console.log(chalk.dim('  尚未在你的开发工具中发现会话'));
     }
 
     console.log('');

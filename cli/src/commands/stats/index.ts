@@ -42,28 +42,28 @@ async function patternsAction(flags: StatsFlags): Promise<void> {
 }
 
 const costCommand = applySharedFlags(
-  new Command('cost').description('Cost breakdown by project, model, and time period')
+  new Command('cost').description('按项目、模型和时间段的成本分析')
 ).action(wrapAction(costAction));
 
 const projectsCommand = applySharedFlags(
-  new Command('projects').description('Per-project detail — sessions, time, cost, models')
+  new Command('projects').description('按项目详情 — 会话、时间、成本、模型')
 ).action(wrapAction(projectsAction));
 
 const todayCommand = applySharedFlags(
-  new Command('today').description("Today's sessions with titles, duration, cost")
+  new Command('today').description('今日会话：标题、时长、成本')
 ).action(wrapAction(todayAction));
 
 const modelsCommand = applySharedFlags(
-  new Command('models').description('Model usage distribution, cost per model, trends')
+  new Command('models').description('模型使用分布、每模型成本、趋势')
 ).action(wrapAction(modelsAction));
 
 const patternsCommand = applySharedFlags(
-  new Command('patterns').description('Cross-session patterns — friction, wins, working style')
+  new Command('patterns').description('跨会话模式 — 摩擦、收获、工作风格')
 ).action(wrapAction(patternsAction));
 
 export const statsCommand = applySharedFlags(
   new Command('stats')
-    .description('View usage statistics and analytics')
+    .description('查看使用统计和分析')
     .addCommand(costCommand)
     .addCommand(projectsCommand)
     .addCommand(todayCommand)

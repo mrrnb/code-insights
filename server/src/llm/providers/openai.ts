@@ -38,15 +38,15 @@ export function createOpenAIClient(
         const detail = error.error?.message;
         const label = provider === 'openai' ? 'OpenAI' : provider;
         if (response.status === 401 || response.status === 403) {
-          throw new Error(`Invalid API key. Check your ${label} API key in \`code-insights config llm\`.${detail ? ` (${detail})` : ''}`);
+          throw new Error(`API Key 无效。请在 \`code-insights config llm\` 中检查 ${label} API Key。${detail ? ` (${detail})` : ''}`);
         }
         if (response.status === 429) {
-          throw new Error(`Rate limited or quota exceeded. Check your ${label} account usage.${detail ? ` (${detail})` : ''}`);
+          throw new Error(`请求频率超限或配额用尽。请检查 ${label} 账户使用情况。${detail ? ` (${detail})` : ''}`);
         }
         if (response.status >= 500) {
-          throw new Error(`${label} service error (HTTP ${response.status}). Try again later.${detail ? ` (${detail})` : ''}`);
+          throw new Error(`${label} 服务错误（HTTP ${response.status}），请稍后重试。${detail ? ` (${detail})` : ''}`);
         }
-        throw new Error(detail || `${label} API error (HTTP ${response.status})`);
+        throw new Error(detail || `${label} API 错误（HTTP ${response.status}）`);
       }
 
       const data = await response.json() as {

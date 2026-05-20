@@ -96,7 +96,7 @@ app.get('/missing', (c) => {
     }
   }
   if (project) {
-    conditions.push('s.project_id = ?');
+    conditions.push('s.project_name = ?');
     params.push(project);
   }
   if (source) {
@@ -164,12 +164,12 @@ app.get('/outdated', (c) => {
 // Uses extractFacetsOnly (lightweight prompt: summary + first/last 20 messages).
 app.post('/backfill', requireLLM(), async (c) => {
 
-  const body = await c.req.json<{ sessionIds?: string[]; force?: boolean }>();
+  const body = await c.req.json<{ sessionIds?: string[]; force?: boolean; concurrency?: number }>();
   if (!body.sessionIds || !Array.isArray(body.sessionIds) || body.sessionIds.length === 0) {
-    return c.json({ error: 'sessionIds array required' }, 400);
+    return c.json({ error: '需要 sessionIds 数组' }, 400);
   }
   if (body.sessionIds.length > MAX_BACKFILL_SESSIONS) {
-    return c.json({ error: `Maximum ${MAX_BACKFILL_SESSIONS} sessions per backfill request` }, 400);
+    return c.json({ error: `每个回填请求最多 ${MAX_BACKFILL_SESSIONS} 个会话` }, 400);
   }
 
   const db = getDb();
@@ -179,7 +179,7 @@ app.post('/backfill', requireLLM(), async (c) => {
       return !!db.prepare('SELECT 1 FROM session_facets WHERE session_id = ?').get(sessionId);
     },
     analysisFn: extractFacetsOnly,
-  });
+  }, body.concurrency ?? 1);
 });
 
 // GET /api/facets/missing-pq
@@ -244,12 +244,12 @@ app.get('/outdated-pq', (c) => {
 // Uses analyzePromptQuality() from analysis.ts — same function used in the primary analysis pipeline.
 app.post('/backfill-pq', requireLLM(), async (c) => {
 
-  const body = await c.req.json<{ sessionIds?: string[]; force?: boolean }>();
+  const body = await c.req.json<{ sessionIds?: string[]; force?: boolean; concurrency?: number }>();
   if (!body.sessionIds || !Array.isArray(body.sessionIds) || body.sessionIds.length === 0) {
-    return c.json({ error: 'sessionIds array required' }, 400);
+    return c.json({ error: '需要 sessionIds 数组' }, 400);
   }
   if (body.sessionIds.length > MAX_BACKFILL_SESSIONS) {
-    return c.json({ error: `Maximum ${MAX_BACKFILL_SESSIONS} sessions per backfill request` }, 400);
+    return c.json({ error: `每个回填请求最多 ${MAX_BACKFILL_SESSIONS} 个会话` }, 400);
   }
 
   const db = getDb();
@@ -259,7 +259,7 @@ app.post('/backfill-pq', requireLLM(), async (c) => {
       return !!db.prepare("SELECT 1 FROM insights WHERE session_id = ? AND type = 'prompt_quality'").get(sessionId);
     },
     analysisFn: analyzePromptQuality,
-  });
+  }, body.concurrency ?? 1);
 });
 
 export default app;

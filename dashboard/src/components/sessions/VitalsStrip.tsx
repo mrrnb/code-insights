@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 import { formatDuration, formatModelName, formatTokenCount } from '@/lib/utils';
 import { parseJsonField } from '@/lib/types';
+import { useI18n } from '@/lib/i18n';
 import type { Session } from '@/lib/types';
 
 interface VitalsStripProps {
@@ -22,6 +23,7 @@ function formatTimeRange(start: Date, end: Date): string {
 }
 
 export function VitalsStrip({ session }: VitalsStripProps) {
+  const { t } = useI18n();
   const startedAt = new Date(session.started_at);
   const endedAt = new Date(session.ended_at);
   const modelsUsed = parseJsonField<string[]>(session.models_used, []);
@@ -30,13 +32,13 @@ export function VitalsStrip({ session }: VitalsStripProps) {
   const compactCount = session.compact_count ?? 0;
   const autoCompactCount = session.auto_compact_count ?? 0;
   const messageSublabelParts: string[] = [
-    `${session.user_message_count} user \u00B7 ${session.assistant_message_count} asst`,
+    t('vitals.userAsst', { user: session.user_message_count, asst: session.assistant_message_count }),
   ];
   if (compactCount > 0) {
-    messageSublabelParts.push(`${compactCount} compact${compactCount > 1 ? 's' : ''}`);
+    messageSublabelParts.push(t('vitals.compact', { count: compactCount }));
   }
   if (autoCompactCount > 0) {
-    messageSublabelParts.push(`${autoCompactCount} ctx overflow${autoCompactCount > 1 ? 's' : ''}`);
+    messageSublabelParts.push(t('vitals.ctxOverflow', { count: autoCompactCount }));
   }
   const messageSublabel = messageSublabelParts.join(' \u00B7 ');
 
@@ -62,22 +64,22 @@ export function VitalsStrip({ session }: VitalsStripProps) {
       {/* Primary stats grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCell
-          label="Duration"
+          label={t('vitals.duration')}
           value={formatDuration(startedAt, endedAt)}
           sublabel={formatTimeRange(startedAt, endedAt)}
         />
         <StatCell
-          label="Messages"
+          label={t('vitals.messages')}
           value={String(session.message_count)}
           sublabel={messageSublabel}
         />
         <StatCell
-          label="Tokens"
+          label={t('vitals.tokens')}
           value={hasTokens ? formatTokenCount(totalTokens) : '--'}
           sublabel={hasTokens ? tokenSublabel : undefined}
         />
         <StatCell
-          label="Cost"
+          label={t('vitals.cost')}
           value={
             session.estimated_cost_usd != null
               ? `$${session.estimated_cost_usd.toFixed(2)}`

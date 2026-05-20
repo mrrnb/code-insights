@@ -108,7 +108,7 @@ function buildFileContent(
   insights: InsightRow[]
 ): string {
   const date = session.started_at.slice(0, 10);
-  const title = session.custom_title ?? session.generated_title ?? `${session.project_name} session`;
+  const title = session.custom_title ?? session.generated_title ?? `${session.project_name} 会话`;
   const duration = durationMinutes(session.started_at, session.ended_at);
   const cost = session.estimated_cost_usd != null
     ? `$${session.estimated_cost_usd.toFixed(4)}`
@@ -251,7 +251,7 @@ async function exportMemoriesAction(options: ExportMemoriesOptions): Promise<voi
   const quiet = options.quiet ?? false;
   const verbose = options.verbose ?? false;
 
-  if (!quiet) console.log(chalk.cyan('\n  Code Insights — Export Memories\n'));
+  if (!quiet) console.log(chalk.cyan('\n  Code Insights — 导出记忆\n'));
 
   // Load export state
   const exportedIds = loadExportedIds();
@@ -286,7 +286,7 @@ async function exportMemoriesAction(options: ExportMemoriesOptions): Promise<voi
   `).all(...params) as SessionRow[];
 
   if (sessions.length === 0) {
-    if (!quiet) console.log(chalk.yellow('  No sessions with insights found.'));
+    if (!quiet) console.log(chalk.yellow('  未找到包含洞察的会话。'));
     return;
   }
 
@@ -311,16 +311,16 @@ async function exportMemoriesAction(options: ExportMemoriesOptions): Promise<voi
     : sessions.filter(s => !exportedIds.has(s.id));
 
   if (!quiet) {
-    console.log(chalk.dim(`  Total with insights: ${sessions.length}`));
-    console.log(chalk.dim(`  Already exported:    ${sessions.length - toExport.length}`));
-    console.log(chalk.dim(`  To export:           ${toExport.length}`));
+    console.log(chalk.dim(`  包含洞察的总数：${sessions.length}`));
+    console.log(chalk.dim(`  已导出：        ${sessions.length - toExport.length}`));
+    console.log(chalk.dim(`  待导出：        ${toExport.length}`));
     console.log();
   }
 
   if (toExport.length === 0) {
     if (!quiet) {
-      console.log(chalk.green('  All sessions already exported.'));
-      console.log(chalk.dim('  Use --force to re-export.'));
+      console.log(chalk.green('  所有会话均已导出。'));
+      console.log(chalk.dim('  使用 --force 重新导出。'));
     }
     return;
   }
@@ -340,7 +340,7 @@ async function exportMemoriesAction(options: ExportMemoriesOptions): Promise<voi
 
     if (!existsSync(memoriesDir)) {
       if (verbose) {
-        console.log(chalk.dim(`  skip [${session.project_name}]: no memories dir at ${memoriesDir}`));
+        console.log(chalk.dim(`  跳过 [${session.project_name}]：${memoriesDir} 目录不存在`));
       }
       skipped++;
       continue;
@@ -377,8 +377,8 @@ async function exportMemoriesAction(options: ExportMemoriesOptions): Promise<voi
 
   if (!quiet) {
     console.log();
-    const skippedMsg = skipped > 0 ? ` ${skipped} skipped (no memories dir).` : '';
-    console.log(chalk.bold(`  Done. ${exported} exported.${skippedMsg}`));
+    const skippedMsg = skipped > 0 ? ` ${skipped} 个已跳过（无 memories 目录）。` : '';
+    console.log(chalk.bold(`  完成。已导出 ${exported} 个。${skippedMsg}`));
     console.log();
   }
 }
@@ -388,13 +388,13 @@ async function exportMemoriesAction(options: ExportMemoriesOptions): Promise<voi
 // ---------------------------------------------------------------------------
 
 export const exportMemoriesCommand = new Command('export-memories')
-  .description('Export session memories to project .aiws/memories/ directories')
-  .option('-f, --force', 'Re-export all sessions (overwrite existing files)')
-  .option('-p, --project <name>', 'Only export sessions from this project')
-  .option('-d, --date <date>', 'Only export sessions from this date (YYYY-MM-DD)')
-  .option('-q, --quiet', 'Suppress output')
-  .option('-v, --verbose', 'Verbose output including file paths')
-  .option('--gains-dir <dir>', 'Root gains directory (default: /data/apps/gains)')
+  .description('将会话记忆导出到项目的 .aiws/memories/ 目录')
+  .option('-f, --force', '重新导出所有会话（覆盖已有文件）')
+  .option('-p, --project <name>', '仅导出该项目的会话')
+  .option('-d, --date <date>', '仅导出该日期的会话（YYYY-MM-DD）')
+  .option('-q, --quiet', '静默输出')
+  .option('-v, --verbose', '详细输出，包含文件路径')
+  .option('--gains-dir <dir>', 'Gains 根目录（默认：/data/apps/gains）')
   .action(async (options: ExportMemoriesOptions) => {
     await exportMemoriesAction(options);
   });

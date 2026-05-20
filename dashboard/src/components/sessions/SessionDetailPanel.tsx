@@ -65,6 +65,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useI18n } from '@/lib/i18n';
 
 interface SessionDetailPanelProps {
   sessionId: string;
@@ -72,6 +73,7 @@ interface SessionDetailPanelProps {
 }
 
 export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelProps) {
+  const { t } = useI18n();
   const { data: session, isLoading: loading, error } = useSession(sessionId);
   const { data: insights = [] } = useInsights({ sessionId });
   const messagesQuery = useMessages(sessionId);
@@ -172,7 +174,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
     return (
       <div className="p-6">
         <ErrorCard
-          message={error instanceof Error ? error.message : 'Session not found'}
+          message={error instanceof Error ? error.message : t('session.notFound')}
         />
       </div>
     );
@@ -209,8 +211,8 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
     summaryInsight?.title ||
     (session.summary
       ? session.summary.split('\n').find((l) => !l.startsWith('- '))?.trim() ||
-        'Session Summary'
-      : 'Session Summary');
+        t('sessionDetail.summary')
+      : t('sessionDetail.summary'));
 
   const startedAt = new Date(session.started_at);
   const endedAt = new Date(session.ended_at);
@@ -219,12 +221,12 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
     ? SESSION_CHARACTER_COLORS[session.session_character]
     : null;
   const characterLabel = session.session_character
-    ? SESSION_CHARACTER_LABELS[session.session_character]
+    ? t(SESSION_CHARACTER_LABELS[session.session_character])
     : null;
 
-  function handleExport(format: 'plain' | 'obsidian' | 'notion') {
-    exportSession(session!, insights, summaryText, format);
-    toast.success(`Exported as ${format === 'plain' ? 'Markdown' : format}`);
+  function handleExport(fmt: 'plain' | 'obsidian' | 'notion') {
+    exportSession(session!, insights, summaryText, fmt);
+    toast.success(t('session.exportedAs', { format: fmt === 'plain' ? 'Markdown' : fmt }));
   }
 
   return (
@@ -238,7 +240,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
               <TooltipTrigger asChild>
                 <span className={cn('w-2 h-2 rounded-full shrink-0', OUTCOME_DOT[sessionOutcome].color)} />
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-xs">{OUTCOME_DOT[sessionOutcome].label}</TooltipContent>
+              <TooltipContent side="bottom" className="text-xs">{t(OUTCOME_DOT[sessionOutcome].label)}</TooltipContent>
             </Tooltip>
           )}
           {characterLabel && characterColor && (
@@ -255,10 +257,10 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
                 onClick={() => setRenameOpen(true)}
               >
                 <Pencil className="h-3.5 w-3.5" />
-                <span className="sr-only">Rename session</span>
+                <span className="sr-only">{t('session.rename')}</span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Rename session</TooltipContent>
+            <TooltipContent side="bottom">{t('session.rename')}</TooltipContent>
           </Tooltip>
           <div className="ml-auto flex items-center gap-1">
             <AnalyzeDropdown
@@ -273,21 +275,21 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-7 w-7">
                       <Download className="h-3.5 w-3.5" />
-                      <span className="sr-only">Export session</span>
+                      <span className="sr-only">{t('session.exportSession')}</span>
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
-                <TooltipContent side="bottom">Export session</TooltipContent>
+                <TooltipContent side="bottom">{t('session.exportSession')}</TooltipContent>
               </Tooltip>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => handleExport('plain')}>
-                  Export as Markdown
+                  {t('session.exportMarkdown')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport('obsidian')}>
-                  Export for Obsidian
+                  {t('session.exportObsidian')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport('notion')}>
-                  Export for Notion
+                  {t('session.exportNotion')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -297,35 +299,34 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
                   <AlertDialogTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
                       <Trash2 className="h-3.5 w-3.5" />
-                      <span className="sr-only">Hide session</span>
+                      <span className="sr-only">{t('session.hide')}</span>
                     </Button>
                   </AlertDialogTrigger>
                 </TooltipTrigger>
-                <TooltipContent side="bottom">Hide session</TooltipContent>
+                <TooltipContent side="bottom">{t('session.hide')}</TooltipContent>
               </Tooltip>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Hide this session?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('session.hideConfirm')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This session will no longer appear in your session list. You can restore it by running{' '}
-                    <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">code-insights sync --force</code>.
+                    {t('session.hideDesc')}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>{t('session.cancel')}</AlertDialogCancel>
                   <AlertDialogAction
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     onClick={async () => {
                       try {
                         await deleteMutation.mutateAsync(session.id);
-                        toast.success('Session hidden');
+                        toast.success(t('session.hidden'));
                         onDelete?.();
                       } catch (err) {
-                        toast.error(err instanceof Error ? err.message : 'Failed to hide session');
+                        toast.error(err instanceof Error ? err.message : t('session.hideFailed'));
                       }
                     }}
                   >
-                    Hide session
+                    {t('session.hide')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -363,7 +364,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
               <span>&middot;</span>
               <span className="flex items-center gap-1">
                 <Wrench className="h-3 w-3" />
-                {session.tool_call_count} tools
+                {t('session.toolCount', { count: session.tool_call_count })}
               </span>
             </>
           )}
@@ -388,11 +389,11 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
       <Tabs defaultValue="insights" className="flex flex-col flex-1 overflow-hidden pt-2">
         <TabsList variant="line" className="shrink-0 w-full justify-start gap-4 px-6 border-b">
           <TabsTrigger value="insights" className="px-0">
-            Insights{nonPromptInsights.length > 0 && ` (${nonPromptInsights.length})`}
+            {t('session.insights')}{nonPromptInsights.length > 0 && ` (${nonPromptInsights.length})`}
           </TabsTrigger>
           <TabsTrigger value="prompt-quality" className="px-0">
-            <span className="flex items-center gap-1.5" aria-label={promptQualityScore != null ? `Prompt Quality, score ${promptQualityScore} out of 100` : 'Prompt Quality'}>
-              Prompt Quality
+            <span className="flex items-center gap-1.5" aria-label={promptQualityScore != null ? `${t('session.promptQuality')}, score ${promptQualityScore} out of 100` : t('session.promptQuality')}>
+              {t('session.promptQuality')}
               {promptQualityScore != null && (
                 <span className={cn(
                   'inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none',
@@ -404,7 +405,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
             </span>
           </TabsTrigger>
           <TabsTrigger value="conversation" className="px-0">
-            Conversation ({session.message_count})
+            {t('session.conversation', { count: session.message_count })}
           </TabsTrigger>
         </TabsList>
 
@@ -417,7 +418,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
             <div className="flex items-center gap-2 rounded-md border border-blue-500/30 bg-blue-500/5 px-4 py-2.5">
               <Loader2 className="h-4 w-4 text-blue-500 animate-spin shrink-0" />
               <p className="text-sm text-muted-foreground">
-                Analysis in progress — results will appear shortly
+                {t('session.analysisInProgress')}
               </p>
             </div>
           )}
@@ -433,7 +434,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
               <div className="flex items-center gap-2 min-w-0">
                 <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
                 <p className="text-sm text-muted-foreground">
-                  Missing pattern data for this session
+                  {t('session.missingPatternData')}
                 </p>
               </div>
               <Button
@@ -443,9 +444,9 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
                 disabled={backfillMutation.isPending}
                 onClick={() => {
                   backfillMutation.mutate([sessionId], {
-                    onSuccess: () => toast.success('Facets extracted successfully'),
+                    onSuccess: () => toast.success(t('session.facetsExtracted')),
                     onError: (err) => toast.error(
-                      err instanceof Error ? err.message : 'Failed to extract facets'
+                      err instanceof Error ? err.message : t('session.facetsFailed')
                     ),
                   });
                 }}
@@ -453,10 +454,10 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
                 {backfillMutation.isPending ? (
                   <>
                     <Loader2 className="h-3 w-3 animate-spin" />
-                    Extracting...
+                    {t('session.extracting')}
                   </>
                 ) : (
-                  'Extract Facets'
+                  t('session.extractFacets')
                 )}
               </Button>
             </div>
@@ -467,7 +468,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <FileText className="h-4 w-4 text-purple-500 shrink-0" />
-                <h3 className="text-sm font-medium">Summary</h3>
+                <h3 className="text-sm font-medium">{t('session.summary')}</h3>
               </div>
               <div className="rounded-md bg-muted/20 px-4 py-3">
                 <p className="font-medium text-sm mb-1.5">{summaryTitle}</p>
@@ -489,7 +490,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <GitPullRequest className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-sm font-medium">Pull Requests</h3>
+                <h3 className="text-sm font-medium">{t('session.pullRequests')}</h3>
               </div>
               <div className="flex flex-wrap gap-2">
                 {prLinks.map((url) => {
@@ -513,9 +514,9 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
             <div className="rounded-lg border border-dashed">
               <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
                 <BarChart2 className="h-8 w-8 text-muted-foreground" />
-                <p className="font-medium text-sm">This session hasn't been analyzed yet</p>
+                <p className="font-medium text-sm">{t('session.notAnalyzed')}</p>
                 <p className="text-xs text-muted-foreground">
-                  Generate AI insights to extract learnings, decisions, and a session summary.
+                  {t('session.notAnalyzedDesc')}
                 </p>
                 <div className="pt-2">
                   <AnalyzeButton
@@ -537,7 +538,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <BookOpen className="h-4 w-4 text-green-500" />
-                      <h3 className="text-sm font-medium">Learnings</h3>
+                      <h3 className="text-sm font-medium">{t('session.learnings')}</h3>
                       <Badge variant="secondary" className="text-xs">
                         {learningInsights.length}
                       </Badge>
@@ -558,7 +559,7 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <GitCommit className="h-4 w-4 text-blue-500" />
-                      <h3 className="text-sm font-medium">Decisions</h3>
+                      <h3 className="text-sm font-medium">{t('session.decisions')}</h3>
                       <Badge variant="secondary" className="text-xs">
                         {decisionInsights.length}
                       </Badge>
@@ -583,9 +584,9 @@ export function SessionDetailPanel({ sessionId, onDelete }: SessionDetailPanelPr
             <div className="rounded-lg border border-dashed">
               <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
                 <Target className="h-8 w-8 text-muted-foreground" />
-                <p className="font-medium text-sm">No Prompt Quality Analysis</p>
+                <p className="font-medium text-sm">{t('session.noPromptQuality')}</p>
                 <p className="text-xs text-muted-foreground max-w-[280px]">
-                  Analyze your prompting patterns to improve efficiency.
+                  {t('session.noPromptQualityDesc')}
                 </p>
                 <div className="pt-2">
                   <PromptQualityAnalyzeButton session={session} />

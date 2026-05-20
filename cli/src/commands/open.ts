@@ -31,15 +31,15 @@ export async function openCommand(options: OpenOptions): Promise<void> {
     }
   }
 
-  console.log(chalk.cyan(`\n  Opening ${url}\n`));
-  console.log(chalk.gray('  (Run `code-insights dashboard` to start the local server if needed)\n'));
+  console.log(chalk.cyan(`\n  正在打开 ${url}\n`));
+  console.log(chalk.gray('  （如需启动本地服务，请运行 `code-insights dashboard`）\n'));
 
   try {
     openUrl(url);
     trackEvent('cli_open', { success: true });
   } catch {
-    console.log(chalk.yellow('  Could not open browser automatically.'));
-    console.log(chalk.white(`  Visit: ${chalk.bold.underline(url)}\n`));
+    console.log(chalk.yellow('  无法自动打开浏览器。'));
+    console.log(chalk.white(`  请访问：${chalk.bold.underline(url)}\n`));
     trackEvent('cli_open', { success: false });
   }
 }

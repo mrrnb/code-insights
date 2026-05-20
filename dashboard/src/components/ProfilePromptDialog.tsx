@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useUserProfile, normalizeGithubUsername } from '@/hooks/useUserProfile';
+import { useI18n } from '@/lib/i18n';
 import type { UserProfile } from '@/hooks/useUserProfile';
 
 interface ProfilePromptDialogProps {
@@ -37,6 +38,7 @@ export function ProfilePromptDialog({
   onOpenChange,
 }: ProfilePromptDialogProps) {
   const { profile, saveProfile } = useUserProfile();
+  const { t } = useI18n();
 
   const [name, setName] = useState(profile?.name ?? '');
   const [githubUsername, setGithubUsername] = useState(profile?.githubUsername ?? '');
@@ -73,9 +75,9 @@ export function ProfilePromptDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add your profile to the share card</DialogTitle>
+          <DialogTitle>{t('profile.addProfile')}</DialogTitle>
           <DialogDescription>
-            Your name and GitHub avatar will appear in the card footer, personalizing it for social sharing.
+            {t('profile.addProfileDesc')}
           </DialogDescription>
         </DialogHeader>
 
@@ -98,21 +100,21 @@ export function ProfilePromptDialog({
               )}
             </div>
             <div className="text-sm">
-              <p className="font-medium">{name.trim() || 'Your Name'}</p>
+              <p className="font-medium">{name.trim() || t('profile.yourName')}</p>
               {normalizedUsername ? (
                 <p className="text-muted-foreground text-xs">@{normalizedUsername}</p>
               ) : (
-                <p className="text-muted-foreground text-xs italic">Enter your GitHub username</p>
+                <p className="text-muted-foreground text-xs italic">{t('profile.enterGithub')}</p>
               )}
             </div>
           </div>
 
           {/* Name input */}
           <div>
-            <label className="text-sm font-medium">Display Name</label>
+            <label className="text-sm font-medium">{t('profile.displayName')}</label>
             <Input
               className="mt-1"
-              placeholder="e.g. Srikanth Rao"
+              placeholder={t('profile.namePlaceholder')}
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -120,10 +122,10 @@ export function ProfilePromptDialog({
 
           {/* GitHub username input */}
           <div>
-            <label className="text-sm font-medium">GitHub Username</label>
+            <label className="text-sm font-medium">{t('profile.githubUsername')}</label>
             <Input
               className="mt-1"
-              placeholder="e.g. melagiri"
+              placeholder={t('profile.githubPlaceholder')}
               value={githubUsername}
               onChange={(e) => {
                 setGithubUsername(e.target.value);
@@ -131,17 +133,17 @@ export function ProfilePromptDialog({
               }}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Used to load your GitHub avatar. No @ prefix needed.
+              {t('profile.githubHelp')}
             </p>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="ghost" onClick={handleSkip} type="button">
-            Skip
+            {t('profile.skip')}
           </Button>
           <Button onClick={handleSave} disabled={!canSave} type="button">
-            Save & Download
+            {t('profile.saveDownload')}
           </Button>
         </DialogFooter>
       </DialogContent>

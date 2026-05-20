@@ -30,20 +30,25 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { generateDispatch } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import { PostOverlay } from './PostOverlay';
 import type { Insight, DispatchPrefill } from '@/lib/types';
 import type { DispatchTone, DispatchFormat, DispatchResponse } from '@/lib/api';
 
-const FORMAT_OPTIONS: { value: DispatchFormat; label: string; description: string }[] = [
-  { value: 'blog', label: 'Blog post', description: 'Full narrative, 800-1000 words, markdown ready to paste to dev.to / Hashnode' },
-  { value: 'linkedin', label: 'LinkedIn', description: 'Hook-first, 150-250 words, optimized for LinkedIn feed' },
-];
+function getFormatOptions(t: (key: string) => string): { value: DispatchFormat; label: string; description: string }[] {
+  return [
+    { value: 'blog', label: t('dispatch.format.blogPost'), description: t('dispatch.format.blogPostDesc') },
+    { value: 'linkedin', label: t('dispatch.format.linkedin'), description: t('dispatch.format.linkedinDesc') },
+  ];
+}
 
-const TONE_OPTIONS: { value: DispatchTone; label: string; description: string }[] = [
-  { value: 'technical', label: 'Technical deep-dive', description: 'For senior engineers — precise, depth-first' },
-  { value: 'accessible', label: 'Accessible', description: 'Broader audience — clear, with analogies' },
-  { value: 'quick-tips', label: 'Quick tips', description: 'Scannable — bold tips + brief context' },
-];
+function getToneOptions(t: (key: string) => string): { value: DispatchTone; label: string; description: string }[] {
+  return [
+    { value: 'technical', label: t('dispatch.tone.technical'), description: t('dispatch.tone.technicalDesc') },
+    { value: 'accessible', label: t('dispatch.tone.accessible'), description: t('dispatch.tone.accessibleDesc') },
+    { value: 'quick-tips', label: t('dispatch.tone.quickTips'), description: t('dispatch.tone.quickTipsDesc') },
+  ];
+}
 
 const INSIGHT_TYPE_COLORS: Record<string, string> = {
   learning: 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20',
@@ -79,7 +84,7 @@ function SortableInsightItem({ insight, onRemove }: SortableInsightItemProps) {
         className="mt-0.5 shrink-0 cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing"
         {...attributes}
         {...listeners}
-        aria-label="Drag to reorder"
+        aria-label={t('dispatchDrawer.dragReorder')}
         aria-describedby="drag-hint"
       >
         <GripVertical className="h-4 w-4" />
@@ -95,7 +100,7 @@ function SortableInsightItem({ insight, onRemove }: SortableInsightItemProps) {
       <button
         className="shrink-0 text-muted-foreground hover:text-destructive transition-colors mt-0.5"
         onClick={() => onRemove(insight.id)}
-        aria-label="Remove insight"
+        aria-label={t('dispatchDrawer.removeInsight')}
       >
         <X className="h-3.5 w-3.5" />
       </button>
@@ -127,6 +132,9 @@ export function DispatchDrawer({
   const [includeSessionBackground, setIncludeSessionBackground] = useState(false);
   const [result, setResult] = useState<DispatchResponse | null>(null);
   const [overlayOpen, setOverlayOpen] = useState(false);
+  const { t } = useI18n();
+  const FORMAT_OPTIONS = getFormatOptions(t);
+  const TONE_OPTIONS = getToneOptions(t);
 
   // When drawer opens with a prefill, apply it; when closed, reset transient state
   useEffect(() => {
@@ -193,11 +201,11 @@ export function DispatchDrawer({
         className="w-full sm:max-w-none sm:w-[480px] flex flex-col p-0 gap-0"
       >
         <SheetHeader className="px-4 py-3 border-b shrink-0">
-          <SheetTitle>Create Post</SheetTitle>
+          <SheetTitle>{t('dispatch.createPost')}</SheetTitle>
           <SheetDescription>
             {prefill
-              ? `Drafting from ${prefill.title}`
-              : 'Curate insights and context, then generate a publishable post.'}
+              ? t('dispatch.draftingFrom', { title: prefill.title })
+              : t('dispatch.desc')}
           </SheetDescription>
         </SheetHeader>
 
@@ -205,13 +213,13 @@ export function DispatchDrawer({
             {/* Selected insights with drag-to-reorder */}
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                Selected ({selectedInsights.length})
+                {t('dispatch.selected', { count: selectedInsights.length })}
                 {selectedInsights.length > 0 && (
-                  <span className="ml-1 normal-case font-normal">— drag to reorder</span>
+                  <span className="ml-1 normal-case font-normal">— {t('dispatch.dragReorder')}</span>
                 )}
               </p>
               <span id="drag-hint" className="sr-only">
-                Press Space or Enter to pick up, arrow keys to move, Space or Enter to drop, Escape to cancel.
+                {t('dispatch.keyboardPickup')}
               </span>
               <DndContext
                 sensors={sensors}
@@ -235,7 +243,7 @@ export function DispatchDrawer({
               </DndContext>
               {selectedInsights.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  No insights selected. Close this panel and select at least 3 from the list.
+                  {t('dispatch.noInsights')}
                 </p>
               )}
             </div>
@@ -243,19 +251,19 @@ export function DispatchDrawer({
             {/* Context textarea */}
             <div>
               <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
-                {"What's the story?"}
+                {t('dispatch.storyPrompt')}
               </label>
               <Textarea
                 rows={4}
                 maxLength={500}
-                placeholder="2-3 sentences framing the narrative. What did you build or discover? Why does it matter?"
+                placeholder={t('dispatch.storyDesc')}
                 value={context}
                 onChange={(e) => { setContext(e.target.value); if (prefill) setContextEdited(true); }}
                 className="resize-none"
               />
               <div className="flex justify-between mt-1">
                 <p className="text-xs text-muted-foreground">
-                  This shapes the arc — the model reads it before the insights.
+                  {t('dispatch.storyHelp')}
                 </p>
                 <span className={`text-xs ${contextTooLong ? 'text-destructive' : 'text-muted-foreground'}`}>
                   {context.length}/500
@@ -268,14 +276,14 @@ export function DispatchDrawer({
                   className="mt-1 h-7 text-xs text-muted-foreground"
                   onClick={() => { setContext(prefill.contextMarkdown); setContextEdited(false); }}
                 >
-                  Reset to defaults
+                  {t('dispatch.resetDefaults')}
                 </Button>
               )}
             </div>
 
             {/* Format selector */}
             <fieldset className="space-y-2 border-0 p-0 m-0 min-w-0">
-              <legend className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Format</legend>
+              <legend className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('dispatch.format')}</legend>
               <div className="space-y-1.5">
                 {FORMAT_OPTIONS.map((opt) => (
                   <label
@@ -305,7 +313,7 @@ export function DispatchDrawer({
 
             {/* Tone selector */}
             <fieldset className="space-y-2 border-0 p-0 m-0 min-w-0">
-              <legend className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tone</legend>
+              <legend className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('dispatch.tone')}</legend>
               <div className="space-y-1.5">
                 {TONE_OPTIONS.map((opt) => (
                   <label
@@ -337,10 +345,10 @@ export function DispatchDrawer({
             <div className="flex items-center justify-between rounded-md border px-3 py-2.5">
               <div className="space-y-0.5">
                 <label htmlFor="session-background" className="text-sm font-medium cursor-pointer">
-                  Include session background
+                  {t('dispatch.includeBackground')}
                 </label>
                 <p id="session-bg-desc" className="text-xs text-muted-foreground">
-                  Adds session summaries to help the model understand context (up to 4 sessions).
+                  {t('dispatch.includeBackgroundDesc')}
                 </p>
               </div>
               <Switch
@@ -355,7 +363,7 @@ export function DispatchDrawer({
             {mutation.isError && (
               <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
                 <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                <span>{mutation.error instanceof Error ? mutation.error.message : 'Generation failed. Please try again.'}</span>
+                <span>{mutation.error instanceof Error ? mutation.error.message : t('dispatch.genFailed')}</span>
               </div>
             )}
           </div>
@@ -371,15 +379,15 @@ export function DispatchDrawer({
               {mutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Generating...
+                  {t('dispatch.generating')}
                 </>
               ) : (
-                'Generate Post'
+                t('dispatch.generatePost')
               )}
             </Button>
             {!context.trim() && selectedInsights.length >= 3 && (
               <p className="text-xs text-muted-foreground text-center mt-1.5">
-                Add a context paragraph to enable generation
+                {t('dispatch.addContextFirst')}
               </p>
             )}
           </div>
@@ -389,14 +397,14 @@ export function DispatchDrawer({
               className="flex-1"
               onClick={() => setOverlayOpen(true)}
             >
-              View post
+              {t('dispatch.viewPost')}
             </Button>
             <Button
               variant="outline"
               className="flex-1"
               onClick={() => { setResult(null); mutation.reset(); }}
             >
-              Regenerate
+              {t('dispatch.regenerate')}
             </Button>
           </div>
         )}

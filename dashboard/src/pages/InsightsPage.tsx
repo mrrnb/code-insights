@@ -38,6 +38,7 @@ import { SavedFiltersDropdown } from '@/components/filters/SavedFiltersDropdown'
 import { SourceToolSelect } from '@/components/filters/SourceToolSelect';
 import { useSavedFilters } from '@/hooks/useSavedFilters';
 import { LlmNudgeBanner } from '@/components/LlmNudgeBanner';
+import { useI18n } from '@/lib/i18n';
 import { DispatchDrawer } from '@/components/dispatch/DispatchDrawer';
 import { FloatingActionBar } from '@/components/dispatch/FloatingActionBar';
 import { DispatchEntryButton } from '@/components/insights/DispatchEntryButton';
@@ -58,10 +59,10 @@ const TYPE_SECTION_ICONS: Record<string, { icon: typeof FileText; color: string 
 };
 
 const VIEW_MODES = [
-  { value: 'timeline', label: 'Timeline' },
-  { value: 'type', label: 'By Type' },
-  { value: 'project', label: 'By Project' },
-  { value: 'session', label: 'By Session' },
+  { value: 'timeline', labelKey: 'insights.view.timeline' },
+  { value: 'type', labelKey: 'insights.view.type' },
+  { value: 'project', labelKey: 'insights.view.project' },
+  { value: 'session', labelKey: 'insights.view.session' },
 ] as const;
 
 interface InsightGroup {
@@ -74,6 +75,7 @@ interface InsightGroup {
 const MAX_DISPATCH_INSIGHTS = 8;
 
 export default function InsightsPage() {
+  const { t } = useI18n();
   const [filters, setFilter, setFilters, clearFilters] = useFilterParams({
     q: '',
     project: 'all',
@@ -282,7 +284,7 @@ export default function InsightsPage() {
     if (view === 'type') {
       return entries.map(([key, items]) => ({
         key,
-        label: INSIGHT_TYPE_LABELS[key as InsightType] || key,
+        label: t(INSIGHT_TYPE_LABELS[key as InsightType] || key),
         count: items.length,
         insights: items,
       }));
@@ -322,11 +324,10 @@ export default function InsightsPage() {
       <div className="shrink-0 sticky top-0 z-10 bg-background border-b px-6 pt-5 pb-3 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold">Insights</h1>
+            <h1 className="text-2xl font-bold">{t('insights.title')}</h1>
             {!isLoading && (
               <p className="text-muted-foreground text-sm">
-                {filtered.length} insight{filtered.length !== 1 ? 's' : ''}
-                {hasFilters ? ' matching filters' : ''}
+                {t('insights.count', { count: filtered.length, filtered: hasFilters ? t('insights.filteredSuffix') : '' })}
               </p>
             )}
           </div>
@@ -341,10 +342,10 @@ export default function InsightsPage() {
         {filters.pattern && (
           <div className="flex items-center gap-2 rounded-lg border bg-amber-500/5 border-amber-500/20 px-3 py-2">
             <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
-              Pattern
+              {t('insights.pattern')}
             </Badge>
             <span className="text-sm text-muted-foreground">
-              Showing {filtered.length} insight{filtered.length !== 1 ? 's' : ''} in this recurring pattern
+              {t('insights.patternShowing', { count: filtered.length })}
             </span>
             <Button
               variant="ghost"
@@ -366,7 +367,7 @@ export default function InsightsPage() {
           />
 
           <Input
-            placeholder="Search insights..."
+            placeholder={t('insights.search')}
             value={filters.q}
             onChange={(e) => setFilter('q', e.target.value)}
             className="max-w-xs"
@@ -374,10 +375,10 @@ export default function InsightsPage() {
 
           <Select value={filters.project} onValueChange={(v) => setFilter('project', v)}>
             <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="All Projects" />
+              <SelectValue placeholder={t('insights.allProjects')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Projects</SelectItem>
+              <SelectItem value="all">{t('insights.allProjects')}</SelectItem>
               {projects.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   {p.name}
@@ -400,7 +401,7 @@ export default function InsightsPage() {
             <TabsList variant="default" className="h-9">
               {VIEW_MODES.map((mode) => (
                 <TabsTrigger key={mode.value} value={mode.value} className="text-xs px-3">
-                  {mode.label}
+                  {t(mode.labelKey)}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -428,7 +429,7 @@ export default function InsightsPage() {
       )}
       <LlmNudgeBanner context="insights" />
       {isError && !isLoading ? (
-        <ErrorCard message="Failed to load insights" onRetry={refetch} />
+        <ErrorCard message={t('insights.error')} onRetry={refetch} />
       ) : isLoading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => (
@@ -439,23 +440,23 @@ export default function InsightsPage() {
         hasFilters ? (
           <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
             <SearchX className="h-8 w-8 text-muted-foreground" />
-            <p className="font-medium">No insights match your search</p>
+            <p className="font-medium">{t('insights.emptyFilteredTitle')}</p>
             <p className="text-sm text-muted-foreground">
-              Try different keywords or clear the search to see all insights.
+              {t('insights.emptyFilteredDesc')}
             </p>
             <Button variant="outline" size="sm" onClick={clearFilters}>
-              Clear filters
+              {t('insights.clearFilters')}
             </Button>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
             <Sparkles className="h-8 w-8 text-muted-foreground" />
-            <p className="font-medium">No insights yet</p>
+            <p className="font-medium">{t('insights.emptyTitle')}</p>
             <p className="text-sm text-muted-foreground max-w-sm">
-              If you haven{"'"}t already, configure an LLM provider to unlock AI-powered insights — decisions, learnings, and patterns extracted from your sessions.
+              {t('insights.emptyDesc')}
             </p>
             <Button variant="outline" size="sm" asChild>
-              <Link to="/settings">Configure LLM provider</Link>
+              <Link to="/settings">{t('analysis.configureAi')}</Link>
             </Button>
           </div>
         )

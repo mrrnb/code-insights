@@ -41,15 +41,15 @@ export function createAnthropicClient(apiKey: string, model: string): LLMClient 
         const error = await response.json().catch(() => ({})) as { error?: { message?: string } };
         const detail = error.error?.message;
         if (response.status === 401 || response.status === 403) {
-          throw new Error(`Invalid API key. Check your Anthropic API key in \`code-insights config llm\`.${detail ? ` (${detail})` : ''}`);
+          throw new Error(`API Key 无效。请在 \`code-insights config llm\` 中检查 Anthropic API Key。${detail ? ` (${detail})` : ''}`);
         }
         if (response.status === 429) {
-          throw new Error(`Rate limited or quota exceeded. Check your Anthropic account usage.${detail ? ` (${detail})` : ''}`);
+          throw new Error(`请求频率超限或配额用尽。请检查 Anthropic 账户使用情况。${detail ? ` (${detail})` : ''}`);
         }
         if (response.status >= 500) {
-          throw new Error(`Anthropic service error (HTTP ${response.status}). Try again later.${detail ? ` (${detail})` : ''}`);
+          throw new Error(`Anthropic 服务错误（HTTP ${response.status}），请稍后重试。${detail ? ` (${detail})` : ''}`);
         }
-        throw new Error(detail || `Anthropic API error (HTTP ${response.status})`);
+        throw new Error(detail || `Anthropic API 错误（HTTP ${response.status}）`);
       }
 
       const data = await response.json() as {

@@ -11,29 +11,29 @@ import type { ClaudeInsightConfig, LLMProviderConfig } from '../types.js';
  */
 function showConfigAction(): void {
   if (!isConfigured()) {
-    console.log(chalk.yellow('\nNot configured. Run `code-insights init` to set up.\n'));
+    console.log(chalk.yellow('\n未配置。请运行 `code-insights init` 进行设置。\n'));
     return;
   }
 
   const config = loadConfig();
   if (!config) {
-    console.log(chalk.red('\nFailed to load config.\n'));
+    console.log(chalk.red('\n加载配置失败。\n'));
     return;
   }
 
-  console.log(chalk.cyan('\n  Code Insights Configuration\n'));
+  console.log(chalk.cyan('\n  Code Insights 配置\n'));
 
   // Sync
-  console.log(chalk.white('  Sync:'));
-  console.log(chalk.gray(`    Claude dir: ${config.sync.claudeDir}`));
+  console.log(chalk.white('  同步：'));
+  console.log(chalk.gray(`    Claude 目录：${config.sync.claudeDir}`));
   if (config.sync.excludeProjects.length > 0) {
-    console.log(chalk.gray(`    Excluded:   ${config.sync.excludeProjects.join(', ')}`));
+    console.log(chalk.gray(`    排除项目：${config.sync.excludeProjects.join(', ')}`));
   }
 
   // Dashboard (Phase 3)
   if (config.dashboard?.port) {
-    console.log(chalk.white('\n  Dashboard:'));
-    console.log(chalk.gray(`    Port: ${config.dashboard.port}`));
+    console.log(chalk.white('\n  控制台：'));
+    console.log(chalk.gray(`    端口：${config.dashboard.port}`));
   }
 
   // LLM config
@@ -41,26 +41,26 @@ function showConfigAction(): void {
     const llm = config.dashboard.llm;
     const maskedKey = llm.apiKey && llm.apiKey.length >= 8
       ? llm.apiKey.slice(0, 4) + '...' + llm.apiKey.slice(-4)
-      : llm.apiKey ? '***' : '(none)';
+      : llm.apiKey ? '***' : '（无）';
 
-    console.log(chalk.white('\n  LLM:'));
-    console.log(chalk.gray(`    Provider: ${llm.provider}`));
-    console.log(chalk.gray(`    Model:    ${llm.model}`));
+    console.log(chalk.white('\n  LLM：'));
+    console.log(chalk.gray(`    提供者：${llm.provider}`));
+    console.log(chalk.gray(`    模型：  ${llm.model}`));
     if (llm.provider !== 'ollama' && llm.provider !== 'llamacpp') {
-      console.log(chalk.gray(`    API Key:  ${maskedKey}`));
+      console.log(chalk.gray(`    API Key：${maskedKey}`));
     }
     if (llm.baseUrl) {
-      console.log(chalk.gray(`    Base URL: ${llm.baseUrl}`));
+      console.log(chalk.gray(`    Base URL：${llm.baseUrl}`));
     }
   }
 
   // Telemetry — default is enabled; env vars can override at runtime
-  console.log(chalk.white('\n  Telemetry:'));
+  console.log(chalk.white('\n  遥测：'));
   const telemetryEnabled = config.telemetry !== false;
   if (process.env.CODE_INSIGHTS_TELEMETRY_DISABLED === '1' || process.env.DO_NOT_TRACK === '1') {
-    console.log(chalk.yellow('    Status:  disabled (via env var)'));
+    console.log(chalk.yellow('    状态：已禁用（通过环境变量）'));
   } else {
-    console.log(chalk.gray(`    Status:  ${telemetryEnabled ? 'enabled' : 'disabled'}`));
+    console.log(chalk.gray(`    状态：${telemetryEnabled ? '已启用' : '已禁用'}`));
   }
 
   console.log('');
@@ -68,18 +68,18 @@ function showConfigAction(): void {
 }
 
 export const configCommand = new Command('config')
-  .description('Show Code Insights configuration')
+  .description('显示 Code Insights 配置')
   .action(() => {
     showConfigAction();
   });
 
 configCommand
   .command('set <key> <value>')
-  .description('Set a configuration value (telemetry)')
+  .description('设置配置值（telemetry）')
   .action((key: string, value: string) => {
     if (key === 'telemetry') {
       if (value !== 'true' && value !== 'false') {
-        console.error(chalk.red(`\nInvalid value "${value}". Must be "true" or "false".\n`));
+        console.error(chalk.red(`\n无效值 "${value}"。必须为 "true" 或 "false"。\n`));
         process.exit(1);
       }
       const existing = loadConfig();
@@ -92,10 +92,10 @@ configCommand
         existing.telemetry = value === 'true';
         saveConfig(existing);
       }
-      console.log(chalk.green(`\nTelemetry ${value === 'true' ? 'enabled' : 'disabled'}.\n`));
+      console.log(chalk.green(`\n遥测已${value === 'true' ? '启用' : '禁用'}。\n`));
       trackEvent('cli_config', { subcommand: 'set', success: true });
     } else {
-      console.error(chalk.red(`\nUnknown config key "${key}". Available: telemetry.\n`));
+      console.error(chalk.red(`\n未知配置键 "${key}"。可用选项：telemetry。\n`));
       process.exit(1);
     }
   });
@@ -104,12 +104,12 @@ configCommand
 
 const llmCommand = configCommand
   .command('llm')
-  .description('Configure LLM provider for AI-powered session analysis')
-  .option('--provider <provider>', 'LLM provider (openai, anthropic, gemini, ollama, custom)')
-  .option('--model <model>', 'Model ID (e.g., gpt-4o, claude-sonnet-4-20250514)')
-  .option('--api-key <key>', 'API key for the selected provider')
-  .option('--base-url <url>', 'Custom base URL (for Ollama or OpenAI-compatible endpoints)')
-  .option('--show', 'Show current LLM configuration')
+  .description('配置用于 AI 会话分析的 LLM 提供者')
+  .option('--provider <provider>', 'LLM 提供者（openai, anthropic, gemini, ollama, custom）')
+  .option('--model <model>', '模型 ID（如 gpt-4o, claude-sonnet-4-20250514）')
+  .option('--api-key <key>', '所选提供者的 API key')
+  .option('--base-url <url>', '自定义 Base URL（用于 Ollama 或 OpenAI 兼容端点）')
+  .option('--show', '显示当前 LLM 配置')
   .action(async (options: {
     provider?: string;
     model?: string;
@@ -123,22 +123,22 @@ const llmCommand = configCommand
       const llm = config?.dashboard?.llm;
 
       if (!llm) {
-        console.log(chalk.yellow('\nLLM not configured. Run `code-insights config llm` to set up.\n'));
+        console.log(chalk.yellow('\nLLM 未配置。请运行 `code-insights config llm` 进行设置。\n'));
         return;
       }
 
       const maskedKey = llm.apiKey && llm.apiKey.length >= 8
         ? llm.apiKey.slice(0, 4) + '...' + llm.apiKey.slice(-4)
-        : llm.apiKey ? '***' : '(none)';
+        : llm.apiKey ? '***' : '(无)';
 
-      console.log(chalk.cyan('\n  LLM Configuration\n'));
-      console.log(chalk.gray(`    Provider: ${llm.provider}`));
-      console.log(chalk.gray(`    Model:    ${llm.model}`));
+      console.log(chalk.cyan('\n  LLM 配置\n'));
+      console.log(chalk.gray(`    提供者：${llm.provider}`));
+      console.log(chalk.gray(`    模型：  ${llm.model}`));
       if (llm.provider !== 'ollama' && llm.provider !== 'llamacpp') {
-        console.log(chalk.gray(`    API Key:  ${maskedKey}`));
+        console.log(chalk.gray(`    API Key：${maskedKey}`));
       }
       if (llm.baseUrl) {
-        console.log(chalk.gray(`    Base URL: ${llm.baseUrl}`));
+        console.log(chalk.gray(`    Base URL：${llm.baseUrl}`));
       }
       console.log('');
       return;
@@ -148,13 +148,13 @@ const llmCommand = configCommand
     if (options.provider && options.model) {
       const validProviders = PROVIDERS.map(p => p.id);
       if (!validProviders.includes(options.provider as LLMProviderConfig['provider'])) {
-        console.error(chalk.red(`\nInvalid provider "${options.provider}". Must be one of: ${validProviders.join(', ')}\n`));
+        console.error(chalk.red(`\n无效提供者 "${options.provider}"。必须为以下之一：${validProviders.join(', ')}\n`));
         process.exit(1);
       }
 
       const providerInfo = PROVIDERS.find(p => p.id === options.provider);
       if (providerInfo?.requiresApiKey && !options.apiKey) {
-        console.error(chalk.red(`\nProvider "${options.provider}" requires an API key. Use --api-key <key>\n`));
+        console.error(chalk.red(`\n提供者 "${options.provider}" 需要 API key。请使用 --api-key <key>\n`));
         process.exit(1);
       }
 
@@ -166,7 +166,7 @@ const llmCommand = configCommand
       };
 
       saveLLMConfig(llmConfig);
-      console.log(chalk.green(`\nLLM configured: ${options.provider} / ${options.model}\n`));
+      console.log(chalk.green(`\nLLM 已配置：${options.provider} / ${options.model}\n`));
       return;
     }
 
@@ -180,17 +180,17 @@ const llmCommand = configCommand
 async function runInteractiveLLMConfig(): Promise<void> {
   const existing = loadConfig()?.dashboard?.llm;
 
-  console.log(chalk.cyan('\n  LLM Configuration\n'));
-  console.log(chalk.gray('  Configure the AI provider used for session analysis.\n'));
+  console.log(chalk.cyan('\n  LLM 配置\n'));
+  console.log(chalk.gray('  配置用于会话分析的 AI 提供者。\n'));
 
   // Step 1: Select provider
   const { provider } = await inquirer.prompt<{ provider: LLMProviderConfig['provider'] }>([
     {
       type: 'list',
       name: 'provider',
-      message: 'Select LLM provider:',
+      message: '选择 LLM 提供者：',
       choices: PROVIDERS.map(p => ({
-        name: `${p.name}${p.requiresApiKey ? '' : ' (no API key needed)'}`,
+        name: `${p.name}${p.requiresApiKey ? '' : '（无需 API key）'}`,
         value: p.id,
       })),
       default: existing?.provider ?? 'ollama',
@@ -199,7 +199,7 @@ async function runInteractiveLLMConfig(): Promise<void> {
 
   const providerInfo = PROVIDERS.find(p => p.id === provider);
   if (!providerInfo) {
-    console.error(chalk.red('\nFailed to find provider info. Aborting.\n'));
+    console.error(chalk.red('\n未找到提供者信息。中止操作。\n'));
     process.exit(1);
   }
 
@@ -209,14 +209,14 @@ async function runInteractiveLLMConfig(): Promise<void> {
       ? {
           type: 'input',
           name: 'model',
-          message: 'Model ID (e.g. gpt-4.1, deepseek-chat, kimi-k2):',
+          message: '模型 ID（如 gpt-4.1、deepseek-chat、kimi-k2）：',
           default: existing?.model ?? '',
-          validate: (value: string) => value.trim() ? true : 'Model ID is required',
+          validate: (value: string) => value.trim() ? true : '模型 ID 为必填项',
         }
       : {
           type: 'list',
           name: 'model',
-          message: 'Select model:',
+          message: '选择模型：',
           choices: providerInfo.models.map(m => ({
             name: `${m.name}${m.description ? ` — ${m.description}` : ''}`,
             value: m.id,
@@ -237,11 +237,11 @@ async function runInteractiveLLMConfig(): Promise<void> {
       {
         type: 'password',
         name: 'apiKey',
-        message: `API key${maskedExisting ? ` (current: ${maskedExisting}, leave blank to keep)` : ''}:`,
+        message: `API key${maskedExisting ? `（当前：${maskedExisting}，留空保持不变）` : ''}：`,
         mask: '*',
         validate: (val: string) => {
           if (!val && !existing?.apiKey) {
-            return `API key required for ${providerInfo.name}`;
+            return `${providerInfo.name} 需要 API key`;
           }
           return true;
         },
@@ -263,11 +263,11 @@ async function runInteractiveLLMConfig(): Promise<void> {
         type: 'input',
         name: 'baseUrl',
         message: provider === 'ollama'
-          ? 'Ollama URL (leave blank for default http://localhost:11434):'
-          : 'OpenAI-compatible base URL (required, e.g. https://api.openai.com/v1):',
+          ? 'Ollama URL（留空使用默认值 http://localhost:11434）：'
+          : 'OpenAI 兼容的 Base URL（必填，如 https://api.openai.com/v1）：',
         default: existing?.baseUrl ?? (provider === 'ollama' ? '' : 'https://api.openai.com/v1'),
         validate: (value: string) => {
-          if (provider === 'custom' && !value.trim()) return 'Base URL is required for custom provider';
+          if (provider === 'custom' && !value.trim()) return '自定义提供者必须填写 Base URL';
           return true;
         },
       },
@@ -283,7 +283,7 @@ async function runInteractiveLLMConfig(): Promise<void> {
       {
         type: 'input',
         name: 'baseUrl',
-        message: 'llama-server URL (leave blank for default http://localhost:8080):',
+        message: 'llama-server URL（留空使用默认值 http://localhost:8080）：',
         default: existing?.baseUrl ?? '',
       },
     ]);
@@ -296,10 +296,10 @@ async function runInteractiveLLMConfig(): Promise<void> {
 
   saveLLMConfig(llmConfig);
 
-  console.log(chalk.green(`\nLLM configured: ${providerInfo.name} / ${model}\n`));
+  console.log(chalk.green(`\nLLM 已配置：${providerInfo.name} / ${model}\n`));
 
   if (providerInfo.apiKeyLink && !llmConfig.apiKey) {
-    console.log(chalk.dim(`  Get an API key: ${providerInfo.apiKeyLink}\n`));
+    console.log(chalk.dim(`  获取 API key：${providerInfo.apiKeyLink}\n`));
   }
 }
 

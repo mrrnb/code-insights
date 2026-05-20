@@ -42,7 +42,7 @@ export async function runChecks(sections: Section[], opts: RunOptions): Promise<
           id: check.id,
           label: check.label,
           status: 'skip',
-          detail: 'Skipped (dependency failed)',
+          detail: '已跳过（依赖项失败）',
         };
       } else {
         result = await check.run();
@@ -64,7 +64,7 @@ export async function runChecks(sections: Section[], opts: RunOptions): Promise<
   if (opts.fix && !opts.json) {
     const fixable = allResults.filter((r) => r.fix && (r.status === 'fail' || r.status === 'warn'));
     if (fixable.length > 0) {
-      console.log(chalk.cyan(`\n  Fixing ${fixable.length} issue(s)...`));
+      console.log(chalk.cyan(`\n  正在修复 ${fixable.length} 个问题...`));
       for (const result of fixable) {
         try {
           await result.fix!();
@@ -114,14 +114,14 @@ function renderSummary(results: CheckResult[]): void {
   console.log(chalk.dim('\n  ────────────────────────────────────────────────'));
 
   if (counts.fail === 0 && counts.warn === 0) {
-    console.log(chalk.green('  All checks passed.'));
+    console.log(chalk.green('  所有检查项通过。'));
   } else if (counts.fail === 0) {
-    console.log(chalk.yellow(`  ${counts.warn} warning(s). All critical checks passed.`));
+    console.log(chalk.yellow(`  ${counts.warn} 个警告。所有关键检查项已通过。`));
   } else {
     const parts: string[] = [];
-    if (counts.fail > 0) parts.push(`${counts.fail} error(s)`);
-    if (counts.warn > 0) parts.push(`${counts.warn} warning(s)`);
-    console.log(chalk.red(`  ${parts.join(', ')}. Run the commands above to fix.`));
+    if (counts.fail > 0) parts.push(`${counts.fail} 个错误`);
+    if (counts.warn > 0) parts.push(`${counts.warn} 个警告`);
+    console.log(chalk.red(`  ${parts.join('，')}。请运行上述命令进行修复。`));
   }
 
   console.log('');

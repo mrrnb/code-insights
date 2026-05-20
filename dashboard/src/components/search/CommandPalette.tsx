@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSearch } from '@/hooks/useSearch';
+import { useI18n } from '@/lib/i18n';
 import { SessionSearchResult, InsightSearchResult } from './SearchResult';
 import type { SearchSessionResult, SearchInsightResult } from '@/lib/api';
 
@@ -47,15 +48,17 @@ function pushRecent(item: Omit<RecentItem, 'timestamp'>): void {
   localStorage.setItem(RECENT_KEY, JSON.stringify(next));
 }
 
-const NAV_ITEMS = [
-  { label: 'Go to Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Go to Sessions', href: '/sessions', icon: MessageSquare },
-  { label: 'Go to Insights', href: '/insights', icon: Lightbulb },
-  { label: 'Go to Analytics', href: '/analytics', icon: BarChart3 },
-  { label: 'Go to Patterns', href: '/patterns', icon: Sparkles },
-  { label: 'Go to Export', href: '/export', icon: Download },
-  { label: 'Go to Settings', href: '/settings', icon: Settings },
-];
+function getNavItems(t: (key: string) => string) {
+  return [
+    { label: t('commandPalette.goToDashboard'), href: '/dashboard', icon: LayoutDashboard },
+    { label: t('commandPalette.goToSessions'), href: '/sessions', icon: MessageSquare },
+    { label: t('commandPalette.goToInsights'), href: '/insights', icon: Lightbulb },
+    { label: t('commandPalette.goToAnalytics'), href: '/analytics', icon: BarChart3 },
+    { label: t('commandPalette.goToPatterns'), href: '/patterns', icon: Sparkles },
+    { label: t('commandPalette.goToExport'), href: '/export', icon: Download },
+    { label: t('commandPalette.goToSettings'), href: '/settings', icon: Settings },
+  ];
+}
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -70,6 +73,7 @@ type ResultItem =
 
 export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -77,6 +81,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const [showAllInsights, setShowAllInsights] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const NAV_ITEMS = getNavItems(t);
   const { data: searchData, isLoading } = useSearch(deferredQuery, 20);
 
   // Focus input when opened
@@ -198,9 +203,9 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       <DialogContent
         className="p-0 gap-0 max-w-[540px] w-[calc(100vw-2rem)] overflow-hidden"
         onKeyDown={handleKeyDown}
-        aria-label="Command palette"
+        aria-label={t('commandPalette.title')}
       >
-        <DialogTitle className="sr-only">Command palette</DialogTitle>
+        <DialogTitle className="sr-only">{t('commandPalette.title')}</DialogTitle>
         {/* Search input */}
         <div className="flex items-center gap-2 px-4 border-b h-12">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -208,7 +213,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search sessions, insights, projects..."
+            placeholder={t('commandPalette.search')}
             className="border-0 shadow-none focus-visible:ring-0 h-10 text-base px-0"
           />
           {query && (
@@ -239,8 +244,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
           ) : showNoResults ? (
             <div className="flex flex-col items-center justify-center py-10 text-center px-6 space-y-2">
               <SearchX className="h-7 w-7 text-muted-foreground" />
-              <p className="text-sm font-medium">No results for &ldquo;{query}&rdquo;</p>
-              <p className="text-xs text-muted-foreground">Try different keywords or check spelling.</p>
+              <p className="text-sm font-medium">{t('commandPalette.noResults', { query })}</p>
+              <p className="text-xs text-muted-foreground">{t('commandPalette.tryDifferent')}</p>
             </div>
           ) : (
             <div>
@@ -250,7 +255,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                   <div className="flex items-center gap-2 px-4 py-1.5">
                     <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Recent
+                      {t('commandPalette.recent')}
                     </span>
                   </div>
                   {recent.map((item, i) => {
@@ -282,7 +287,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
               {query && sessions.length > 0 && (
                 <div>
                   <div className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Sessions ({sessions.length})
+                    {t('commandPalette.sessions', { count: sessions.length })}
                   </div>
                   {visibleSessions.map((s) => {
                     const flatIdx = flatItems.findIndex((f) => f.kind === 'session' && f.data.id === s.id);
@@ -307,7 +312,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                       onClick={() => setShowAllSessions(true)}
                       className="w-full text-xs text-muted-foreground hover:text-foreground py-1.5 px-4 text-left transition-colors"
                     >
-                      +{sessions.length - INITIAL_SHOW} more sessions...
+                      {t('commandPalette.moreSessions', { count: sessions.length - INITIAL_SHOW })}
                     </button>
                   )}
                 </div>
@@ -317,7 +322,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
               {query && insights.length > 0 && (
                 <div>
                   <div className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Insights ({insights.length})
+                    {t('commandPalette.insights', { count: insights.length })}
                   </div>
                   {visibleInsights.map((ins) => {
                     const flatIdx = flatItems.findIndex((f) => f.kind === 'insight' && f.data.id === ins.id);
@@ -342,7 +347,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                       onClick={() => setShowAllInsights(true)}
                       className="w-full text-xs text-muted-foreground hover:text-foreground py-1.5 px-4 text-left transition-colors"
                     >
-                      +{insights.length - INITIAL_SHOW} more insights...
+                      {t('commandPalette.moreInsights', { count: insights.length - INITIAL_SHOW })}
                     </button>
                   )}
                 </div>
@@ -354,7 +359,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                   <div className="flex items-center gap-2 px-4 py-1.5">
                     <Zap className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Quick Actions
+                      {t('commandPalette.quickActions')}
                     </span>
                   </div>
                   {filteredNav.map((n) => {
@@ -383,9 +388,9 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
         {/* Footer hint */}
         <div className="border-t px-4 py-2 text-xs text-muted-foreground flex items-center gap-3">
-          <span>↑↓ navigate</span>
-          <span>↵ open</span>
-          <span>esc close</span>
+          <span>↑↓ {t('commandPalette.navigate')}</span>
+          <span>↵ {t('commandPalette.open')}</span>
+          <span>esc {t('commandPalette.close')}</span>
         </div>
       </DialogContent>
     </Dialog>
