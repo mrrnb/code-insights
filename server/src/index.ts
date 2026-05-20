@@ -6,16 +6,19 @@ import { relative, join } from 'path';
 import { openUrl } from '@code-insights/cli/utils/browser';
 import { shutdownTelemetry } from '@code-insights/cli/utils/telemetry';
 import projectsRouter from './routes/projects.js';
+import searchRouter from './routes/search.js';
 import sessionsRouter from './routes/sessions.js';
 import messagesRouter from './routes/messages.js';
 import insightsRouter from './routes/insights.js';
 import analysisRouter from './routes/analysis.js';
+import analysisQueueRouter from './routes/analysis-queue.js';
 import analyticsRouter from './routes/analytics.js';
 import configRouter from './routes/config.js';
 import exportRouter from './routes/export.js';
 import telemetryRouter from './routes/telemetry.js';
 import facetsRouter from './routes/facets.js';
 import reflectRouter from './routes/reflect.js';
+import dispatchRouter from './routes/dispatch.js';
 
 export interface ServerOptions {
   port: number;
@@ -44,16 +47,19 @@ export function createApp(): Hono {
 
   // API routes — all under /api
   app.route('/api/projects', projectsRouter);
+  app.route('/api/search', searchRouter);
   app.route('/api/sessions', sessionsRouter);
   app.route('/api/messages', messagesRouter);
   app.route('/api/insights', insightsRouter);
   app.route('/api/analysis', analysisRouter);
+  app.route('/api/analysis/queue', analysisQueueRouter);
   app.route('/api/analytics', analyticsRouter);
   app.route('/api/config', configRouter);
   app.route('/api/export', exportRouter);
   app.route('/api/telemetry', telemetryRouter);
   app.route('/api/facets', facetsRouter);
   app.route('/api/reflect', reflectRouter);
+  app.route('/api/dispatch', dispatchRouter);
 
   // Health check
   app.get('/api/health', (c) => c.json({ ok: true, version: '0.1.0' }));

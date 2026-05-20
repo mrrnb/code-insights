@@ -66,7 +66,12 @@ export const AGENT_PARTICIPANT_COLORS: Record<string, string> = {
 /** Fallback color for unknown agent types. */
 export const AGENT_DEFAULT_COLOR = 'bg-gray-500 text-white';
 
-/** Outcome indicator dot colors and labels for session outcome status. */
+/**
+ * Outcome indicator dot colors for per-session summary insights.
+ * Keys match InsightMetadata.outcome ('success' | 'partial' | 'abandoned' | 'blocked')
+ * from the LLM summary extraction — NOT the session_facets.outcome_satisfaction
+ * values ('high' | 'medium' | 'low' | 'abandoned') used on the Patterns page.
+ */
 export const OUTCOME_DOT: Record<string, { color: string; label: string }> = {
   success: { color: 'bg-emerald-500', label: 'Completed successfully' },
   partial: { color: 'bg-amber-500', label: 'Partially completed' },

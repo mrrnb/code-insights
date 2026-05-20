@@ -1,6 +1,7 @@
 // OpenAI provider implementation (server-side, no browser dependencies)
 
 import type { LLMClient, LLMMessage, LLMResponse, ChatOptions } from '../types.js';
+import { flattenContent } from '../types.js';
 
 export function createOpenAIClient(
   apiKey: string,
@@ -24,15 +25,28 @@ export function createOpenAIClient(
         signal: options?.signal,
         body: JSON.stringify({
           model,
-          messages: messages.map(m => ({ role: m.role, content: m.content })),
-          temperature: 0.7,
+          // flattenContent converts ContentBlock[] to string; strings pass through unchanged.
+          // OpenAI gets automatic prefix caching for free when prefixes match — no extra config needed.
+          messages: messages.map(m => ({ role: m.role, content: flattenContent(m.content) })),
+          temperature: options?.temperature ?? 0.7,
           max_tokens: 8192,
         }),
       });
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({})) as { error?: { message?: string } };
-        throw new Error(error.error?.message || `${provider} API error: ${response.status}`);
+        const detail = error.error?.message;
+        const label = provider === 'openai' ? 'OpenAI' : provider;
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(`Invalid API key. Check your ${label} API key in \`code-insights config llm\`.${detail ? ` (${detail})` : ''}`);
+        }
+        if (response.status === 429) {
+          throw new Error(`Rate limited or quota exceeded. Check your ${label} account usage.${detail ? ` (${detail})` : ''}`);
+        }
+        if (response.status >= 500) {
+          throw new Error(`${label} service error (HTTP ${response.status}). Try again later.${detail ? ` (${detail})` : ''}`);
+        }
+        throw new Error(detail || `${label} API error (HTTP ${response.status})`);
       }
 
       const data = await response.json() as {

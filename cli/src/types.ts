@@ -71,6 +71,9 @@ export interface ParsedSession {
   userMessageCount: number;
   assistantMessageCount: number;
   toolCallCount: number;
+  compactCount: number;
+  autoCompactCount: number;
+  slashCommands: string[];  // All non-exit slash commands used, e.g., ["/compact", "/login", "/plan"]
   customTitle?: string;
   gitBranch: string | null;
   claudeVersion: string | null;
@@ -189,7 +192,9 @@ export interface InsightMetadata {
   root_cause?: string;
   takeaway?: string;
   applies_when?: string;
-  // Summary-specific
+  // Summary-specific — narrative outcome from LLM summary extraction.
+  // Distinct from session_facets.outcome_satisfaction ('high'|'medium'|'low'|'abandoned')
+  // which is a quantitative satisfaction rating used for Patterns/Reflect aggregation.
   outcome?: 'success' | 'partial' | 'abandoned' | 'blocked';
   // Technique/learning-specific (legacy v2)
   context?: string;
@@ -313,6 +318,7 @@ export interface RulesSkillsResult {
 export interface WorkingStyleResult {
   section: 'working-style';
   tagline?: string;             // 2-4 word archetype label (e.g. "The Methodical Builder")
+  tagline_subtitle?: string;    // 1-sentence descriptor shown under the tagline on the share card (≤80 chars)
   narrative: string;
   workflowDistribution: Record<string, number>;
   outcomeDistribution: Record<string, number>;
@@ -322,7 +328,7 @@ export interface WorkingStyleResult {
 
 export type ReflectResult = FrictionWinsResult | RulesSkillsResult | WorkingStyleResult;
 
-export type LLMProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'custom';
+export type LLMProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'llamacpp' | 'custom';
 
 export interface LLMProviderConfig {
   provider: LLMProvider;
@@ -371,4 +377,65 @@ export interface FileSyncState {
   lastSyncedLine: number;
   sessionId: string;
   syncedSessionIds?: string[];  // For providers where 1 file = N sessions (e.g., Cursor SQLite)
+}
+
+// ── Dispatch feature (blog post generator) ───────────────────────────────────
+
+export type DispatchTone = 'technical' | 'accessible' | 'quick-tips';
+export type DispatchFormat = 'blog' | 'linkedin';
+
+export interface DispatchInsight {
+  id: string;
+  type: string;
+  summary: string;
+  content: string;
+  bullets: string[];
+}
+
+export interface SessionBackground {
+  sessionId: string;
+  title: string;
+  sessionCharacter: string | null;
+  summary: string;
+}
+
+export interface DispatchRequest {
+  insightIds: string[];
+  context: string;
+  tone: DispatchTone;
+  format: DispatchFormat;
+  includeSessionBackground?: boolean;
+}
+
+export interface DispatchResponse {
+  markdown: string;
+  /** Plain text body without YAML frontmatter — use for LinkedIn copy and word/char count. */
+  body: string;
+  format: DispatchFormat;
+  frontmatter: {
+    title: string;
+    tags: string[];
+    tldr: string;
+  };
+  wordCount: number;
+  characterCount: number;
+  degraded: boolean;
+  model: string;
+  tokensUsed: {
+    input: number;
+    output: number;
+  };
+}
+
+export interface DispatchImagePromptRequest {
+  title: string;
+  tags: string[];
+  tldr: string;
+  format: DispatchFormat;
+}
+
+export interface DispatchImagePromptResponse {
+  prompt: string;
+  model: string;
+  tokensUsed: { input: number; output: number };
 }

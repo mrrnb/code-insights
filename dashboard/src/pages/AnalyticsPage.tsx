@@ -10,6 +10,7 @@ import { ErrorCard } from '@/components/ErrorCard';
 import { formatTokenCount, formatModelName } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { CHART_COLORS } from '@/lib/constants/colors';
+import { SourceToolSelect } from '@/components/filters/SourceToolSelect';
 import {
   BarChart,
   Bar,
@@ -21,19 +22,22 @@ import {
 } from 'recharts';
 import type { DailyStats } from '@/lib/types';
 import { useThemeColors } from '@/lib/hooks/useThemeColors';
-import { useI18n } from '@/lib/i18n';
 
 type AnalyticsRange = '7d' | '30d' | '90d' | 'all';
+const rangeOptions: { value: AnalyticsRange; label: string }[] = [
+  { value: '7d', label: '7d' },
+  { value: '30d', label: '30d' },
+  { value: '90d', label: '90d' },
+  { value: 'all', label: 'All' },
+];
+
 export default function AnalyticsPage() {
-  const { t, language } = useI18n();
   const [range, setRange] = useState<AnalyticsRange>('7d');
-  const rangeOptions: { value: AnalyticsRange; label: string }[] = [
-    { value: '7d', label: '7d' },
-    { value: '30d', label: '30d' },
-    { value: '90d', label: '90d' },
-    { value: 'all', label: language === 'zh' ? '全部' : 'All' },
-  ];
-  const { data: sessions = [], isLoading: sessionsLoading, isError: sessionsError, refetch: refetchSessions } = useSessions({ limit: 500 });
+  const [source, setSource] = useState<string>('all');
+  const { data: sessions = [], isLoading: sessionsLoading, isError: sessionsError, refetch: refetchSessions } = useSessions({
+    limit: 500,
+    ...(source !== 'all' && { sourceTool: source }),
+  });
   const { data: insights = [], isLoading: insightsLoading, isError: insightsError, refetch: refetchInsights } = useInsights();
   const { data: projects = [], isLoading: projectsLoading, isError: projectsError, refetch: refetchProjects } = useProjects();
   const { tooltipBg, tooltipBorder } = useThemeColors();
@@ -51,10 +55,16 @@ export default function AnalyticsPage() {
     () => cutoff === 0 ? sessions : sessions.filter((s) => new Date(s.started_at).getTime() >= cutoff),
     [sessions, cutoff]
   );
-  const filteredInsights = useMemo(
-    () => cutoff === 0 ? insights : insights.filter((i) => new Date(i.timestamp).getTime() >= cutoff),
-    [insights, cutoff]
+  // When source filter is active, insights are scoped to session IDs in filteredSessions
+  const filteredSessionIds = useMemo(
+    () => new Set(filteredSessions.map((s) => s.id)),
+    [filteredSessions]
   );
+  const filteredInsights = useMemo(() => {
+    const byDate = cutoff === 0 ? insights : insights.filter((i) => new Date(i.timestamp).getTime() >= cutoff);
+    if (source === 'all') return byDate;
+    return byDate.filter((i) => filteredSessionIds.has(i.session_id));
+  }, [insights, cutoff, source, filteredSessionIds]);
 
   // Build daily stats from filtered sessions
   const dailyStats: DailyStats[] = useMemo(() => {
@@ -175,10 +185,10 @@ export default function AnalyticsPage() {
     return (
       <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">{t('analytics.title')}</h1>
-          <p className="text-muted-foreground">{t('analytics.desc')}</p>
+          <h1 className="text-2xl font-bold">Analytics</h1>
+          <p className="text-muted-foreground">Visualize your AI coding usage patterns</p>
         </div>
-        <ErrorCard message={t('analytics.error')} onRetry={retryAll} />
+        <ErrorCard message="Failed to load analytics data" onRetry={retryAll} />
       </div>
     );
   }
@@ -187,8 +197,8 @@ export default function AnalyticsPage() {
     return (
       <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">{t('analytics.title')}</h1>
-          <p className="text-muted-foreground">{t('analytics.desc')}</p>
+          <h1 className="text-2xl font-bold">Analytics</h1>
+          <p className="text-muted-foreground">Visualize your AI coding usage patterns</p>
         </div>
         <div className="grid gap-4 md:grid-cols-4">
           {[...Array(4)].map((_, i) => (
@@ -211,21 +221,28 @@ export default function AnalyticsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{t('analytics.title')}</h1>
-          <p className="text-muted-foreground">{t('analytics.desc')}</p>
+          <h1 className="text-2xl font-bold">Analytics</h1>
+          <p className="text-muted-foreground">Visualize your AI coding usage patterns</p>
         </div>
-        <div className="flex gap-1">
-          {rangeOptions.map(({ value, label }) => (
-            <Button
-              key={value}
-              variant={range === value ? 'default' : 'ghost'}
-              size="sm"
-              className="h-7 px-2.5 text-xs"
-              onClick={() => setRange(value)}
-            >
-              {label}
-            </Button>
-          ))}
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex gap-1">
+            {rangeOptions.map(({ value, label }) => (
+              <Button
+                key={value}
+                variant={range === value ? 'default' : 'ghost'}
+                size="sm"
+                className="h-7 px-2.5 text-xs"
+                onClick={() => setRange(value)}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+          <SourceToolSelect
+            value={source}
+            onValueChange={setSource}
+            className="w-[140px] h-7 text-xs"
+          />
         </div>
       </div>
 
@@ -233,7 +250,7 @@ export default function AnalyticsPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t('analytics.totalSessions')}</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{totalSessions}</div>
@@ -242,7 +259,7 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t('analytics.totalInsights')}</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Insights</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{totalInsights}</div>
@@ -251,7 +268,7 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t('analytics.activeProjects')}</CardTitle>
+            <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{projectStats.length}</div>
@@ -261,7 +278,7 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">
-              {totalCost > 0 ? t('analytics.estimatedCost') : t('analytics.totalTokens')}
+              {totalCost > 0 ? 'Estimated Cost' : 'Total Tokens'}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -286,7 +303,7 @@ export default function AnalyticsPage() {
         {/* Sessions by Project */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t('analytics.topProjects')}</CardTitle>
+            <CardTitle className="text-base">Top Projects</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[200px]">
@@ -312,13 +329,13 @@ export default function AnalyticsPage() {
                     <Bar
                       dataKey="sessions"
                       fill={CHART_COLORS.projects.sessions}
-                      name={t('analytics.sessions')}
+                      name="Sessions"
                     />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="flex h-full items-center justify-center">
-                  <p className="text-sm text-muted-foreground">{t('analytics.noProjectData')}</p>
+                  <p className="text-sm text-muted-foreground">No project data yet</p>
                 </div>
               )}
             </div>
@@ -330,7 +347,7 @@ export default function AnalyticsPage() {
       {Object.keys(modelDistribution).length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t('analytics.modelDistribution')}</CardTitle>
+            <CardTitle className="text-base">Model Distribution</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -362,20 +379,20 @@ export default function AnalyticsPage() {
       {/* Project Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('analytics.allProjects')}</CardTitle>
+          <CardTitle className="text-base">All Projects</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="py-3 text-left font-medium">{t('analytics.table.project')}</th>
-                  <th className="py-3 text-right font-medium">{t('analytics.table.sessions')}</th>
-                  <th className="py-3 text-right font-medium">{t('analytics.table.summaries')}</th>
-                  <th className="py-3 text-right font-medium">{t('analytics.table.decisions')}</th>
-                  <th className="py-3 text-right font-medium">{t('analytics.table.learnings')}</th>
-                  <th className="py-3 text-right font-medium">{t('analytics.table.cost')}</th>
-                  <th className="py-3 text-right font-medium">{t('analytics.table.tokens')}</th>
+                  <th className="py-3 text-left font-medium">Project</th>
+                  <th className="py-3 text-right font-medium">Sessions</th>
+                  <th className="py-3 text-right font-medium">Summaries</th>
+                  <th className="py-3 text-right font-medium">Decisions</th>
+                  <th className="py-3 text-right font-medium">Learnings</th>
+                  <th className="py-3 text-right font-medium">Est. Cost</th>
+                  <th className="py-3 text-right font-medium">Tokens</th>
                 </tr>
               </thead>
               <tbody>
@@ -403,7 +420,7 @@ export default function AnalyticsPage() {
                 {projectStats.length === 0 && (
                   <tr>
                     <td colSpan={7} className="py-8 text-center text-muted-foreground text-sm">
-                      {t('analytics.noProjectRows')}
+                      No project data yet. Sync sessions to see analytics.
                     </td>
                   </tr>
                 )}

@@ -46,7 +46,7 @@ function showConfigAction(): void {
     console.log(chalk.white('\n  LLM:'));
     console.log(chalk.gray(`    Provider: ${llm.provider}`));
     console.log(chalk.gray(`    Model:    ${llm.model}`));
-    if (llm.provider !== 'ollama') {
+    if (llm.provider !== 'ollama' && llm.provider !== 'llamacpp') {
       console.log(chalk.gray(`    API Key:  ${maskedKey}`));
     }
     if (llm.baseUrl) {
@@ -134,7 +134,7 @@ const llmCommand = configCommand
       console.log(chalk.cyan('\n  LLM Configuration\n'));
       console.log(chalk.gray(`    Provider: ${llm.provider}`));
       console.log(chalk.gray(`    Model:    ${llm.model}`));
-      if (llm.provider !== 'ollama') {
+      if (llm.provider !== 'ollama' && llm.provider !== 'llamacpp') {
         console.log(chalk.gray(`    API Key:  ${maskedKey}`));
       }
       if (llm.baseUrl) {
@@ -276,6 +276,22 @@ async function runInteractiveLLMConfig(): Promise<void> {
     if (baseUrl && (provider !== 'ollama' || baseUrl !== 'http://localhost:11434')) {
       llmConfig.baseUrl = baseUrl;
     }
+  }
+
+  if (provider === 'llamacpp') {
+    const { baseUrl } = await inquirer.prompt<{ baseUrl: string }>([
+      {
+        type: 'input',
+        name: 'baseUrl',
+        message: 'llama-server URL (leave blank for default http://localhost:8080):',
+        default: existing?.baseUrl ?? '',
+      },
+    ]);
+
+    if (baseUrl && baseUrl !== 'http://localhost:8080') {
+      llmConfig.baseUrl = baseUrl;
+    }
+    // No API key prompt for llamacpp — llama-server runs locally without authentication
   }
 
   saveLLMConfig(llmConfig);

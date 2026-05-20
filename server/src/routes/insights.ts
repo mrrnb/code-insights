@@ -3,13 +3,18 @@ import { getDb } from '@code-insights/cli/db/client';
 import { randomUUID } from 'crypto';
 import { parseIntParam } from '../utils.js';
 
+/** Escape SQLite LIKE wildcard characters so user input is treated as literal text. */
+function escapeLike(s: string): string {
+  return s.replace(/[%_\\]/g, '\\$&');
+}
+
 const app = new Hono();
 
 const VALID_TYPES = ['summary', 'decision', 'learning', 'technique', 'prompt_quality'] as const;
 
 app.get('/', (c) => {
   const db = getDb();
-  const { projectId, sessionId, type, limit, offset } = c.req.query();
+  const { projectId, sessionId, type, limit, offset, q } = c.req.query();
 
   const conditions: string[] = ['s.deleted_at IS NULL'];
   const params: (string | number)[] = [];
@@ -26,6 +31,11 @@ app.get('/', (c) => {
     conditions.push('i.type = ?');
     params.push(type);
   }
+  if (q) {
+    const likeParam = `%${escapeLike(q)}%`;
+    conditions.push("(i.title LIKE ? ESCAPE '\\' OR i.content LIKE ? ESCAPE '\\' OR i.summary LIKE ? ESCAPE '\\')");
+    params.push(likeParam, likeParam, likeParam);
+  }
 
   const where = `WHERE ${conditions.join(' AND ')}`;
   const insights = db.prepare(`
@@ -37,7 +47,7 @@ app.get('/', (c) => {
     ${where}
     ORDER BY i.timestamp DESC
     LIMIT ? OFFSET ?
-  `).all(...params, parseIntParam(limit, 100), parseIntParam(offset, 0));
+  `).all(...params, parseIntParam(limit, 5000), parseIntParam(offset, 0));
 
   return c.json({ insights });
 });

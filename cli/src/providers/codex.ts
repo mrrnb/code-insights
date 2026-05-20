@@ -300,7 +300,7 @@ function parseFormatA(content: string): ParsedSession | null {
         flushAssistantTurn();
         // event_msg user_message stores the text directly in payload.message
         const msgText = (payload.message as string) || '';
-        if (msgText) {
+        if (msgText && !isSystemContextMessage(msgText)) {
           messages.push({
             id: nextMessageId('user'),
             sessionId: sessionId,
@@ -654,10 +654,13 @@ function buildSession(
     sessionCharacter: null,
     startedAt,
     endedAt,
-    messageCount: messages.length,
+    messageCount: userMessages.length + assistantMessages.length,
     userMessageCount: userMessages.length,
     assistantMessageCount: assistantMessages.length,
     toolCallCount,
+    compactCount: 0,
+    autoCompactCount: 0,
+    slashCommands: [],
     gitBranch: null,
     claudeVersion: cliVersion,
     sourceTool: 'codex-cli',

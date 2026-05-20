@@ -379,7 +379,11 @@ function parseCursorSession(dbPath: string, composerId: string): ParsedSession |
       ).get(`composerData:${composerId}`) as { value: string } | undefined;
 
       if (row?.value) {
-        composerData = JSON.parse(row.value) as Record<string, unknown>;
+        try {
+          composerData = JSON.parse(row.value) as Record<string, unknown>;
+        } catch {
+          console.warn(`[cursor] failed to parse cursorDiskKV composerData for composer ${composerId}`);
+        }
       }
     }
 
@@ -395,9 +399,13 @@ function parseCursorSession(dbPath: string, composerId: string): ParsedSession |
         ).get() as { value: string } | undefined;
 
         if (row?.value) {
-          const allData = JSON.parse(row.value) as Record<string, unknown>;
-          const composers = (allData.allComposers || allData.composers || []) as Array<Record<string, unknown>>;
-          composerData = composers.find((c) => c.composerId === composerId) || null;
+          try {
+            const allData = JSON.parse(row.value) as Record<string, unknown>;
+            const composers = (allData.allComposers || allData.composers || []) as Array<Record<string, unknown>>;
+            composerData = composers.find((c) => c.composerId === composerId) || null;
+          } catch {
+            console.warn(`[cursor] failed to parse ItemTable composerData for composer ${composerId}`);
+          }
         }
       }
     }
@@ -422,7 +430,13 @@ function parseCursorSession(dbPath: string, composerId: string): ParsedSession |
           ).get(`composerData:${composerId}`) as { value: string } | undefined;
 
           if (globalRow?.value) {
-            const globalComposerData = JSON.parse(globalRow.value) as Record<string, unknown>;
+            let globalComposerData: Record<string, unknown>;
+            try {
+              globalComposerData = JSON.parse(globalRow.value) as Record<string, unknown>;
+            } catch {
+              console.warn(`[cursor] failed to parse global cursorDiskKV composerData for composer ${composerId}`);
+              return null;
+            }
             [messages, rawBubbles] = extractMessages(globalComposerData, composerId, globalDb);
             // Prefer composerData from global DB for richer metadata
             if (messages.length > 0) {
@@ -458,10 +472,10 @@ function parseCursorSession(dbPath: string, composerId: string): ParsedSession |
     const timestamps = messages.map(m => m.timestamp.getTime()).filter(t => t > 0);
     let startedAt = timestamps.length > 0
       ? new Date(timestamps.reduce((a, b) => a < b ? a : b))
-      : new Date();
+      : new Date(0); // Epoch fallback — avoids misleading "now" timestamps
     let endedAt = timestamps.length > 0
       ? new Date(timestamps.reduce((a, b) => a > b ? a : b))
-      : new Date();
+      : new Date(0);
 
     // If timestamps are missing or invalid, try composerData timestamps
     const createdAt = composerData.createdAt as number | undefined;
@@ -478,6 +492,62 @@ function parseCursorSession(dbPath: string, composerId: string): ParsedSession |
     const assistantMessages = messages.filter(m => m.type === 'assistant');
     const toolCallCount = messages.reduce((sum, m) => sum + m.toolCalls.length, 0);
 
+    // Extract gitBranch from the first user bubble that has gitStatusRaw.
+    // gitStatusRaw looks like: "On branch master\nYour branch is up to date..."
+    // gitStatusRaw is not surfaced on ParsedMessage — scan rawBubbles directly.
+    let gitBranch: string | null = null;
+    for (const bubble of rawBubbles) {
+      if ((bubble.type === 1 || bubble.role === 'user') && typeof bubble.gitStatusRaw === 'string') {
+        const match = bubble.gitStatusRaw.match(/^On branch (.+)/m);
+        if (match) {
+          const branchName = match[1].trim();
+          // Exclude detached HEAD state which git reports as "(no branch)"
+          if (branchName !== '(no branch)') {
+            gitBranch = branchName;
+          }
+          break;
+        }
+      }
+    }
+
+    // Build session usage from composerData.usageData (cost in cents) and
+    // per-bubble tokenCount aggregation (inputTokens/outputTokens on assistant bubbles).
+    let usage: import('../types.js').SessionUsage | undefined;
+    const usageData = composerData.usageData as Record<string, { costInCents?: number }> | undefined;
+    const costInCents = usageData?.default?.costInCents;
+
+    // Sum token counts from assistant bubbles (user bubbles always report 0)
+    let totalInput = 0;
+    let totalOutput = 0;
+    for (const bubble of rawBubbles) {
+      if (bubble.type === 2 || bubble.role === 'assistant') {
+        const tc = bubble.tokenCount as Record<string, number> | undefined;
+        if (tc) {
+          totalInput += tc.inputTokens || 0;
+          totalOutput += tc.outputTokens || 0;
+        }
+      }
+    }
+
+    if (typeof costInCents === 'number' || totalInput > 0 || totalOutput > 0) {
+      usage = {
+        totalInputTokens: totalInput,
+        totalOutputTokens: totalOutput,
+        cacheCreationTokens: 0,
+        cacheReadTokens: 0,
+        estimatedCostUsd: typeof costInCents === 'number' ? costInCents / 100 : 0,
+        modelsUsed: [],
+        primaryModel: 'unknown',
+        usageSource: 'session',
+      };
+    }
+
+    // Check if Cursor tagged this session as an agentic session.
+    // unifiedMode === 'agent' (vs 'ask') or isAgentic === true marks agent-mode sessions.
+    const isAgentic =
+      composerData.unifiedMode === 'agent' ||
+      composerData.isAgentic === true;
+
     const session: ParsedSession = {
       id: `cursor:${composerId}`,
       projectPath,
@@ -488,14 +558,17 @@ function parseCursorSession(dbPath: string, composerId: string): ParsedSession |
       sessionCharacter: null,
       startedAt,
       endedAt,
-      messageCount: messages.length,
+      messageCount: userMessages.length + assistantMessages.length,
       userMessageCount: userMessages.length,
       assistantMessageCount: assistantMessages.length,
       toolCallCount,
-      gitBranch: null, // Not available from Cursor's DB
+      compactCount: 0,
+      autoCompactCount: 0,
+      slashCommands: [],
+      gitBranch,
       claudeVersion: null,
       sourceTool: 'cursor',
-      usage: undefined, // No token data in Cursor's DB
+      usage,
       messages,
     };
 
@@ -504,8 +577,11 @@ function parseCursorSession(dbPath: string, composerId: string): ParsedSession |
     session.generatedTitle = titleResult.title;
     session.titleSource = titleResult.source;
 
-    // Detect session character
-    session.sessionCharacter = titleResult.character || detectSessionCharacter(session);
+    // Detect session character. If detection returns null and Cursor marked the session
+    // as agentic (unifiedMode === 'agent' / isAgentic === true), default to 'feature_build'
+    // as the closest character for autonomous multi-step agent sessions.
+    const detectedCharacter = titleResult.character || detectSessionCharacter(session);
+    session.sessionCharacter = detectedCharacter ?? (isAgentic ? 'feature_build' : null);
 
     return session;
   } catch {
@@ -669,7 +745,10 @@ function parseBubbles(conversation: Array<Record<string, unknown>>, sessionId: s
     const contentField = (bubble.content as string | undefined) || '';
 
     if (textField) {
-      content = textField;
+      // Some Cursor versions store the Lexical editor JSON in `text` rather than `richText`.
+      // Detect and extract plain text from it so we don't display raw JSON to the user.
+      const lexicalFromText = textField.startsWith('{"root"') ? extractLexicalText(textField) : null;
+      content = lexicalFromText !== null ? lexicalFromText : textField;
     } else if (bubble.richText) {
       // richText may be a Lexical JSON object (user bubbles) or a plain string (older formats).
       // Try Lexical extraction first; fall back to coercing whatever value we have to a string.
@@ -690,10 +769,17 @@ function parseBubbles(conversation: Array<Record<string, unknown>>, sessionId: s
     // Truncate to 10,000 chars (same as Claude Code parser)
     const truncatedContent = content.length > 10000 ? content.slice(0, 10000) : content;
 
-    // Extract timestamp (milliseconds)
+    // Extract timestamp (milliseconds).
+    // Cursor does not store a createdAt field on bubbles. Real wall-clock time lives
+    // in assistant bubbles under timingInfo.clientRpcSendTime (Unix ms). User bubbles
+    // have no timestamp — leave as epoch so session bounds code filters them out.
+    // NOTE: clientStartTime is a performance offset (e.g. 926228.7 ms), NOT a wall clock.
     let timestamp: Date;
-    if (bubble.createdAt) {
-      timestamp = new Date(typeof bubble.createdAt === 'number' ? bubble.createdAt : Date.parse(bubble.createdAt as string));
+    const timingInfo = bubble.timingInfo as Record<string, unknown> | undefined;
+    const clientRpcSendTime = timingInfo?.clientRpcSendTime;
+    if (typeof clientRpcSendTime === 'number' && clientRpcSendTime > 1_000_000_000_000) {
+      // Sanity-check: must be after 2001-09-09 (Unix ms > 1e12) to be a wall clock
+      timestamp = new Date(clientRpcSendTime);
     } else {
       timestamp = new Date(0); // Epoch fallback — filtered out of session bounds calculation
     }
@@ -744,7 +830,7 @@ function parseBubbles(conversation: Array<Record<string, unknown>>, sessionId: s
       thinking: null, // Cursor doesn't expose thinking
       toolCalls,
       toolResults: [], // Not available from Cursor's format
-      usage: null, // No per-message usage data
+      usage: null, // Per-message usage not available; session-level tokens aggregated from rawBubbles
       timestamp,
       parentId: null,
     });

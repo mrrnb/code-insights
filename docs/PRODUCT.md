@@ -21,7 +21,9 @@ Code Insights provides:
 1. **Automated extraction** — Parses session files from multiple AI coding tools and structures the data
 2. **Smart session titles** — Auto-generates meaningful titles from session content
 3. **Session classification** — Categorizes sessions (deep focus, bug hunt, feature build, etc.)
-4. **LLM-powered analysis** — Multi-provider insight generation (OpenAI, Anthropic, Gemini, Ollama) with your own API key
+4. **LLM-powered analysis** — Two analysis paths:
+   - **Native (zero-config):** Claude Code users get automatic analysis via `SessionEnd` hook using their existing Claude subscription. No API key needed. Install with `code-insights install-hook`.
+   - **On-demand:** Configure any LLM provider (OpenAI, Anthropic, Gemini, Ollama, llama.cpp) for manual analysis from the dashboard or CLI. Ollama and llama.cpp run fully local — no API key needed.
 5. **Visual dashboard** — Local web interface with charts, timelines, and filters at `http://localhost:7890`
 6. **CLI analytics** — Terminal stats via `code-insights stats` and subcommands
 
@@ -61,7 +63,7 @@ LLM analysis uses your own API key, stored in `~/.code-insights/config.json` (mo
 | **Decision** | Architecture choices, trade-offs, reasoning, alternatives considered |
 | **Learning** | Technical discoveries, mistakes, transferable knowledge |
 | **Technique** | Problem-solving approaches and debugging strategies |
-| **Prompt Quality** | Efficiency scores, wasted turns, anti-patterns, improvement suggestions |
+| **Prompt Quality** | Categorized prompt analysis: 7 deficit + 3 strength categories, 5 dimension scores, two-layer output (user takeaways + Reflect findings) |
 
 ### Export
 
@@ -103,36 +105,199 @@ Cross-session pattern detection and synthesis, powered by session facets:
 **Technical details:**
 - Dedicated `session_facets` SQLite table (Schema V3) with indexed scalar columns and JSON arrays
 - Facet extraction integrated into the existing analysis prompt (facets first, then insights)
-- Lightweight facet-only backfill for previously-analyzed sessions (summary + first/last 20 messages)
+- Lightweight facet-only backfill for previously-analyzed sessions (summary + first/last 20 messages); `reflect backfill` finds both missing and outdated sessions in one pass
 - Friction category normalization via Levenshtein distance matching to 9 canonical categories, with alias mapping for legacy category migration
+- Effective patterns use the `driver` field (`user-driven`/`ai-driven`/`collaborative`) to attribute who drove the pattern; CoT `_reasoning` scratchpad captured for prompt tuning
+- Attribution model: each friction point classified as `user-actionable`, `ai-capability`, or `environmental`
 - Synthesis prompts pre-aggregate data in code, then feed ranked summaries to LLM for narration
-- Reflect snapshots cached in `reflect_snapshots` table (Schema V4) with staleness tracking
-- 20-session minimum threshold for meaningful synthesis; coverage warning when < 50% analyzed
+- Reflect uses ISO week navigation (e.g., `2026-W10`) rather than sliding windows; `--week` CLI flag, `GET /api/reflect/weeks` endpoint for week history
+- Reflect snapshots cached in `reflect_snapshots` table (Schema V4); `period` column stores ISO week strings
+- 8-session minimum threshold for weekly scope synthesis; coverage warning when < 50% analyzed
 
 **Upcoming:** Progress tracking — "Am I getting better?" Weekly snapshots comparing friction trends and pattern emergence over time, helping developers see how their AI collaboration skills evolve.
+
+### Dispatch — LLM-Powered Post Generator
+
+Turn session insights into shareable content. Dispatch generates blog posts and LinkedIn updates from the insights you've extracted, using your configured LLM provider.
+
+**How it works:**
+1. Open Dispatch from the floating action bar on the Insights page, or click "Write about this" on any qualifying high-value session (feature_build, deep_focus, bug_hunt, refactor)
+2. Select the insights to include (minimum 3), choose a format and tone, and optionally add session background context
+3. Generate a formatted post — preview it, copy to clipboard, or download as Markdown
+
+**Formats and tones:**
+- **Blog** — Long-form technical post with narrative structure, code context, and lessons learned
+- **LinkedIn** — Concise professional update optimized for engagement (~250 words, 3-5 key points)
+- Tones: Technical, Storytelling, Educational, Reflective
+
+**AI Cover Image Prompts** — Inside the post preview, generate a Midjourney/DALL-E-ready prompt for your cover image via the `/api/dispatch/image-prompt` endpoint.
+
+**Discoverability:**
+- Qualifying sessions surface a contextual "Write about this" button on the Insights page
+- Clicking it opens Dispatch pre-populated with the session title, detected format, and a context block built from top effective patterns + user-actionable friction points
+- A dismissible discovery callout nudges first-time users toward the feature (persisted in localStorage)
+
+**Technical details:**
+- `POST /api/dispatch/generate` — format-aware prompt builder, output parser, retry logic
+- `POST /api/dispatch/image-prompt` — cover image prompt generation
+- Multi-provider: uses the same LLM abstraction as analysis (OpenAI, Anthropic, Gemini, Ollama, llama.cpp)
+- Temperature 0.7 for blog/LinkedIn generation; per-format prompt tuning
+- `buildDispatchPrefill` pure function maps session + facets → pre-populated drawer context
+
+### Share Card (AI Fluency Score)
+
+A shareable 1200×630 PNG image (OG standard for Twitter/X, LinkedIn, Slack, Discord) that visualizes a developer's AI coding fluency. Downloaded from the Patterns page.
+
+**What's on the card:**
+- **Archetype tagline** — LLM-generated identity label from working-style synthesis (e.g., "The Methodical Achiever")
+- **AI Fluency Score** — Composite 0–100 score derived from 5 Prompt Quality dimension averages, displayed as a hero circle with gradient arc
+- **Fingerprint bars** — 5 rainbow-colored dimension bars showing per-dimension PQ scores:
+  - Context (context_provision), Clarity (request_specificity), Focus (scope_management), Timing (information_timing), Orchestration (correction_quality)
+- **Evidence lines** — "Score from N sessions · XK tokens · last 4 weeks" + "N lifetime sessions · [tool logos]"
+- **Effective pattern pills** — Top 3 patterns by frequency (if data exists)
+- **Tool logos** — Deduplicated source tool icons (Claude Code, Cursor, Codex CLI, GitHub Copilot)
+- **CTA footer** — code-insights.app + `npx @code-insights/cli`
+
+**Scoring window:** 4-week rolling window (last 4 ISO weeks) for stable, representative scores. Lifetime session count is all-time.
+
+**Technical details:**
+- Canvas 2D rendering at 2× DPR (2400×1260 internal) exported as 1200×630 PNG
+- Dark gradient background with subtle radial glows
+- System font stack with monospace fallback for code elements
+- Tool logos loaded from `dashboard/public/icons/` static assets
+
+### Zero-Config First Run
+
+Running `code-insights` with no arguments works immediately — auto-creates the database, syncs sessions, and opens the dashboard. No `init` required. The dashboard includes guided empty states with CLI command snippets for first-time users.
+
+### Knowledge Journal
+
+The Journal page (`/journal`) provides a chronological view of learnings and decisions extracted from sessions:
+
+- **Timeline tab** — Weeks grouped by ISO week with visual timeline dots (yellow for learnings, blue for decisions). Week headers show learning/decision counts. Newest-first within each week.
+- **Patterns tab** — Links to LLM analysis workflow for pattern discovery across sessions.
+
+### Chat View Enhancements
+
+Session detail chat view includes system event rendering:
+- **Context break dividers** — Visual markers where conversation context was reset (compacts)
+- **Inline event chips** — Slash commands displayed as inline chips (e.g., `/grep`, `/read`)
+- **Raw message toggle** — Switch between filtered and full conversation view
+- **Agent message rendering** — Task notifications (amber) and teammate messages (colored border)
 
 ### Dashboard Views
 
 - **Dashboard** — Overview with activity charts
 - **Sessions** — Session list with source, project, date, character filters
-- **Session Detail** — Full session with analyze button for LLM insights
+- **Session Detail** — Full session with analyze button, cost tracking, chat view enhancements
 - **Insights** — Browse and search generated insights
 - **Analytics** — Charts showing effort distribution, cost, models, projects
-- **Patterns** — Cross-session pattern synthesis (Friction & Wins, Rules & Skills, Working Style)
+- **Patterns** — Cross-session pattern synthesis (Friction & Wins, Rules & Skills, Working Style) + Share Card download + Week-at-a-Glance strip with streak, session count, AI Fluency Score
 - **Export** — LLM-powered export wizard (4 formats, 3 depths)
-- **Journal** — Session journal/notes
+- **Journal** — Chronological timeline of learnings and decisions by ISO week
 - **Settings** — Configuration UI
 
-### CLI Stats Commands
+### CLI Command Reference
+
+#### Setup & Sync
+
+Running `code-insights` with no arguments automatically syncs sessions and opens the dashboard — no configuration required.
 
 ```bash
-code-insights stats              # Overview (last 7 days)
-code-insights stats cost         # Cost breakdown by project and model
-code-insights stats projects     # Per-project detail cards
-code-insights stats today        # Today's sessions with details
-code-insights stats models       # Model usage distribution
-code-insights stats patterns     # Cross-session pattern summary
+code-insights                              # Sync + open dashboard (zero-config)
+code-insights init                         # Optional: customize settings (provider, API key)
+code-insights sync                         # Sync sessions to SQLite
+code-insights sync --force                 # Re-sync all sessions
+code-insights sync --dry-run               # Preview without changes
+code-insights sync -q                      # Quiet mode (for hook usage)
+code-insights sync --source cursor         # Sync only from a specific tool
+code-insights sync --verbose               # Verbose output
+code-insights sync --regenerate-titles     # Regenerate session titles
+code-insights sync prune                   # Soft-delete trivial sessions (≤2 messages, restorable with sync --force)
+code-insights status                       # Show sync statistics
+code-insights install-hook                 # Auto-sync on session end
+code-insights uninstall-hook               # Remove auto-sync hook
 ```
+
+#### Dashboard & Browser
+
+```bash
+code-insights dashboard                    # Start local server + open dashboard (auto-syncs first)
+code-insights dashboard --no-sync          # Start server without syncing first
+code-insights dashboard --port 8080        # Custom port (default: 7890)
+code-insights dashboard --no-open          # Start server without opening browser
+code-insights open                         # Open dashboard in browser (without starting server)
+code-insights open --project               # Open filtered to the current project
+```
+
+#### Stats (Terminal Analytics)
+
+```bash
+code-insights stats                        # Overview (last 7 days)
+code-insights stats cost                   # Cost breakdown by project and model
+code-insights stats projects               # Per-project detail cards
+code-insights stats today                  # Today's sessions with details
+code-insights stats models                 # Model usage distribution
+code-insights stats patterns               # Cross-session pattern summary
+```
+
+Stats shared flags:
+- `--period 7d|30d|90d|all` — Time range (default: 7d)
+- `--project <name>` — Scope to a specific project
+- `--source <tool>` — Filter by source tool
+- `--no-sync` — Skip auto-sync before showing stats
+
+#### Reflect (Cross-Session Synthesis)
+
+```bash
+code-insights reflect                      # Cross-session LLM synthesis (current ISO week)
+code-insights reflect --week 2026-W11      # Synthesis for a specific ISO week
+code-insights reflect --section friction-wins   # Only generate one section
+code-insights reflect --project myproject  # Scope to a specific project
+code-insights reflect backfill             # Backfill facets for legacy sessions
+code-insights reflect backfill --period 30d     # Backfill within time range (7d|30d|90d|all)
+code-insights reflect backfill --project <name> # Backfill for specific project
+code-insights reflect backfill --dry-run        # Show count without backfilling
+code-insights reflect backfill --prompt-quality # Run prompt quality analysis instead of facets
+```
+
+Reflect `--section` values: `friction-wins`, `rules-skills`, `working-style`
+
+#### Configuration
+
+```bash
+code-insights config                       # Show current configuration
+code-insights config set <key> <value>     # Set config value (e.g., telemetry)
+code-insights config llm                   # Configure LLM provider interactively
+code-insights config llm --provider openai # Set provider directly
+code-insights config llm --model gpt-4o   # Set model
+code-insights config llm --api-key <key>  # Set API key
+code-insights config llm --base-url <url> # Set custom base URL (Ollama, proxies)
+code-insights config llm --show           # Show current LLM configuration
+```
+
+#### Telemetry
+
+```bash
+code-insights telemetry                    # Show telemetry status
+code-insights telemetry status             # Show state and what data is collected
+code-insights telemetry disable            # Disable anonymous telemetry
+code-insights telemetry enable             # Enable anonymous telemetry
+```
+
+#### Other
+
+```bash
+code-insights reset --confirm              # Delete all local data
+```
+
+### LLM Cost Tracking
+
+Per-session analysis costs are tracked in the `analysis_usage` SQLite table (Schema V7, extended in V8). Each analysis call records provider, model, token counts (including cache creation/read tokens), estimated USD cost, and duration. The dashboard shows cost per session after analysis runs. Cost data is also available via the `/api/analysis/usage` endpoint.
+
+### Message Classification (Schema V6)
+
+The `sessions` table tracks three context signals from Claude Code sessions: `compact_count` (explicit `/compact` invocations), `auto_compact_count` (auto-compact triggers), and `slash_commands` (all non-exit slash commands used). These signals feed into session characterization and are available for display in session detail views.
 
 ## Multi-Source Architecture
 
@@ -168,7 +333,7 @@ Adding a new source tool requires implementing the `SessionProvider` interface i
 ## Tech Stack
 
 - **CLI**: Node.js (ES2022, ES Modules), Commander.js
-- **Database**: SQLite (`better-sqlite3`) at `~/.code-insights/data.db` — WAL mode, local, Schema V5
+- **Database**: SQLite (`better-sqlite3`) at `~/.code-insights/data.db` — WAL mode, local, Schema V9
 - **Server**: Hono — lightweight API server, serves dashboard SPA at `localhost:7890`
 - **Dashboard**: Vite + React 19 SPA, Tailwind CSS 4 + shadcn/ui
 - **AI**: Multi-provider — OpenAI, Anthropic, Gemini, Ollama (your own API keys, proxied server-side)

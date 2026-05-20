@@ -1,10 +1,13 @@
 import { Hono } from 'hono';
-import { streamSSE } from 'hono/streaming';
 import { getDb } from '@code-insights/cli/db/client';
-import { isLLMConfigured } from '../llm/client.js';
-import { extractFacetsOnly } from '../llm/analysis.js';
-import type { SQLiteMessageRow, SessionData } from '../llm/analysis.js';
+import { extractFacetsOnly, analyzePromptQuality } from '../llm/analysis.js';
 import { buildWhereClause, getAggregatedData } from './shared-aggregation.js';
+import {
+  loadSessionForAnalysis,
+  loadSessionMessages,
+  requireLLM,
+  streamBatchBackfill,
+} from './route-helpers.js';
 
 const app = new Hono();
 
@@ -159,10 +162,7 @@ app.get('/outdated', (c) => {
 // Streams progress as facets are extracted one-by-one for sessions that lack them.
 // force=true skips the existing-facets guard, allowing re-extraction of outdated rows.
 // Uses extractFacetsOnly (lightweight prompt: summary + first/last 20 messages).
-app.post('/backfill', async (c) => {
-  if (!isLLMConfigured()) {
-    return c.json({ error: 'LLM not configured.' }, 400);
-  }
+app.post('/backfill', requireLLM(), async (c) => {
 
   const body = await c.req.json<{ sessionIds?: string[]; force?: boolean }>();
   if (!body.sessionIds || !Array.isArray(body.sessionIds) || body.sessionIds.length === 0) {
@@ -174,99 +174,91 @@ app.post('/backfill', async (c) => {
 
   const db = getDb();
 
-  return streamSSE(c, async (stream) => {
-    const abortSignal = c.req.raw.signal;
-    let completed = 0;
-    let failed = 0;
-    const total = body.sessionIds!.length;
+  return streamBatchBackfill(c, body.sessionIds, body.force ?? false, {
+    shouldSkip: (sessionId) => {
+      return !!db.prepare('SELECT 1 FROM session_facets WHERE session_id = ?').get(sessionId);
+    },
+    analysisFn: extractFacetsOnly,
+  });
+});
 
-    for (const sessionId of body.sessionIds!) {
-      if (abortSignal.aborted) break;
+// GET /api/facets/missing-pq
+// Returns session IDs that have at least one non-PQ insight but no prompt_quality insight row.
+// Accepts period + project + source to scope results (same params as /missing).
+// Uses buildWhereClause so ISO week periods (e.g., 2026-W10) are supported.
+app.get('/missing-pq', (c) => {
+  const db = getDb();
+  const period = c.req.query('period') || 'all';
+  const project = c.req.query('project');
+  const source = c.req.query('source');
 
-      const session = db.prepare(
-        `SELECT id, project_id, project_name, project_path, summary, ended_at
-         FROM sessions WHERE id = ? AND deleted_at IS NULL`
-      ).get(sessionId) as SessionData | undefined;
+  const { where, params } = buildWhereClause(period, project, source);
 
-      if (!session) {
-        failed++;
-        await stream.writeSSE({
-          event: 'progress',
-          data: JSON.stringify({
-            completed,
-            failed,
-            total,
-            currentSessionId: sessionId,
-          }),
-        });
-        continue;
-      }
+  // Sessions with a non-PQ insight but no prompt_quality insight row.
+  const rows = db.prepare(`
+    SELECT DISTINCT i.session_id
+    FROM insights i
+    JOIN sessions s ON i.session_id = s.id
+    ${where}
+    AND i.type != 'prompt_quality'
+    AND NOT EXISTS (
+      SELECT 1 FROM insights pq
+      WHERE pq.session_id = i.session_id AND pq.type = 'prompt_quality'
+    )
+  `).all(...params) as Array<{ session_id: string }>;
 
-      // Skip sessions that already have facets unless force=true (used when re-processing
-      // outdated sessions that have stale attribution/driver/category fields).
-      if (!body.force) {
-        const existingFacet = db.prepare(
-          'SELECT 1 FROM session_facets WHERE session_id = ?'
-        ).get(sessionId);
-        if (existingFacet) {
-          completed++;
-          await stream.writeSSE({
-            event: 'progress',
-            data: JSON.stringify({
-              completed,
-              failed,
-              total,
-              currentSessionId: sessionId,
-            }),
-          });
-          continue;
-        }
-      }
+  const sessionIds = rows.map(r => r.session_id);
+  return c.json({ sessionIds, count: sessionIds.length });
+});
 
-      // Only load first 20 and last 20 messages for facet extraction
-      const firstMessages = db.prepare(
-        `SELECT id, session_id, type, content, thinking, tool_calls, tool_results, usage, timestamp, parent_id
-         FROM messages WHERE session_id = ? ORDER BY timestamp ASC LIMIT 20`
-      ).all(sessionId) as SQLiteMessageRow[];
+// GET /api/facets/outdated-pq
+// Returns session IDs where the prompt_quality insight's metadata lacks a `findings` array
+// (old schema pre-PR #136). Accepts period + project + source to scope results.
+// Uses buildWhereClause so ISO week periods (e.g., 2026-W10) are supported.
+app.get('/outdated-pq', (c) => {
+  const db = getDb();
+  const period = c.req.query('period') || 'all';
+  const project = c.req.query('project');
+  const source = c.req.query('source');
 
-      const lastMessages = db.prepare(
-        `SELECT id, session_id, type, content, thinking, tool_calls, tool_results, usage, timestamp, parent_id
-         FROM messages WHERE session_id = ? ORDER BY timestamp DESC LIMIT 20`
-      ).all(sessionId) as SQLiteMessageRow[];
+  const { where, params } = buildWhereClause(period, project, source);
 
-      // Merge and deduplicate (for sessions with <= 40 messages, some overlap)
-      const seenIds = new Set<string>();
-      const messages: SQLiteMessageRow[] = [];
-      for (const msg of [...firstMessages, ...lastMessages.reverse()]) {
-        if (!seenIds.has(msg.id)) {
-          seenIds.add(msg.id);
-          messages.push(msg);
-        }
-      }
+  // PQ insights where metadata lacks the findings array (old schema).
+  const rows = db.prepare(`
+    SELECT DISTINCT i.session_id
+    FROM insights i
+    JOIN sessions s ON i.session_id = s.id
+    ${where}
+    AND i.type = 'prompt_quality'
+    AND json_type(i.metadata, '$.findings') IS NULL
+  `).all(...params) as Array<{ session_id: string }>;
 
-      const result = await extractFacetsOnly(session, messages, { signal: abortSignal });
-      if (result.success) {
-        completed++;
-      } else {
-        failed++;
-      }
+  const sessionIds = rows.map(r => r.session_id);
+  return c.json({ sessionIds, count: sessionIds.length });
+});
 
-      await stream.writeSSE({
-        event: 'progress',
-        data: JSON.stringify({
-          completed,
-          failed,
-          total,
-          currentSessionId: sessionId,
-          ...(result.success ? {} : { error: result.error }),
-        }),
-      });
-    }
+// POST /api/facets/backfill-pq
+// Body: { sessionIds: string[], force?: boolean }
+// Streams progress as PQ analysis runs one-by-one for sessions that lack or have outdated PQ insights.
+// force=true skips the existing-PQ-insight guard, allowing re-analysis of sessions with old schema.
+// Uses analyzePromptQuality() from analysis.ts — same function used in the primary analysis pipeline.
+app.post('/backfill-pq', requireLLM(), async (c) => {
 
-    await stream.writeSSE({
-      event: 'complete',
-      data: JSON.stringify({ completed, failed, total }),
-    });
+  const body = await c.req.json<{ sessionIds?: string[]; force?: boolean }>();
+  if (!body.sessionIds || !Array.isArray(body.sessionIds) || body.sessionIds.length === 0) {
+    return c.json({ error: 'sessionIds array required' }, 400);
+  }
+  if (body.sessionIds.length > MAX_BACKFILL_SESSIONS) {
+    return c.json({ error: `Maximum ${MAX_BACKFILL_SESSIONS} sessions per backfill request` }, 400);
+  }
+
+  const db = getDb();
+
+  return streamBatchBackfill(c, body.sessionIds, body.force ?? false, {
+    shouldSkip: (sessionId) => {
+      return !!db.prepare("SELECT 1 FROM insights WHERE session_id = ? AND type = 'prompt_quality'").get(sessionId);
+    },
+    analysisFn: analyzePromptQuality,
   });
 });
 

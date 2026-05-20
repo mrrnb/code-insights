@@ -9,6 +9,7 @@ import { createOpenAIClient } from './providers/openai.js';
 import { createAnthropicClient } from './providers/anthropic.js';
 import { createGeminiClient } from './providers/gemini.js';
 import { createOllamaClient } from './providers/ollama.js';
+import { createLlamaCppClient } from './providers/llamacpp.js';
 
 /**
  * Load LLM config from the CLI config file.
@@ -24,7 +25,8 @@ export function loadLLMConfig(): LLMProviderConfig | null {
 export function isLLMConfigured(): boolean {
   const llm = loadLLMConfig();
   if (!llm) return false;
-  if (llm.provider === 'ollama') return !!llm.model;
+  // Local providers: no API key required — configured if a model is set
+  if (llm.provider === 'ollama' || llm.provider === 'llamacpp') return !!llm.model;
   if (llm.provider === 'custom') return !!llm.apiKey && !!llm.model && !!llm.baseUrl;
   return !!llm.apiKey && !!llm.model;
 }
@@ -56,6 +58,8 @@ export function createClientFromConfig(config: LLMProviderConfig): LLMClient {
       return createOllamaClient(config.model, config.baseUrl);
     case 'custom':
       return createOpenAIClient(config.apiKey ?? '', config.model, config.baseUrl, 'custom');
+    case 'llamacpp':
+      return createLlamaCppClient(config.model, config.baseUrl);
     default:
       throw new Error(`Unknown LLM provider: ${config.provider}`);
   }
@@ -67,7 +71,7 @@ export function createClientFromConfig(config: LLMProviderConfig): LLMClient {
 export async function testLLMConfig(config: LLMProviderConfig): Promise<{ success: boolean; error?: string }> {
   try {
     const client = createClientFromConfig(config);
-    await client.chat([{ role: 'user', content: 'Say "ok" and nothing else.' }]);
+    await client.chat([{ role: 'user', content: 'Respond with exactly this JSON and nothing else: {"status":"ok"}' }]);
     return { success: true };
   } catch (error) {
     return {

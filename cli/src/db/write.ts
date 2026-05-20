@@ -89,6 +89,7 @@ function getStmts() {
         summary, generated_title, title_source, session_character,
         started_at, ended_at,
         message_count, user_message_count, assistant_message_count, tool_call_count,
+        compact_count, auto_compact_count, slash_commands,
         git_branch, claude_version, source_tool,
         device_id, device_hostname, device_platform,
         total_input_tokens, total_output_tokens, cache_creation_tokens, cache_read_tokens,
@@ -100,11 +101,12 @@ function getStmts() {
         ?, ?, ?, ?,
         ?, ?, ?,
         ?, ?, ?,
+        ?, ?, ?,
         ?, ?, ?, ?,
         ?, ?, ?, ?
       )
       ON CONFLICT(id) DO UPDATE SET
-        generated_title         = excluded.generated_title,
+        generated_title         = COALESCE(sessions.generated_title, excluded.generated_title),
         title_source            = excluded.title_source,
         session_character       = excluded.session_character,
         ended_at                = excluded.ended_at,
@@ -113,6 +115,9 @@ function getStmts() {
         user_message_count      = excluded.user_message_count,
         assistant_message_count = excluded.assistant_message_count,
         tool_call_count         = excluded.tool_call_count,
+        compact_count           = excluded.compact_count,
+        auto_compact_count      = excluded.auto_compact_count,
+        slash_commands          = excluded.slash_commands,
         total_input_tokens      = excluded.total_input_tokens,
         total_output_tokens     = excluded.total_output_tokens,
         cache_creation_tokens   = excluded.cache_creation_tokens,
@@ -198,7 +203,16 @@ function insertSessionWithProjectInternal(session: ParsedSession, isForce: boole
     }
   });
 
-  tx();
+  try {
+    tx();
+  } catch (err: unknown) {
+    const code = (err as { code?: string }).code;
+    if (code === 'SQLITE_BUSY' || code === 'SQLITE_LOCKED') {
+      // busy_timeout=5000 in client.ts already waited up to 5s — if still locked, surface clearly
+      throw new Error(`[write] DB locked while writing session ${session.id} — try again`);
+    }
+    throw err;
+  }
   return isNew;
 }
 
@@ -261,6 +275,9 @@ function upsertSession(
     session.userMessageCount,
     session.assistantMessageCount,
     session.toolCallCount,
+    session.compactCount,
+    session.autoCompactCount,
+    JSON.stringify(session.slashCommands),
     session.gitBranch,
     session.claudeVersion,
     session.sourceTool ?? 'claude-code',
@@ -280,9 +297,11 @@ function upsertSession(
 
 /**
  * Insert messages for a session.
- * Replaces firebase/client.ts uploadMessages().
+ * Replaces existing messages for the session before inserting the freshly-parsed
+ * result. This keeps re-syncs correct when parser fixes change message content
+ * or remove stale messages.
  */
-export function insertMessages(session: ParsedSession): void {
+export function insertMessages(session: ParsedSession, isForce = false): void {
   if (session.messages.length === 0) return;
 
   const db = getDb();
@@ -318,7 +337,15 @@ export function insertMessages(session: ParsedSession): void {
     }
   });
 
-  tx(session.messages);
+  try {
+    tx(session.messages);
+  } catch (err: unknown) {
+    const code = (err as { code?: string }).code;
+    if (code === 'SQLITE_BUSY' || code === 'SQLITE_LOCKED') {
+      throw new Error(`[write] DB locked while writing messages for session ${session.id} — try again`);
+    }
+    throw err;
+  }
 }
 
 /**

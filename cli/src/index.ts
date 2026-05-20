@@ -16,6 +16,10 @@ import { reflectCommand } from './commands/reflect.js';
 import { analyzeCommand } from './commands/analyze.js';
 import { memoriesCommand } from './commands/memories.js';
 import { exportMemoriesCommand } from './commands/export-memories.js';
+import { insightsCommand, insightsCheckCommand } from './commands/insights.js';
+import { sessionEndCommand } from './commands/session-end.js';
+import { buildQueueCommand } from './commands/queue.js';
+import { doctorCommand } from './commands/doctor/index.js';
 import { showTelemetryNoticeIfNeeded } from './utils/telemetry.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
@@ -91,13 +95,23 @@ program
 
 program
   .command('install-hook')
-  .description('Install Claude Code hook for automatic sync')
-  .action(installHookCommand);
+  .description('Install Claude Code SessionEnd hook for automatic sync and analysis')
+  .action(() => installHookCommand());
 
 program
   .command('uninstall-hook')
-  .description('Remove Claude Code hook')
+  .description('Remove Claude Code hooks (sync and analysis)')
   .action(uninstallHookCommand);
+
+program
+  .command('doctor')
+  .description('Check your Code Insights installation')
+  .option('--fix', 'Apply safe idempotent fixes automatically')
+  .option('--verbose', 'Show probed paths for skipped items')
+  .option('--json', 'Machine-readable JSON output')
+  .action(async (opts) => {
+    await doctorCommand({ fix: opts.fix, verbose: opts.verbose, json: opts.json });
+  });
 
 program
   .command('open')
@@ -110,6 +124,7 @@ program
   .description('Start the Code Insights dashboard server and open in browser')
   .option('-p, --port <number>', 'Port number', String(7890))
   .option('--no-open', 'Do not open browser automatically')
+  .option('--no-sync', 'Skip automatic session sync before starting')
   .action(dashboardCommand);
 
 program.addCommand(resetCommand);
@@ -121,7 +136,61 @@ program.addCommand(analyzeCommand);
 program.addCommand(memoriesCommand);
 program.addCommand(exportMemoriesCommand);
 
+
+// session-end command — single SessionEnd hook entry point (sync + enqueue + spawn worker)
+program
+  .command('session-end')
+  .description('SessionEnd hook: sync session, enqueue for analysis, spawn background worker')
+  .option('--native', 'Use claude -p for analysis worker (default: true)')
+  .option('-s, --source <tool>', 'Source tool identifier (default: claude-code)')
+  .option('-q, --quiet', 'Suppress output')
+  .option('--model <model>', 'Model for native analysis (default: sonnet)')
+  .action(async (opts) => {
+    await sessionEndCommand({ native: opts.native ?? true, quiet: opts.quiet, source: opts.source, model: opts.model });
+  });
+
+// queue command suite — manage the analysis_queue
+program.addCommand(buildQueueCommand());
+
+// insights command — analyze a session using native claude -p or configured LLM
+const insightsCmd = program
+  .command('insights [session_id]')
+  .description('Analyze a session with AI — extracts insights and prompt quality score')
+  .option('--native', 'Use claude -p (your Claude subscription, no API key required)')
+  .option('--hook', 'Read session context from stdin (for Claude Code SessionEnd hook)')
+  .option('-s, --source <tool>', 'Source tool identifier (default: claude-code)')
+  .option('--force', 'Re-analyze even if already analyzed at this session length')
+  .option('-q, --quiet', 'Suppress output')
+  .option('--model <model>', 'Model for native analysis (default: sonnet)')
+  .action(async (sessionId: string | undefined, opts) => {
+    await insightsCommand(sessionId, opts);
+  });
+
+insightsCmd
+  .command('check')
+  .description('Check for unanalyzed sessions in the last N days')
+  .option('--days <n>', 'Lookback window in days', '7')
+  .option('-q, --quiet', 'Machine-readable output (just count)')
+  .option('--analyze', 'Process all found sessions sequentially')
+  .action(async (opts) => {
+    await insightsCheckCommand({
+      days: opts.days ? parseInt(opts.days, 10) : 7,
+      quiet: opts.quiet,
+      analyze: opts.analyze,
+    });
+  });
+
+// Default action: running `code-insights` with no arguments opens the dashboard.
+// Dashboard auto-syncs sessions first, giving "1 command to value" on first run.
+program.action(async () => {
+  await dashboardCommand({ port: '7890', open: true, sync: true });
+});
+
 // Show one-time telemetry disclosure before any command runs
-showTelemetryNoticeIfNeeded();
+// Skip for --version/-V and --help/-h since those commands don't need it
+const isVersionOrHelp = process.argv.some(arg => ['--version', '-V', '--help', '-h'].includes(arg));
+if (!isVersionOrHelp) {
+  showTelemetryNoticeIfNeeded();
+}
 
 program.parse();

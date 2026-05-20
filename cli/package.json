@@ -1,12 +1,13 @@
 {
   "name": "@code-insights/cli",
-  "version": "3.6.1",
+  "version": "4.11.0",
   "description": "Turn your AI coding sessions into knowledge",
   "type": "module",
   "main": "dist/index.js",
   "exports": {
     ".": "./dist/index.js",
     "./db/client": "./dist/db/client.js",
+    "./db/queue": "./dist/db/queue.js",
     "./db/read": "./dist/db/read.js",
     "./db/write": "./dist/db/write.js",
     "./db/schema": "./dist/db/schema.js",
@@ -14,14 +15,31 @@
     "./utils/config": "./dist/utils/config.js",
     "./utils/browser": "./dist/utils/browser.js",
     "./constants/llm-providers": "./dist/constants/llm-providers.js",
-    "./utils/telemetry": "./dist/utils/telemetry.js"
+    "./utils/pricing": "./dist/utils/pricing.js",
+    "./utils/telemetry": "./dist/utils/telemetry.js",
+    "./analysis/prompts": "./dist/analysis/prompts.js",
+    "./analysis/prompt-types": "./dist/analysis/prompt-types.js",
+    "./analysis/prompt-constants": "./dist/analysis/prompt-constants.js",
+    "./analysis/message-format": "./dist/analysis/message-format.js",
+    "./analysis/response-parsers": "./dist/analysis/response-parsers.js",
+    "./analysis/normalize-utils": "./dist/analysis/normalize-utils.js",
+    "./analysis/friction-normalize": "./dist/analysis/friction-normalize.js",
+    "./analysis/pattern-normalize": "./dist/analysis/pattern-normalize.js",
+    "./analysis/prompt-quality-normalize": "./dist/analysis/prompt-quality-normalize.js",
+    "./analysis/runner-types": "./dist/analysis/runner-types.js",
+    "./analysis/native-runner": "./dist/analysis/native-runner.js",
+    "./analysis/analysis-db": "./dist/analysis/analysis-db.js",
+    "./analysis/analysis-usage-db": "./dist/analysis/analysis-usage-db.js",
+    "./analysis/provider-runner": "./dist/analysis/provider-runner.js",
+    "./analysis/schemas/session-analysis.json": "./dist/analysis/schemas/session-analysis.json",
+    "./analysis/schemas/prompt-quality.json": "./dist/analysis/schemas/prompt-quality.json"
   },
   "bin": {
     "code-insights": "./dist/index.js",
     "insights": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"const{cpSync,mkdirSync}=require('fs');mkdirSync('dist/analysis/schemas',{recursive:true});cpSync('src/analysis/schemas/session-analysis.json','dist/analysis/schemas/session-analysis.json');cpSync('src/analysis/schemas/prompt-quality.json','dist/analysis/schemas/prompt-quality.json');\"",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "test": "vitest run",

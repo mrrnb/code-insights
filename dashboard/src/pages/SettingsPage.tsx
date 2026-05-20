@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useLlmConfig, useSaveLlmConfig } from '@/hooks/useConfig';
-import { fetchOllamaModels, testLlmConfig } from '@/lib/api';
+import { useUserProfile, normalizeGithubUsername } from '@/hooks/useUserProfile';
+import { fetchOllamaModels, fetchLlamaCppModels, testLlmConfig } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,10 +18,12 @@ import {
   ChevronRight,
   Check,
   Minus,
+  User,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 
-type LLMProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'custom';
+// TODO: tech debt — duplicated provider types (this local type mirrors dashboard/src/lib/types.ts LLMConfig.provider)
+type LLMProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'llamacpp' | 'custom';
 
 interface ProviderInfo {
   id: LLMProvider;
@@ -61,6 +64,7 @@ const PROVIDERS: ProviderInfo[] = [
     models: [
       { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: '快速' },
       { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: '更强' },
+      { id: 'gemma-3-27b-it', name: 'Gemma 4 27B IT', description: '通过 Gemini API 免费使用' },
     ],
   },
   {
@@ -71,6 +75,19 @@ const PROVIDERS: ProviderInfo[] = [
       { id: 'llama3.3', name: 'Llama 3.3' },
       { id: 'qwen3:14b', name: 'Qwen3 14B' },
       { id: 'mistral', name: 'Mistral' },
+      { id: 'qwen2.5-coder', name: 'Qwen 2.5 Coder' },
+      { id: 'gemma4', name: 'Gemma 4 12B' },
+      { id: 'gemma4:27b', name: 'Gemma 4 27B' },
+    ],
+  },
+  {
+    id: 'llamacpp',
+    name: 'llama.cpp (Local)',
+    requiresApiKey: false,
+    models: [
+      { id: 'gemma-4-12b', name: 'Gemma 4 12B (Q4_K_M)', description: 'Flagship local model' },
+      { id: 'gemma-4-27b', name: 'Gemma 4 27B (Q4_K_M)', description: 'Large local model' },
+      { id: 'custom', name: 'Custom model', description: 'Any GGUF loaded in llama-server' },
     ],
   },
   {
@@ -87,6 +104,29 @@ export default function SettingsPage() {
   const { t, language } = useI18n();
   const { data: llmConfig, isLoading: configLoading } = useLlmConfig();
   const saveMutation = useSaveLlmConfig();
+  const { profile, saveProfile } = useUserProfile();
+
+  // Profile card state
+  const [profileName, setProfileName] = useState(profile?.name ?? '');
+  const [profileGithubUsername, setProfileGithubUsername] = useState(profile?.githubUsername ?? '');
+  const [profileAvatarError, setProfileAvatarError] = useState(false);
+
+  // Sync profile fields when profile loads from localStorage
+  useEffect(() => {
+    setProfileName(profile?.name ?? '');
+    setProfileGithubUsername(profile?.githubUsername ?? '');
+    setProfileAvatarError(false);
+  }, [profile?.name, profile?.githubUsername]);
+
+  const profileNormalizedUsername = normalizeGithubUsername(profileGithubUsername);
+  const profileAvatarUrl = profileNormalizedUsername
+    ? `https://github.com/${profileNormalizedUsername}.png`
+    : '';
+
+  const handleSaveProfile = async () => {
+    await saveProfile(profileName, profileGithubUsername);
+    toast.success('Profile saved');
+  };
 
   const [llmProvider, setLlmProvider] = useState<LLMProvider>('openai');
   const [llmModel, setLlmModel] = useState('');
@@ -98,6 +138,8 @@ export default function SettingsPage() {
   const [llmTestError, setLlmTestError] = useState<string | null>(null);
   const [ollamaDiscoveredModels, setOllamaDiscoveredModels] = useState<string[]>([]);
   const [ollamaCorsOpen, setOllamaCorsOpen] = useState(false);
+  const [llamacppDiscoveredModels, setLlamacppDiscoveredModels] = useState<string[]>([]);
+  const [llamacppDiscovering, setLlamacppDiscovering] = useState(false);
 
   // Populate form from loaded config
   useEffect(() => {
@@ -137,6 +179,21 @@ export default function SettingsPage() {
       .then((r) => setOllamaDiscoveredModels(r.models.map((m) => m.name)))
       .catch(() => {});
   }, [llmProvider, llmBaseUrl]);
+
+  // Handler to manually discover llamacpp models via the Discover button
+  const handleDiscoverLlamaCppModels = () => {
+    setLlamacppDiscovering(true);
+    fetchLlamaCppModels(llmBaseUrl || undefined)
+      .then((r) => {
+        const names = r.models.map((m) => m.id);
+        setLlamacppDiscoveredModels(names);
+        if (names.length > 0 && !llmModel) {
+          setLlmModel(names[0]);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLlamacppDiscovering(false));
+  };
 
   const handleProviderChange = (provider: LLMProvider) => {
     setLlmProvider(provider);
@@ -241,6 +298,80 @@ export default function SettingsPage() {
           <p className="text-muted-foreground">{t('settings.desc')}</p>
       </div>
 
+      {/* User Profile Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            <CardTitle className="text-base">Your Profile</CardTitle>
+          </div>
+          <CardDescription>
+            Your name and GitHub avatar appear in the footer of downloaded share cards
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Live avatar preview */}
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-full overflow-hidden bg-muted border border-border shrink-0 flex items-center justify-center">
+              {profileAvatarUrl && !profileAvatarError ? (
+                <img
+                  src={profileAvatarUrl}
+                  alt="GitHub avatar preview"
+                  className="h-full w-full object-cover"
+                  onError={() => setProfileAvatarError(true)}
+                  onLoad={() => setProfileAvatarError(false)}
+                />
+              ) : (
+                <span className="text-xl text-muted-foreground select-none">
+                  {profileName.trim().charAt(0).toUpperCase() || '?'}
+                </span>
+              )}
+            </div>
+            <div className="text-sm">
+              <p className="font-medium">{profileName.trim() || 'Your Name'}</p>
+              {profileNormalizedUsername ? (
+                <p className="text-muted-foreground text-xs">@{profileNormalizedUsername}</p>
+              ) : (
+                <p className="text-muted-foreground text-xs italic">Enter your GitHub username</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Display Name</label>
+            <Input
+              className="mt-1"
+              placeholder="e.g. Srikanth Rao"
+              value={profileName}
+              onChange={(e) => setProfileName(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">GitHub Username</label>
+            <Input
+              className="mt-1"
+              placeholder="e.g. melagiri"
+              value={profileGithubUsername}
+              onChange={(e) => {
+                setProfileGithubUsername(e.target.value);
+                setProfileAvatarError(false);
+              }}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Used to load your GitHub avatar on share cards. No @ prefix needed.
+            </p>
+          </div>
+
+          <Button
+            onClick={handleSaveProfile}
+            disabled={!profileName.trim() || !profileNormalizedUsername}
+          >
+            Save Profile
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Setup progress strip */}
       <div className="rounded-lg border bg-card px-4 py-3 flex items-center gap-4 flex-wrap">
         <span className="text-sm font-medium shrink-0">
@@ -340,6 +471,36 @@ export default function SettingsPage() {
                   ) : null;
                 })()}
               </div>
+            ) : llmProvider === 'llamacpp' ? (
+              <div className="mt-1 space-y-2">
+                <Input
+                  value={llmModel}
+                  onChange={(e) => setLlmModel(e.target.value)}
+                  placeholder="Type any model name (e.g. gemma-4-12b)"
+                />
+                {(() => {
+                  const hardcoded =
+                    PROVIDERS.find((p) => p.id === 'llamacpp')?.models.map((m) => m.id) ?? [];
+                  const suggestions = [...new Set([...hardcoded, ...llamacppDiscoveredModels])];
+                  return suggestions.length > 0 ? (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1.5">Suggestions:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {suggestions.map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            onClick={() => setLlmModel(name)}
+                            className="text-xs px-2 py-0.5 rounded-md border border-border bg-muted hover:bg-accent hover:text-accent-foreground transition-colors"
+                          >
+                            {name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+              </div>
             ) : (
               <div className="mt-1 space-y-2">
                 <Select value={llmModel} onValueChange={setLlmModel}>
@@ -414,6 +575,46 @@ export default function SettingsPage() {
                   {PROVIDERS.find((p) => p.id === llmProvider)?.name}
                 </a>
               </p>
+            </div>
+          )}
+
+          {/* llama.cpp: Base URL + model discovery button */}
+          {llmProvider === 'llamacpp' && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium">Base URL (optional)</label>
+                <Input
+                  value={llmBaseUrl}
+                  onChange={(e) => setLlmBaseUrl(e.target.value)}
+                  placeholder="http://localhost:8080"
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Leave empty for default (localhost:8080). Start llama-server with:{' '}
+                  <code className="bg-muted px-0.5 rounded">llama-server -m &lt;model.gguf&gt;</code>
+                </p>
+              </div>
+              <div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDiscoverLlamaCppModels}
+                  disabled={llamacppDiscovering}
+                >
+                  {llamacppDiscovering ? (
+                    <>
+                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                      Discovering...
+                    </>
+                  ) : (
+                    'Discover Loaded Model'
+                  )}
+                </Button>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Queries the running llama-server instance to detect the currently loaded model.
+                </p>
+              </div>
             </div>
           )}
 

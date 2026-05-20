@@ -80,21 +80,36 @@ pnpm build            # Compile TypeScript to dist/
 
 # After building, link for local testing:
 npm link
-code-insights init                     # Interactive setup
+code-insights                          # Sync + open dashboard (zero-config)
+code-insights init                     # Optional: customize settings
 code-insights sync                     # Sync sessions to SQLite
 code-insights sync --force             # Re-sync all sessions
 code-insights sync --dry-run           # Preview without changes
 code-insights sync -q                  # Quiet mode (for hook usage)
 code-insights sync --source cursor     # Sync only from a specific tool
 code-insights status                   # Show sync statistics
-code-insights dashboard                # Open the dashboard in browser
-code-insights install-hook             # Auto-sync on session end
-code-insights uninstall-hook           # Remove auto-sync hook
+code-insights open                     # Open dashboard in browser (no server start)
+code-insights dashboard                # Start server + open dashboard (auto-syncs first)
+code-insights dashboard --no-sync      # Start server + open dashboard without syncing
+code-insights install-hook             # Auto-sync + auto-analysis on session end
+code-insights install-hook --sync-only # Install sync hook only (no analysis)
+code-insights uninstall-hook           # Remove all Code Insights hooks
 code-insights config                   # Show current configuration
+code-insights config llm               # Configure LLM provider interactively
 code-insights reset --confirm          # Delete all local data
 code-insights reflect                  # Cross-session LLM synthesis
+code-insights reflect --week 2026-W11  # Synthesis for a specific ISO week
 code-insights reflect backfill         # Backfill facets for legacy sessions
-code-insights telemetry                # Telemetry opt-in/opt-out
+code-insights sync prune               # Soft-delete trivial sessions (≤2 messages)
+code-insights telemetry                # Show telemetry status
+code-insights telemetry disable        # Opt out of anonymous telemetry
+code-insights telemetry enable         # Opt back in
+
+# Insights — session analysis
+code-insights insights <session_id>              # Analyze using configured LLM
+code-insights insights <session_id> --native     # Analyze using claude -p (no API key needed)
+code-insights insights --hook --native -q        # Hook mode (reads stdin, used by SessionEnd hook)
+code-insights insights check                     # Check for unanalyzed sessions (last 7 days)
 
 # Stats — terminal analytics
 code-insights stats                    # Dashboard overview (last 7 days)
@@ -117,7 +132,7 @@ code-insights stats patterns           # Cross-session patterns summary
 
 - **Runtime**: Node.js (ES2022, ES Modules)
 - **CLI Framework**: Commander.js
-- **Database**: SQLite (better-sqlite3) — WAL mode, local at `~/.code-insights/data.db`, Schema V5
+- **Database**: SQLite (better-sqlite3) — WAL mode, local at `~/.code-insights/data.db`, Schema V9
 - **Dashboard**: Vite + React 19 SPA
 - **Server**: Hono
 - **UI**: Tailwind CSS 4 + shadcn/ui (New York), Lucide icons
@@ -126,7 +141,7 @@ code-insights stats patterns           # Cross-session patterns summary
 - **LLM**: OpenAI, Anthropic, Gemini, Ollama (multi-provider abstraction)
 - **Telemetry**: PostHog (opt-out model, enabled by default)
 - **Terminal UI**: Chalk (colors), Ora (spinners), Inquirer (prompts)
-- **Utilities**: date-fns, uuid
+- **Utilities**: date-fns
 - **Package Manager**: pnpm (workspace monorepo)
 - **npm Package**: `@code-insights/cli`
 - **Binary**: `code-insights`

@@ -4,6 +4,9 @@
 import { getDb } from '@code-insights/cli/db/client';
 import { normalizeFrictionCategory } from '../llm/friction-normalize.js';
 import { normalizePatternCategory, getPatternCategoryLabel } from '../llm/pattern-normalize.js';
+import { normalizePromptQualityCategory, PQ_CATEGORY_LABELS } from '../llm/prompt-quality-normalize.js';
+import { CANONICAL_PQ_STRENGTH_CATEGORIES } from '../llm/prompt-constants.js';
+import { safeParseJson } from '../utils.js';
 
 // ISO week regex: matches YYYY-WNN format (e.g., 2026-W10)
 const ISO_WEEK_RE = /^(\d{4})-W(\d{2})$/;
@@ -121,10 +124,25 @@ export interface AggregatedEffectivePattern {
   drivers: Record<string, number>;  // driver -> count breakdown (user-driven, ai-driven, collaborative)
 }
 
+export interface AggregatedPQCategory {
+  category: string;
+  label: string;
+  count: number;
+}
+
 export interface RateLimitInfo {
   count: number;
   sessionsAffected: number;
   examples: string[];
+}
+
+export interface PQDimensionScores {
+  overall: number;
+  context_provision: number | null;  // null if no data for this dimension
+  request_specificity: number | null;
+  scope_management: number | null;
+  information_timing: number | null;
+  correction_quality: number | null;
 }
 
 export interface AggregatedData {
@@ -139,6 +157,12 @@ export interface AggregatedData {
   rateLimitInfo: RateLimitInfo | null;
   streak: number;            // consecutive days with at least one session (ignores period filter)
   sourceToolCount: number;   // distinct AI tools used within the scope
+  sourceTools: string[];     // distinct AI tool identifiers used within the scope
+  pqDeficits: AggregatedPQCategory[];
+  pqStrengths: AggregatedPQCategory[];
+  pqScores: PQDimensionScores | null;  // per-dimension PQ scores + overall (0-100), null if no PQ data
+  lifetimeSessions: number;            // all-time session count (no date filter)
+  totalTokens: number;                 // sum of input+output tokens for sessions in scope
 }
 
 /**
@@ -226,11 +250,11 @@ export function getAggregatedData(
     `SELECT COUNT(*) as count FROM sessions s ${where}`
   ).get(...params) as { count: number };
 
-  // Parse examples and session_ids from json_group_array output, then normalize via alias + Levenshtein clustering
+  // Parse examples and session_ids from json_group_array output, then normalize via alias + Levenshtein clustering.
   const parsedFriction = frictionCategories.map(fc => ({
     ...fc,
-    examples: JSON.parse(fc.examples) as string[],
-    session_ids: JSON.parse(fc.session_ids) as string[],
+    examples: safeParseJson<string[]>(fc.examples, []),
+    session_ids: safeParseJson<string[]>(fc.session_ids, []),
   }));
 
   const normalizedFriction = new Map<string, { count: number; total_severity: number; examples: string[]; session_ids: string[] }>();
@@ -352,6 +376,11 @@ export function getAggregatedData(
     `SELECT COUNT(DISTINCT source_tool) as count FROM sessions s ${where}`
   ).get(...params) as { count: number };
 
+  // Fetch distinct source tool identifiers within scope (for share card tool pills)
+  const sourceToolRows = db.prepare(
+    `SELECT DISTINCT source_tool FROM sessions s ${where}`
+  ).all(...params) as Array<{ source_tool: string }>;
+
   // Streak: count consecutive days (backward from today) with at least one session.
   // Always uses all-time scope — filtering by period would cap streak at the window size.
   // Respects project and source filters since those are user-scope constraints.
@@ -393,6 +422,20 @@ export function getAggregatedData(
     }
   }
 
+  const { pqDeficits, pqStrengths } = aggregatePQFindings(db, where, params);
+  const pqScores = computePQScores(db, where, params);
+
+  // Lifetime session count — no date filter, respects project/source scope only
+  const { where: lifetimeWhere, params: lifetimeParams } = buildWhereClause('all', project, source);
+  const lifetimeRow = db.prepare(
+    `SELECT COUNT(*) as count FROM sessions s ${lifetimeWhere}`
+  ).get(...lifetimeParams) as { count: number };
+
+  // Token sum for sessions in scope (input + output tokens)
+  const tokenRow = db.prepare(
+    `SELECT COALESCE(SUM(total_input_tokens + total_output_tokens), 0) as total FROM sessions s ${where}`
+  ).get(...params) as { total: number };
+
   return {
     frictionCategories: mergedFriction,
     effectivePatterns,
@@ -405,5 +448,138 @@ export function getAggregatedData(
     rateLimitInfo,
     streak,
     sourceToolCount: sourceToolRow.count,
+    sourceTools: sourceToolRows.map(r => r.source_tool),
+    pqDeficits,
+    pqStrengths,
+    pqScores,
+    lifetimeSessions: lifetimeRow.count,
+    totalTokens: tokenRow.total,
+  };
+}
+
+/**
+ * Aggregate prompt quality findings from the insights table for the given scope.
+ * Returns deficits and strengths as separate arrays, pre-filtered to count >= 2.
+ * Count is session-level (unique session IDs), not finding-level — more honest signal.
+ *
+ * Uses the same where/params scope as getAggregatedData so period/project/source filters apply.
+ */
+export function aggregatePQFindings(
+  db: ReturnType<typeof getDb>,
+  where: string,
+  params: (string | number)[]
+): { pqDeficits: AggregatedPQCategory[]; pqStrengths: AggregatedPQCategory[] } {
+  const hasWhere = where.length > 0;
+  const extraPrefix = hasWhere ? 'AND' : 'WHERE';
+
+  const rows = db.prepare(`
+    SELECT i.metadata, i.session_id
+    FROM insights i
+    JOIN sessions s ON i.session_id = s.id
+    ${where}
+    ${extraPrefix} i.type = 'prompt_quality'
+  `).all(...params) as Array<{ metadata: string; session_id: string }>;
+
+  const deficitCounts = new Map<string, Set<string>>();
+  const strengthCounts = new Map<string, Set<string>>();
+  const strengthSet = new Set<string>(CANONICAL_PQ_STRENGTH_CATEGORIES);
+
+  for (const row of rows) {
+    let metadata: Record<string, unknown>;
+    try { metadata = JSON.parse(row.metadata); } catch { continue; }
+    const findings = metadata.findings;
+    if (!Array.isArray(findings)) continue;
+    for (const finding of findings) {
+      if (typeof finding?.category !== 'string') continue;
+      const normalized = normalizePromptQualityCategory(finding.category);
+      const bucket = strengthSet.has(normalized) ? strengthCounts : deficitCounts;
+      if (!bucket.has(normalized)) bucket.set(normalized, new Set());
+      bucket.get(normalized)!.add(row.session_id);
+    }
+  }
+
+  const toSorted = (map: Map<string, Set<string>>): AggregatedPQCategory[] =>
+    [...map.entries()]
+      .map(([category, sessions]) => ({
+        category,
+        label: PQ_CATEGORY_LABELS[category] ?? category,
+        count: sessions.size,
+      }))
+      .filter(e => e.count >= 2)
+      .sort((a, b) => b.count - a.count);
+
+  return { pqDeficits: toSorted(deficitCounts), pqStrengths: toSorted(strengthCounts) };
+}
+
+/**
+ * Compute per-dimension PQ scores + overall average across all prompt_quality insights in scope.
+ * Parses metadata.dimension_scores from each insight row and averages each of the 5 dimensions.
+ * Returns null if no PQ insights exist in scope or none have dimension_scores.
+ */
+export function computePQScores(
+  db: ReturnType<typeof getDb>,
+  where: string,
+  params: (string | number)[]
+): PQDimensionScores | null {
+  const hasWhere = where.length > 0;
+  const extraPrefix = hasWhere ? 'AND' : 'WHERE';
+
+  const rows = db.prepare(`
+    SELECT i.metadata
+    FROM insights i
+    JOIN sessions s ON i.session_id = s.id
+    ${where}
+    ${extraPrefix} i.type = 'prompt_quality'
+  `).all(...params) as Array<{ metadata: string }>;
+
+  const DIMENSION_KEYS = [
+    'context_provision',
+    'request_specificity',
+    'scope_management',
+    'information_timing',
+    'correction_quality',
+  ] as const;
+
+  const sums: Record<string, number> = {};
+  const counts: Record<string, number> = {};
+  for (const key of DIMENSION_KEYS) {
+    sums[key] = 0;
+    counts[key] = 0;
+  }
+
+  for (const row of rows) {
+    let metadata: Record<string, unknown>;
+    try { metadata = JSON.parse(row.metadata); } catch { continue; }
+    const scores = metadata.dimension_scores;
+    if (typeof scores !== 'object' || scores === null || Array.isArray(scores)) continue;
+    const scoresObj = scores as Record<string, unknown>;
+    for (const key of DIMENSION_KEYS) {
+      const val = scoresObj[key];
+      if (typeof val === 'number' && val >= 0 && val <= 100) {
+        sums[key] += val;
+        counts[key]++;
+      }
+    }
+  }
+
+  // Require at least one dimension to have data
+  const hasData = DIMENSION_KEYS.some(k => counts[k] > 0);
+  if (!hasData) return null;
+
+  // Per-dimension averages — null for dimensions with no data points (honest signal)
+  const dimScores = Object.fromEntries(
+    DIMENSION_KEYS.map(k => [k, counts[k] > 0 ? Math.round(sums[k] / counts[k]) : null])
+  ) as Record<typeof DIMENSION_KEYS[number], number | null>;
+
+  const dimAverages = DIMENSION_KEYS.filter(k => counts[k] > 0).map(k => dimScores[k] as number);
+  const overall = Math.round(dimAverages.reduce((s, v) => s + v, 0) / dimAverages.length);
+
+  return {
+    overall,
+    context_provision: dimScores.context_provision,
+    request_specificity: dimScores.request_specificity,
+    scope_management: dimScores.scope_management,
+    information_timing: dimScores.information_timing,
+    correction_quality: dimScores.correction_quality,
   };
 }

@@ -2,7 +2,7 @@
 // Base URL is relative in production (SPA served by the same server).
 // In Vite dev mode, the proxy forwards /api -> localhost:7890.
 
-import type { Project, Session, Message, Insight, DashboardStats, LLMConfig, ExportTemplate } from '@/lib/types';
+import type { Project, Session, Message, Insight, DashboardStats, LLMConfig, ExportTemplate, FacetRow } from '@/lib/types';
 
 const BASE = '/api';
 
@@ -97,6 +97,37 @@ export function deleteInsight(id: string) {
   return request<{ ok: boolean }>(`/insights/${id}`, { method: 'DELETE' });
 }
 
+// ── Search ────────────────────────────────────────────────────────────────────
+
+export interface SearchSessionResult {
+  id: string;
+  title: string;
+  project_name: string;
+  session_character: string | null;
+  started_at: string;
+  match_field: 'title' | 'summary';
+  snippet: string;
+}
+
+export interface SearchInsightResult {
+  id: string;
+  title: string;
+  type: string;
+  project_name: string;
+  session_id: string;
+  created_at: string;
+  snippet: string;
+}
+
+export function fetchSearch(params: { q: string; limit?: number }) {
+  const q = new URLSearchParams();
+  q.set('q', params.q);
+  if (params.limit !== undefined) q.set('limit', String(params.limit));
+  return request<{ sessions: SearchSessionResult[]; insights: SearchInsightResult[] }>(
+    `/search?${q.toString()}`
+  );
+}
+
 // ── Analytics ─────────────────────────────────────────────────────────────────
 
 export function fetchDashboardStats(range: '7d' | '30d' | '90d' | 'all' = '7d') {
@@ -105,7 +136,7 @@ export function fetchDashboardStats(range: '7d' | '30d' | '90d' | 'all' = '7d') 
 
 // ── Analysis (Phase 4) ────────────────────────────────────────────────────────
 
-export interface AnalysisApiResult {
+interface AnalysisApiResult {
   success: boolean;
   insights?: Array<{ id: string; type: string; title: string }>;
   error?: string;
@@ -157,22 +188,17 @@ export function fetchOllamaModels(baseUrl?: string) {
   );
 }
 
+export function fetchLlamaCppModels(baseUrl?: string) {
+  const qs = baseUrl ? `?baseUrl=${encodeURIComponent(baseUrl)}` : '';
+  return request<{ models: Array<{ id: string; object: string }> }>(
+    `/config/llm/llamacpp-models${qs}`
+  );
+}
+
 export function analyzePromptQuality(sessionId: string) {
   return request<AnalysisApiResult>('/analysis/prompt-quality', {
     method: 'POST',
     body: JSON.stringify({ sessionId }),
-  });
-}
-
-export function findRecurringInsights(body?: { projectId?: string; limit?: number }) {
-  return request<{
-    success: boolean;
-    groups?: Array<{ insightIds: string[]; theme: string }>;
-    updatedCount?: number;
-    error?: string;
-  }>('/analysis/recurring', {
-    method: 'POST',
-    body: JSON.stringify(body ?? {}),
   });
 }
 
@@ -248,6 +274,15 @@ export interface RateLimitInfo {
   examples: string[];
 }
 
+export interface PQDimensionScores {
+  overall: number;
+  context_provision: number | null;  // null if no data for this dimension
+  request_specificity: number | null;
+  scope_management: number | null;
+  information_timing: number | null;
+  correction_quality: number | null;
+}
+
 export interface FacetAggregation {
   frictionCategories: Array<{
     category: string;
@@ -272,6 +307,23 @@ export interface FacetAggregation {
   rateLimitInfo: RateLimitInfo | null;
   streak: number;
   sourceToolCount: number;
+  sourceTools: string[];
+  pqScores: PQDimensionScores | null;
+  lifetimeSessions: number;
+  totalTokens: number;
+}
+
+export function fetchFacets(params?: {
+  project?: string;
+  period?: string;
+  source?: string;
+}) {
+  const q = new URLSearchParams();
+  if (params?.project) q.set('project', params.project);
+  if (params?.period) q.set('period', params.period);
+  if (params?.source) q.set('source', params.source);
+  const qs = q.toString() ? `?${q.toString()}` : '';
+  return request<{ facets: FacetRow[]; missingCount: number; totalSessions: number }>(`/facets${qs}`);
 }
 
 export function fetchFacetAggregation(params?: {
@@ -418,19 +470,88 @@ export async function reflectGenerateStream(
   return res;
 }
 
-export async function backfillFacetsStream(
-  sessionIds: string[],
-  signal?: AbortSignal
-): Promise<Response> {
-  const res = await fetch(`${BASE}/facets/backfill`, {
+// ── Dispatch (blog post generator) ───────────────────────────────────────────
+
+export type DispatchTone = 'technical' | 'accessible' | 'quick-tips';
+export type DispatchFormat = 'blog' | 'linkedin';
+
+export interface DispatchRequest {
+  insightIds: string[];
+  context: string;
+  tone: DispatchTone;
+  format: DispatchFormat;
+  includeSessionBackground?: boolean;
+}
+
+export interface DispatchResponse {
+  markdown: string;
+  /** Plain text body without YAML frontmatter — use for LinkedIn copy and character count. */
+  body: string;
+  format: DispatchFormat;
+  frontmatter: {
+    title: string;
+    tags: string[];
+    tldr: string;
+  };
+  wordCount: number;
+  characterCount: number;
+  degraded: boolean;
+  model: string;
+  tokensUsed: {
+    input: number;
+    output: number;
+  };
+}
+
+export function generateDispatch(body: DispatchRequest): Promise<DispatchResponse> {
+  return request<DispatchResponse>('/dispatch/generate', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionIds }),
-    signal,
+    body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(`Backfill failed ${res.status}: ${text}`);
-  }
-  return res;
+}
+
+export interface DispatchImagePromptRequest {
+  title: string;
+  tags: string[];
+  tldr: string;
+  format: DispatchFormat;
+}
+
+export interface DispatchImagePromptResponse {
+  prompt: string;
+  model: string;
+  tokensUsed: { input: number; output: number };
+}
+
+export function generateDispatchImagePrompt(body: DispatchImagePromptRequest): Promise<DispatchImagePromptResponse> {
+  return request<DispatchImagePromptResponse>('/dispatch/image-prompt', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+// ── Analysis Queue ────────────────────────────────────────────────────────────
+
+export interface AnalysisQueueItem {
+  session_id: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  runner_type: string;
+  enqueued_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  error_message: string | null;
+  attempt_count: number;
+  max_attempts: number;
+}
+
+export interface AnalysisQueueStatus {
+  pending: number;
+  processing: number;
+  completed: number;
+  failed: number;
+  items: AnalysisQueueItem[];
+}
+
+export function fetchAnalysisQueue() {
+  return request<AnalysisQueueStatus>('/analysis/queue');
 }

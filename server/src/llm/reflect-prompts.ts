@@ -18,6 +18,8 @@ RULES:
 - Do not give advice — that's for the Rules & Skills section.
 - Be specific: "wrong-approach appeared 7 times with high severity" not "there were some issues"
 - Keep the narrative under 500 words.
+- Where PQ deficit signals corroborate friction categories, note the reinforcing evidence briefly.
+- PQ signals are supplementary context, not primary evidence. Never dedicate a full pattern to PQ alone — mention PQ only within friction or wins paragraphs.
 
 All narrative and explanation fields must be written in Simplified Chinese. Keep enum values and machine-readable category IDs unchanged.
 
@@ -28,7 +30,24 @@ export function generateFrictionWinsPrompt(data: {
   effectivePatterns: Array<{ category: string; label: string; frequency: number; avg_confidence: number; descriptions: string[] }>;
   totalSessions: number;
   period: string;
+  pqSignals?: {
+    deficits: Array<{ category: string; count: number }>;
+    strengths: Array<{ category: string; count: number }>;
+  };
 }): string {
+  const hasPQData = data.pqSignals?.deficits.length || data.pqSignals?.strengths.length;
+  const pqSection = hasPQData
+    ? `
+PROMPT QUALITY SIGNALS (supplementary):
+
+Deficits:
+${((data.pqSignals?.deficits ?? []).map(d => `  ${d.category}: ${d.count}`).join('\n') || '  (none above threshold)')}
+
+Strengths:
+${((data.pqSignals?.strengths ?? []).map(s => `  ${s.category}: ${s.count}`).join('\n') || '  (none above threshold)')}
+`
+    : '';
+
   return `Analyze these cross-session patterns from ${data.totalSessions} sessions over ${data.period}.
 
 FRICTION CATEGORIES (ranked by frequency × severity):
@@ -36,7 +55,7 @@ ${JSON.stringify(data.frictionCategories.slice(0, 15), null, 2)}
 
 EFFECTIVE PATTERNS (ranked by frequency, grouped by category):
 ${JSON.stringify(data.effectivePatterns.slice(0, 10), null, 2)}
-
+${pqSection}
 Respond with this JSON format:
 {
   "narrative": "Your 300-500 word analysis of the most significant patterns",
@@ -135,6 +154,7 @@ RULES:
 - The tagline must be empowering and descriptive, never critical or negative
 - Base the tagline on the dominant session types, workflow patterns, and outcome distribution
 - Think of it like a developer personality type — specific and earned, not generic
+- Generate a tagline_subtitle: a single short sentence (≤80 chars) that completes or elaborates the tagline with a specific behavioral observation (e.g. "plans thoroughly, debugs systematically, ships with confidence")
 
 All narrative and explanation fields must be written in Simplified Chinese. Keep enum values and machine-readable category IDs unchanged.
 
@@ -164,6 +184,7 @@ FRICTION FREQUENCY: ${data.frictionFrequency} total friction points across all s
 Respond with this JSON format:
 {
   "tagline": "2-4 word archetype label (e.g. The Methodical Builder)",
+  "tagline_subtitle": "single sentence ≤80 chars elaborating on the tagline (e.g. plans thoroughly, debugs systematically, ships with confidence)",
   "narrative": "3-5 sentence working style description"
 }
 

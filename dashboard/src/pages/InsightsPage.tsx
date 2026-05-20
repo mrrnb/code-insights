@@ -1,10 +1,14 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
-import { useSearchParams } from 'react-router';
+import { useSearchParams, Link } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
 import { useInsights } from '@/hooks/useInsights';
+import { useSessions } from '@/hooks/useSessions';
 import { useFilterParams } from '@/hooks/useFilterParams';
 import { useProjects } from '@/hooks/useProjects';
+import { useDispatchDiscovery } from '@/hooks/useDispatchDiscovery';
 import { buildPatternGroups } from '@/lib/pattern-grouping';
+import { buildDispatchPrefill } from '@/lib/buildDispatchPrefill';
 import { InsightListItem } from '@/components/insights/InsightListItem';
 // PromptQualityCard still used in SessionDetailPanel; on this page prompt_quality
 // insights render inline via InsightListItem → PromptQualityContent.
@@ -14,6 +18,7 @@ import { ErrorCard } from '@/components/ErrorCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
@@ -25,10 +30,24 @@ import {
 import { Sparkles, SearchX, X, FileText, GitCommit, BookOpen, Target } from 'lucide-react';
 import { getDateGroup, sortDateGroups } from '@/lib/utils';
 import { INSIGHT_TYPE_LABELS } from '@/lib/constants/colors';
-import type { Insight, InsightType } from '@/lib/types';
-import { useI18n } from '@/lib/i18n';
+import { parseJsonField } from '@/lib/types';
+import type { Insight, InsightType, DispatchPrefill, SessionCharacter, EffectivePattern, FrictionPoint } from '@/lib/types';
+import { InsightTypePills } from '@/components/filters/InsightTypePills';
+import { SaveFilterPopover } from '@/components/filters/SaveFilterPopover';
+import { SavedFiltersDropdown } from '@/components/filters/SavedFiltersDropdown';
+import { SourceToolSelect } from '@/components/filters/SourceToolSelect';
+import { useSavedFilters } from '@/hooks/useSavedFilters';
+import { LlmNudgeBanner } from '@/components/LlmNudgeBanner';
+import { DispatchDrawer } from '@/components/dispatch/DispatchDrawer';
+import { FloatingActionBar } from '@/components/dispatch/FloatingActionBar';
+import { DispatchEntryButton } from '@/components/insights/DispatchEntryButton';
+import { DispatchDiscoveryCallout } from '@/components/insights/DispatchDiscoveryCallout';
+import { fetchFacets } from '@/lib/api';
+import { captureDispatchCalloutShown, captureDispatchOpenedFromInsights } from '@/lib/telemetry';
 
 const INSIGHT_TYPES: InsightType[] = ['summary', 'decision', 'learning', 'technique', 'prompt_quality'];
+
+const QUALIFYING_SESSION_TYPES = new Set<SessionCharacter>(['feature_build', 'deep_focus', 'bug_hunt', 'refactor']);
 
 const TYPE_SECTION_ICONS: Record<string, { icon: typeof FileText; color: string }> = {
   summary: { icon: FileText, color: 'text-purple-500' },
@@ -38,6 +57,13 @@ const TYPE_SECTION_ICONS: Record<string, { icon: typeof FileText; color: string 
   prompt_quality: { icon: Target, color: 'text-rose-500' },
 };
 
+const VIEW_MODES = [
+  { value: 'timeline', label: 'Timeline' },
+  { value: 'type', label: 'By Type' },
+  { value: 'project', label: 'By Project' },
+  { value: 'session', label: 'By Session' },
+] as const;
+
 interface InsightGroup {
   key: string;
   label: string;
@@ -45,22 +71,63 @@ interface InsightGroup {
   insights: Insight[];
 }
 
-export default function InsightsPage() {
-  const { t } = useI18n();
-  const VIEW_MODES = [
-    { value: 'timeline', label: t('insights.view.timeline') },
-    { value: 'type', label: t('insights.view.type') },
-    { value: 'project', label: t('insights.view.project') },
-    { value: 'session', label: t('insights.view.session') },
-  ] as const;
+const MAX_DISPATCH_INSIGHTS = 8;
 
-  const [filters, setFilter, , clearFilters] = useFilterParams({
+export default function InsightsPage() {
+  const [filters, setFilter, setFilters, clearFilters] = useFilterParams({
     q: '',
     project: 'all',
     type: 'all',
     view: 'timeline',
     pattern: '',
+    source: 'all',
   });
+
+  // Dispatch selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedInsights, setSelectedInsights] = useState<Insight[]>([]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [dispatchPrefill, setDispatchPrefill] = useState<DispatchPrefill | undefined>(undefined);
+
+  // Dispatch discovery: callout + opened tracking
+  const { shouldShowCallout, markCalloutDismissed, markDispatchOpened } = useDispatchDiscovery();
+
+  const handleToggleSelect = useCallback((insight: Insight) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(insight.id)) {
+        next.delete(insight.id);
+        setSelectedInsights((ins) => ins.filter((i) => i.id !== insight.id));
+      } else {
+        if (next.size >= MAX_DISPATCH_INSIGHTS) return prev;
+        next.add(insight.id);
+        setSelectedInsights((ins) => [...ins, insight]);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleReorder = useCallback((reordered: Insight[]) => {
+    setSelectedInsights(reordered);
+    setSelectedIds(new Set(reordered.map((i) => i.id)));
+  }, []);
+
+  const handleRemoveFromDrawer = useCallback((id: string) => {
+    setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+    setSelectedInsights((ins) => ins.filter((i) => i.id !== id));
+  }, []);
+
+  const { savedFilters, saveFilter, deleteFilter } = useSavedFilters('insights');
+
+  // activeTypes is a comma-separated list, or empty = all
+  const activeTypes: InsightType[] = useMemo(() => {
+    if (!filters.type || filters.type === 'all') return [];
+    return filters.type.split(',').filter((t) => INSIGHT_TYPES.includes(t as InsightType)) as InsightType[];
+  }, [filters.type]);
+
+  function handleTypePillChange(types: InsightType[]) {
+    setFilter('type', types.length === 0 ? 'all' : types.join(','));
+  }
 
   const [searchParams] = useSearchParams();
   const highlightedInsightId = searchParams.get('insight') || null;
@@ -69,8 +136,88 @@ export default function InsightsPage() {
   const { data: insights = [], isLoading, isError, refetch } = useInsights(
     filters.project !== 'all' ? { projectId: filters.project } : undefined
   );
+  // Fetch sessions for source tool mapping — Insight type lacks source_tool, so we join client-side.
+  // limit: 500 matches Analytics page pattern; server default is 50 which would silently miss sessions.
+  const { data: allSessions = [] } = useSessions({ limit: 500 });
+
+  // Fetch raw facets to power DispatchEntryButton prefill
+  const { data: facetsData } = useQuery({
+    queryKey: ['facets', 'list'],
+    queryFn: () => fetchFacets({ period: '30d' }),
+    staleTime: 60_000,
+  });
+
+  // Build a map of session_id → facet row for prefill lookup
+  const facetsBySessionId = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof facetsData>['facets'][0]>();
+    for (const f of (facetsData?.facets ?? [])) {
+      map.set(f.session_id, f);
+    }
+    return map;
+  }, [facetsData]);
+
+  // Primary qualifying session: most recent session with a qualifying character that has facets,
+  // at least 3 insights (so canGenerate can be satisfied after auto-select), and non-empty
+  // prefill content (so contextMarkdown won't be empty when the drawer opens).
+  const primarySession = useMemo(() => {
+    const qualifying = allSessions.filter((s) => {
+      if (!s.session_character || !QUALIFYING_SESSION_TYPES.has(s.session_character as SessionCharacter)) return false;
+      const facetRow = facetsBySessionId.get(s.id);
+      if (!facetRow) return false;
+      // Require ≥3 insights so canGenerate can be satisfied after auto-select
+      const sessionInsightCount = insights.filter((i) => i.session_id === s.id).length;
+      if (sessionInsightCount < 3) return false;
+      // Require non-empty prefill content so contextMarkdown isn't empty
+      const patterns = parseJsonField<EffectivePattern[]>(facetRow.effective_patterns, []);
+      const friction = parseJsonField<FrictionPoint[]>(facetRow.friction_points, []).filter(
+        (f) => f.attribution === 'user-actionable'
+      );
+      return patterns.length > 0 || friction.length > 0;
+    });
+    if (qualifying.length === 0) return null;
+    return qualifying.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())[0];
+  }, [allSessions, facetsBySessionId, insights]);
 
   const allInsightIds = useMemo(() => new Set(insights.map((i) => i.id)), [insights]);
+
+  // Fire callout_shown telemetry once when callout becomes visible
+  useEffect(() => {
+    if (shouldShowCallout && primarySession) {
+      captureDispatchCalloutShown();
+    }
+  }, [shouldShowCallout, primarySession]);
+
+  function openDispatchWithPrefill() {
+    if (!primarySession) return;
+    const facetRow = facetsBySessionId.get(primarySession.id);
+    if (!facetRow) return;
+    const prefill = buildDispatchPrefill(primarySession, facetRow);
+
+    // Auto-select insights from this session so canGenerate passes on entry
+    const sessionInsights = insights
+      .filter((i) => i.session_id === primarySession.id)
+      .slice(0, MAX_DISPATCH_INSIGHTS);
+    setSelectedInsights(sessionInsights);
+    setSelectedIds(new Set(sessionInsights.map((i) => i.id)));
+
+    setDispatchPrefill(prefill);
+    setDrawerOpen(true);
+    markDispatchOpened();
+    captureDispatchOpenedFromInsights(primarySession.session_character);
+  }
+
+  function handleCalloutDismiss() {
+    markCalloutDismissed();
+  }
+
+  // Map session_id → source_tool for client-side source filtering on Insights
+  const sessionSourceMap = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const s of allSessions) {
+      map.set(s.id, s.source_tool);
+    }
+    return map;
+  }, [allSessions]);
 
   const patternGroups = useMemo(() => buildPatternGroups(insights), [insights]);
 
@@ -82,18 +229,23 @@ export default function InsightsPage() {
   const filtered = useMemo(() => {
     return insights.filter((i) => {
       if (patternInsightIds && !patternInsightIds.has(i.id)) return false;
-      if (filters.type !== 'all' && i.type !== filters.type) return false;
+      // Multi-type pill support: activeTypes empty = all; non-empty = must match one
+      if (activeTypes.length > 0 && !activeTypes.includes(i.type)) return false;
       if (filters.q) {
         const q = filters.q.toLowerCase();
         if (!i.title.toLowerCase().includes(q) && !i.content.toLowerCase().includes(q)) {
           return false;
         }
       }
+      if (filters.source !== 'all') {
+        const sourceTool = sessionSourceMap.get(i.session_id);
+        if (sourceTool !== filters.source) return false;
+      }
       return true;
     });
-  }, [insights, filters.type, filters.q, patternInsightIds]);
+  }, [insights, activeTypes, filters.q, filters.source, patternInsightIds, sessionSourceMap]);
 
-  const hasFilters = !!filters.q || filters.type !== 'all' || filters.project !== 'all' || !!filters.pattern;
+  const hasFilters = !!filters.q || filters.type !== 'all' || filters.project !== 'all' || !!filters.pattern || filters.source !== 'all';
 
   const grouped = useMemo((): InsightGroup[] => {
     const view = filters.view;
@@ -165,26 +317,34 @@ export default function InsightsPage() {
   }, [filtered, filters.view]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)]">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] relative">
       {/* Sticky header: title + filters */}
       <div className="shrink-0 sticky top-0 z-10 bg-background border-b px-6 pt-5 pb-3 space-y-3">
-        <div>
-          <h1 className="text-2xl font-bold">{t('insights.title')}</h1>
-          {!isLoading && (
-            <p className="text-muted-foreground text-sm">
-              {t('insights.count', { count: filtered.length, filtered: hasFilters ? t('insights.filteredSuffix') : '' })}
-            </p>
-          )}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">Insights</h1>
+            {!isLoading && (
+              <p className="text-muted-foreground text-sm">
+                {filtered.length} insight{filtered.length !== 1 ? 's' : ''}
+                {hasFilters ? ' matching filters' : ''}
+              </p>
+            )}
+          </div>
+          <DispatchEntryButton
+            sessionCharacter={primarySession?.session_character}
+            facetsLoaded={!!primarySession && facetsBySessionId.has(primarySession.id)}
+            onClick={openDispatchWithPrefill}
+          />
         </div>
 
         {/* Pattern filter banner */}
         {filters.pattern && (
           <div className="flex items-center gap-2 rounded-lg border bg-amber-500/5 border-amber-500/20 px-3 py-2">
             <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
-                {t('insights.pattern')}
+              Pattern
             </Badge>
             <span className="text-sm text-muted-foreground">
-              {t('insights.patternShowing', { count: filtered.length })}
+              Showing {filtered.length} insight{filtered.length !== 1 ? 's' : ''} in this recurring pattern
             </span>
             <Button
               variant="ghost"
@@ -199,61 +359,76 @@ export default function InsightsPage() {
 
         {/* Filters + View Mode */}
         <div className="flex flex-wrap items-center gap-3">
-        <Input
-          placeholder={t('insights.search')}
-          value={filters.q}
-          onChange={(e) => setFilter('q', e.target.value)}
-          className="max-w-xs"
-        />
+          <SavedFiltersDropdown
+            savedFilters={savedFilters}
+            onApply={(f) => setFilters(f as Parameters<typeof setFilters>[0])}
+            onDelete={deleteFilter}
+          />
 
-        <Select value={filters.project} onValueChange={(v) => setFilter('project', v)}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder={t('insights.allProjects')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('insights.allProjects')}</SelectItem>
-            {projects.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Input
+            placeholder="Search insights..."
+            value={filters.q}
+            onChange={(e) => setFilter('q', e.target.value)}
+            className="max-w-xs"
+          />
 
-        <Select value={filters.type} onValueChange={(v) => setFilter('type', v)}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder={t('insights.allTypes')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('insights.allTypes')}</SelectItem>
-            {INSIGHT_TYPES.map((t) => (
-              <SelectItem key={t} value={t}>
-                {INSIGHT_TYPE_LABELS[t]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Select value={filters.project} onValueChange={(v) => setFilter('project', v)}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="All Projects" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Projects</SelectItem>
+              {projects.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        <Tabs
-          value={filters.view}
-          onValueChange={(v) => setFilter('view', v)}
-          className="ml-auto"
-        >
-          <TabsList variant="default" className="h-9">
-            {VIEW_MODES.map((mode) => (
-              <TabsTrigger key={mode.value} value={mode.value} className="text-xs px-3">
-                {mode.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+          <SourceToolSelect
+            value={filters.source}
+            onValueChange={(v) => setFilter('source', v)}
+            className="w-[140px]"
+          />
+
+          <Tabs
+            value={filters.view}
+            onValueChange={(v) => setFilter('view', v)}
+            className="ml-auto"
+          >
+            <TabsList variant="default" className="h-9">
+              {VIEW_MODES.map((mode) => (
+                <TabsTrigger key={mode.value} value={mode.value} className="text-xs px-3">
+                  {mode.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* Type pills row */}
+        <div className="flex flex-wrap items-center gap-2">
+          <InsightTypePills activeTypes={activeTypes} onChange={handleTypePillChange} />
+          <SaveFilterPopover
+            activeFilters={{ q: filters.q, project: filters.project, type: filters.type, source: filters.source }}
+            defaultFilterValues={{ q: '', project: 'all', type: 'all', source: 'all' }}
+            onSave={saveFilter}
+          />
         </div>
       </div>
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+      {shouldShowCallout && primarySession && facetsBySessionId.has(primarySession.id) && (
+        <DispatchDiscoveryCallout
+          onTryIt={() => { openDispatchWithPrefill(); }}
+          onDismiss={handleCalloutDismiss}
+        />
+      )}
+      <LlmNudgeBanner context="insights" />
       {isError && !isLoading ? (
-        <ErrorCard message={t('insights.error')} onRetry={refetch} />
+        <ErrorCard message="Failed to load insights" onRetry={refetch} />
       ) : isLoading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => (
@@ -264,21 +439,24 @@ export default function InsightsPage() {
         hasFilters ? (
           <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
             <SearchX className="h-8 w-8 text-muted-foreground" />
-            <p className="font-medium">{t('insights.emptyFilteredTitle')}</p>
+            <p className="font-medium">No insights match your search</p>
             <p className="text-sm text-muted-foreground">
-              {t('insights.emptyFilteredDesc')}
+              Try different keywords or clear the search to see all insights.
             </p>
             <Button variant="outline" size="sm" onClick={clearFilters}>
-              {t('insights.clearFilters')}
+              Clear filters
             </Button>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
             <Sparkles className="h-8 w-8 text-muted-foreground" />
-            <p className="font-medium">{t('insights.emptyTitle')}</p>
-            <p className="text-sm text-muted-foreground">
-              {t('insights.emptyDesc')}
+            <p className="font-medium">No insights yet</p>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              If you haven{"'"}t already, configure an LLM provider to unlock AI-powered insights — decisions, learnings, and patterns extracted from your sessions.
             </p>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/settings">Configure LLM provider</Link>
+            </Button>
           </div>
         )
       ) : (
@@ -298,16 +476,37 @@ export default function InsightsPage() {
                   {group.label} ({group.count})
                 </h2>
                 <div className="rounded-md border overflow-hidden">
-                  {group.insights.map((insight) => (
-                    <InsightListItem
-                      key={insight.id}
-                      insight={insight}
-                      showProject={filters.view !== 'project'}
-                      allInsightIds={allInsightIds}
-                      highlighted={insight.id === highlightedInsightId}
-                      defaultExpanded={insight.id === highlightedInsightId}
-                    />
-                  ))}
+                  {group.insights.map((insight) => {
+                    const isSelected = selectedIds.has(insight.id);
+                    const atMax = selectedIds.size >= MAX_DISPATCH_INSIGHTS;
+                    return (
+                      <div
+                        key={insight.id}
+                        className={`relative group/dispatch ${isSelected ? 'bg-primary/5' : ''}`}
+                      >
+                        <div
+                          className="absolute left-2 top-3 z-10 opacity-0 group-hover/dispatch:opacity-100 transition-opacity"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            disabled={!isSelected && atMax}
+                            onCheckedChange={() => handleToggleSelect(insight)}
+                            aria-label={`Select insight: ${insight.title}`}
+                          />
+                        </div>
+                        <div className={`transition-[padding-left] ${isSelected ? 'pl-8' : 'group-hover/dispatch:pl-8'}`}>
+                          <InsightListItem
+                            insight={insight}
+                            showProject={filters.view !== 'project'}
+                            allInsightIds={allInsightIds}
+                            highlighted={insight.id === highlightedInsightId}
+                            defaultExpanded={insight.id === highlightedInsightId}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -315,6 +514,20 @@ export default function InsightsPage() {
         </div>
       )}
       </div>
+
+      <FloatingActionBar
+        count={selectedIds.size}
+        onOpen={() => { setDispatchPrefill(undefined); setDrawerOpen(true); }}
+      />
+
+      <DispatchDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        selectedInsights={selectedInsights}
+        onReorder={handleReorder}
+        onRemove={handleRemoveFromDrawer}
+        prefill={dispatchPrefill}
+      />
     </div>
   );
 }

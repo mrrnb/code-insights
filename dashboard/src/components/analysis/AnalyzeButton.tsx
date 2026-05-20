@@ -15,7 +15,6 @@ import { Link } from 'react-router';
 import { useAnalysis } from './AnalysisContext';
 import { useLlmConfig } from '@/hooks/useConfig';
 import type { Session } from '@/lib/types';
-import { useI18n } from '@/lib/i18n';
 
 interface AnalyzeButtonProps {
   session: Session;
@@ -24,21 +23,16 @@ interface AnalyzeButtonProps {
 }
 
 export function AnalyzeButton({ session, hasExistingInsights, insightCount }: AnalyzeButtonProps) {
-  const { t } = useI18n();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const { state: analysisState, startAnalysis, cancelAnalysis } = useAnalysis();
+  const { getAnalysisState, startAnalysis, cancelAnalysis } = useAnalysis();
   const { data: llmConfig } = useLlmConfig();
 
   const configured = !!(llmConfig?.provider && llmConfig?.model);
 
-  const isAnalyzingThisSession =
-    analysisState.status === 'analyzing' && analysisState.sessionId === session.id && analysisState.type === 'session';
-  const isAnalyzingOther =
-    analysisState.status === 'analyzing' && !isAnalyzingThisSession;
+  const analysisState = getAnalysisState(session.id, 'session');
+  const isAnalyzingThisSession = analysisState?.status === 'analyzing';
   const isCompleteForThisSession =
-    (analysisState.status === 'complete' || analysisState.status === 'error') &&
-    analysisState.sessionId === session.id &&
-    analysisState.type === 'session';
+    (analysisState?.status === 'complete' || analysisState?.status === 'error');
 
   const handleAnalyze = () => {
     startAnalysis(session, 'session');
@@ -59,11 +53,11 @@ export function AnalyzeButton({ session, hasExistingInsights, insightCount }: An
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <AlertCircle className="h-4 w-4" />
         <span>
-          {t('analysis.configurePrefix')}{' '}
+          Configure an AI provider in{' '}
           <Link to="/settings" className="underline hover:text-foreground">
-            {t('nav.settings')}
+            Settings
           </Link>{' '}
-          {t('analysis.configureSuffix')}
+          to analyze sessions
         </span>
       </div>
     );
@@ -75,34 +69,18 @@ export function AnalyzeButton({ session, hasExistingInsights, insightCount }: An
         <div className="flex items-center gap-3">
           <Button disabled variant="outline" className="gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            {analysisState.progress?.message || `Analyzing "${analysisState.sessionTitle}"...`}
+            {analysisState?.progress?.message || `Analyzing "${analysisState?.sessionTitle}"...`}
           </Button>
           <Button
             variant="ghost"
             size="sm"
             className="gap-1.5 text-muted-foreground hover:text-foreground"
-            onClick={cancelAnalysis}
+            onClick={() => cancelAnalysis(session.id, 'session')}
           >
             <X className="h-3.5 w-3.5" />
-            {t('analysis.cancel')}
+            Cancel
           </Button>
         </div>
-      </div>
-    );
-  }
-
-  if (isAnalyzingOther) {
-    return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-3">
-          <Button disabled variant="outline" className="gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            {t('analysis.inProgress')}
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {t('analysis.waiting', { title: analysisState.sessionTitle })}
-        </p>
       </div>
     );
   }
@@ -118,12 +96,12 @@ export function AnalyzeButton({ session, hasExistingInsights, insightCount }: An
           {isReanalyze ? (
             <>
               <CheckCircle className="h-4 w-4 text-green-500" />
-              {t('analysis.reanalyze')}
+              Re-analyze Session
             </>
           ) : (
             <>
               <Sparkles className="h-4 w-4" />
-              {t('analysis.analyze')}
+              Analyze Session
             </>
           )}
         </Button>
@@ -137,36 +115,37 @@ export function AnalyzeButton({ session, hasExistingInsights, insightCount }: An
 
       {isReanalyze && !isCompleteForThisSession && (
         <p className="text-xs text-muted-foreground">
-          {t('analysis.replaceWarning')}
+          Replaces existing insights. Uses LLM tokens.
         </p>
       )}
 
-      {isCompleteForThisSession && analysisState.result?.success && (
+      {isCompleteForThisSession && analysisState?.result?.success && (
         <div className="text-sm text-green-600">
           {analysisState.result.insightCount != null
-            ? t('analysis.completeCount', { count: analysisState.result.insightCount })
-            : t('analysis.complete')}
+            ? `Analysis complete! ${analysisState.result.insightCount} insight${analysisState.result.insightCount !== 1 ? 's' : ''} saved.`
+            : 'Analysis complete! Insights saved.'}
         </div>
       )}
 
-      {isCompleteForThisSession && !analysisState.result?.success && (
+      {isCompleteForThisSession && !analysisState?.result?.success && (
         <div className="flex items-start gap-2 text-sm text-red-500">
           <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-          <span>{analysisState.result?.error || t('analysis.failedText')}</span>
+          <span>{analysisState?.result?.error || 'Analysis failed'}</span>
         </div>
       )}
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('analysis.confirmTitle')}</AlertDialogTitle>
+            <AlertDialogTitle>Re-analyze this session?</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('analysis.confirmDesc', { count: insightCount ?? 0 })}
+              This will replace {insightCount ?? 0} existing insight{(insightCount ?? 0) !== 1 ? 's' : ''} with new ones.
+              This uses LLM tokens and cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('analysis.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleAnalyze}>{t('analysis.reanalyze')}</AlertDialogAction>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAnalyze}>Re-analyze</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

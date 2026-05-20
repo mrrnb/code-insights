@@ -3,9 +3,10 @@ import * as path from 'path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { loadSyncState, saveSyncState } from '../utils/config.js';
+import { autoDetectOllama } from '../utils/ollama-detect.js';
 import { trackEvent, identifyUser, captureError, classifyError } from '../utils/telemetry.js';
 import { insertSessionWithProjectAndReturnIsNew, insertMessages, recalculateUsageStats } from '../db/write.js';
-import { getDb } from '../db/client.js';
+import { getDb, getMigrationResult } from '../db/client.js';
 import { getAllProviders, getProvider } from '../providers/registry.js';
 import { setProviderVerbose } from '../providers/context.js';
 import type { SessionProvider } from '../providers/types.js';
@@ -63,6 +64,28 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
     throw new Error(`Database error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
+  // Auto-detect Ollama if no LLM is configured (silent if not running)
+  if (!options.quiet) {
+    await autoDetectOllama();
+  }
+
+  // Check if V6 migration was just applied — triggers auto force-sync for interactive sessions
+  const migrationResult = getMigrationResult();
+  const v6JustApplied = migrationResult?.v6Applied === true;
+
+  if (v6JustApplied && options.quiet) {
+    // Hook-triggered sync: defer re-parse to avoid adding 30-60s to a sub-second operation
+    process.stderr.write("Message counts updated in v6. Run 'code-insights sync --force' to recalculate.\n");
+  }
+
+  // Auto force-sync on V6 migration (interactive only, not quiet/hook mode)
+  if (v6JustApplied && !options.quiet && !options.force && !options.dryRun) {
+    log(chalk.cyan('\n  V6 migration: recalculating message counts across all sessions...'));
+    log(chalk.dim('  Fixed: user messages were previously overcounted by including tool results and system messages'));
+    // Trigger force re-parse by treating this as a force sync for state reset
+    options = { ...options, force: true };
+  }
+
   // Dry-run banner
   if (options.dryRun) {
     log(chalk.yellow('\n  Dry run -- no changes will be made'));
@@ -114,7 +137,6 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
   let totalErrorCount = 0;
   let totalUpdatedExisting = 0;
   const sessionsByProvider: Record<string, number> = {};
-
   for (const provider of providers) {
     const providerName = provider.getProviderName();
     try {
@@ -125,15 +147,17 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
       // Discovery
       spinner.start(`Discovering ${providerName} sessions...`);
       const sessionFiles = await provider.discover({ projectFilter: options.project });
-      spinner.succeed(`Found ${sessionFiles.length} ${providerName} session files`);
+      spinner.stop();
 
       if (sessionFiles.length === 0) continue;
 
       // Filter to only new/modified files
       const filesToSync = filterFilesToSync(sessionFiles, syncState, options.force);
-      log(chalk.gray(`  ${filesToSync.length} files need syncing (${sessionFiles.length - filesToSync.length} already synced)`));
 
-      if (filesToSync.length === 0) continue;
+      if (filesToSync.length === 0) {
+        log(chalk.gray(`  ✔ Up to date (${sessionFiles.length} sessions)`));
+        continue;
+      }
 
       if (options.dryRun) {
         for (const file of filesToSync) {
@@ -145,7 +169,6 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
       // Process files — accumulate per-provider counts, show one summary line after
       let providerSyncedCount = 0;
       let providerUpdatedCount = 0;
-      let providerSkippedCount = 0;
       let providerMessageCount = 0;
 
       for (const filePath of filesToSync) {
@@ -156,13 +179,14 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
           // Parse session
           const session = await provider.parse(filePath);
           if (!session) {
-            providerSkippedCount++;
+            // Track null-parse files so they aren't re-discovered on every sync run
+            updateSyncState(syncState, filePath, '__empty__');
+            saveSyncState(syncState);
             continue;
           }
 
           // Skip trivial sessions (≤2 messages) — likely abandoned prompts with no content
           if (session.messageCount <= 2) {
-            providerSkippedCount++;
             updateSyncState(syncState, filePath, session.id);
             saveSyncState(syncState);
             continue;
@@ -170,7 +194,7 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
 
           // Write session and messages to SQLite
           const isNew = insertSessionWithProjectAndReturnIsNew(session, !!options.force);
-          insertMessages(session);
+          insertMessages(session, !!options.force);
 
           // Update and persist sync state after each file
           // so progress survives crashes
@@ -199,17 +223,14 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
 
       // One summary line per provider instead of per-file noise
       spinner.stop();
-      if (providerSyncedCount > 0 || providerSkippedCount > 0) {
+      if (providerSyncedCount > 0) {
         const providerNewCount = providerSyncedCount - providerUpdatedCount;
         const parts: string[] = [];
         if (providerNewCount > 0) parts.push(`${providerNewCount} new`);
         if (providerUpdatedCount > 0) parts.push(`${providerUpdatedCount} updated`);
         if (parts.length === 0) parts.push('0 synced');
         const syncedPart = `${parts.join(', ')}${providerMessageCount > 0 ? ` (${providerMessageCount.toLocaleString()} messages)` : ''}`;
-        const skippedPart = providerSkippedCount > 0
-          ? `, ${providerSkippedCount} empty`
-          : '';
-        log(chalk.gray(`  ${syncedPart}${skippedPart}`));
+        log(chalk.gray(`  ✔ Synced ${syncedPart}`));
       }
     } catch (error) {
       totalErrorCount++;
@@ -234,14 +255,26 @@ export async function runSync(options: SyncOptions = {}): Promise<SyncResult> {
   if (shouldRecalculateUsageStats) {
     spinner.start('Recalculating usage stats...');
     try {
-      const result = recalculateUsageStats();
-      spinner.succeed(`Usage stats reconciled (${result.sessionsWithUsage} sessions with usage data)`);
+      recalculateUsageStats();
+      spinner.stop();
     } catch (error) {
       spinner.warn('Could not reconcile usage stats');
       if (!options.quiet) {
         console.error(chalk.red(`  ${error instanceof Error ? error.message : 'Unknown error'}`));
       }
     }
+  }
+
+  // After V6 auto force-sync: all re-synced sessions have updated message counts.
+  // Any existing insights were generated from the old (inflated) counts — show advisory.
+  if (v6JustApplied && !options.quiet && totalSyncedCount > 0) {
+    log(chalk.dim(`\n  i ${totalSyncedCount} sessions have updated message counts. Existing insights may reflect old data.`));
+    log(chalk.dim(`    Run 'code-insights reflect backfill' to regenerate (uses LLM API credits).`));
+
+    trackEvent('migration_v6_resync', {
+      sessions_recalculated: totalSyncedCount,
+      insight_count: totalSyncedCount,
+    });
   }
 
   // Save sync state
@@ -324,6 +357,28 @@ export async function syncCommand(options: SyncOptions = {}): Promise<void> {
   }
 }
 
+
+/**
+ * Sync a single session file to SQLite.
+ * Used by the insights --hook path to guarantee fresh data before analysis.
+ * Much faster than full sync (no directory scanning, no other providers).
+ */
+export async function syncSingleFile(options: {
+  filePath: string;
+  sourceTool?: string;
+  quiet?: boolean;
+}): Promise<void> {
+  const provider = getProvider(options.sourceTool ?? 'claude-code');
+  const session = await provider.parse(options.filePath);
+  if (!session) return;
+
+  // Data quality invariant: skip trivial sessions (matches runSync filter at line ~194)
+  if (session.messageCount <= 2) return;
+
+  insertSessionWithProjectAndReturnIsNew(session, false);
+  insertMessages(session);
+}
+
 /**
  * Filter files to only those that need syncing
  */
@@ -332,7 +387,16 @@ function filterFilesToSync(files: string[], syncState: SyncState, force?: boolea
 
   return files.filter((filePath) => {
     const { realPath, sessionFragment } = splitVirtualPath(filePath);
-    const stat = fs.statSync(realPath);
+    let stat: ReturnType<typeof fs.statSync>;
+    try {
+      stat = fs.statSync(realPath);
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        console.warn(`[sync] skipping disappeared file: ${realPath}`);
+        return false;
+      }
+      throw err;
+    }
     const lastModified = stat.mtime.toISOString();
     const fileState = syncState.files[realPath];
 
@@ -402,7 +466,7 @@ interface TrivialSession {
 export function getTrivialSessions(): TrivialSession[] {
   const db = getDb();
   return db.prepare(`
-    SELECT id, title, project_name, message_count
+    SELECT id, COALESCE(custom_title, generated_title) as title, project_name, message_count
     FROM sessions
     WHERE message_count <= 2 AND deleted_at IS NULL
     ORDER BY started_at DESC

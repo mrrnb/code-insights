@@ -1,6 +1,7 @@
 // Gemini provider implementation (server-side, no browser dependencies)
 
 import type { LLMClient, LLMMessage, LLMResponse, ChatOptions } from '../types.js';
+import { flattenContent } from '../types.js';
 
 export function createGeminiClient(apiKey: string, model: string): LLMClient {
   return {
@@ -13,20 +14,30 @@ export function createGeminiClient(apiKey: string, model: string): LLMClient {
 
       const contents = chatMessages.map(m => ({
         role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }],
+        // flattenContent converts ContentBlock[] to string; strings pass through unchanged.
+        parts: [{ text: flattenContent(m.content) }],
       }));
+
+      const generationConfig: Record<string, unknown> = {
+        temperature: options?.temperature ?? 0.7,
+        maxOutputTokens: 8192,
+      };
+
+      // JSON mode is the default for analysis calls (prevents markdown fences and prose prefixes).
+      // Dispatch and other text callers pass responseFormat: 'text' to get plain markdown output.
+      if (options?.responseFormat !== 'text') {
+        generationConfig.responseMimeType = 'application/json';
+      }
 
       const body: Record<string, unknown> = {
         contents,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 8192,
-        },
+        generationConfig,
       };
 
       if (systemMessage) {
         body.systemInstruction = {
-          parts: [{ text: systemMessage.content }],
+          // flattenContent handles string | ContentBlock[] system messages.
+          parts: [{ text: flattenContent(systemMessage.content) }],
         };
       }
 
@@ -44,7 +55,17 @@ export function createGeminiClient(apiKey: string, model: string): LLMClient {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({})) as { error?: { message?: string } };
-        throw new Error(error.error?.message || `Gemini API error: ${response.status}`);
+        const detail = error.error?.message;
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(`Invalid API key. Check your Gemini API key in \`code-insights config llm\`.${detail ? ` (${detail})` : ''}`);
+        }
+        if (response.status === 429) {
+          throw new Error(`Rate limited or quota exceeded. Check your Gemini account usage.${detail ? ` (${detail})` : ''}`);
+        }
+        if (response.status >= 500) {
+          throw new Error(`Gemini service error (HTTP ${response.status}). Try again later.${detail ? ` (${detail})` : ''}`);
+        }
+        throw new Error(detail || `Gemini API error (HTTP ${response.status})`);
       }
 
       const data = await response.json() as {

@@ -10,8 +10,8 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { SOURCE_TOOLS } from '@/components/filters/SourceToolSelect';
 import type { Project } from '@/lib/types';
-import { useI18n } from '@/lib/i18n';
 
 interface ProjectNavProps {
   projects: Project[];
@@ -28,7 +28,6 @@ export function ProjectNav({
   onSelectProject,
   onSelectSource,
 }: ProjectNavProps) {
-  const { t } = useI18n();
   const [search, setSearch] = useState('');
   const showSearch = projects.length > 8;
 
@@ -48,7 +47,7 @@ export function ProjectNav({
       <div className="p-3 space-y-2">
         {showSearch && (
           <Input
-            placeholder={t('projectNav.search')}
+            placeholder="Search projects..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-8 text-xs"
@@ -68,7 +67,7 @@ export function ProjectNav({
               : 'text-foreground hover:bg-accent/50'
           )}
         >
-          <span className="truncate">{t('projectNav.allProjects')}</span>
+          <span className="truncate">All Projects</span>
           <span className="text-xs text-muted-foreground tabular-nums shrink-0">{totalSessions}</span>
         </button>
 
@@ -104,15 +103,13 @@ export function ProjectNav({
       <div className="p-3 border-t">
         <Select value={selectedSource} onValueChange={onSelectSource}>
           <SelectTrigger className="h-8 text-xs">
-            <SelectValue placeholder={t('projectNav.allSources')} />
+            <SelectValue placeholder="All Sources" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('projectNav.allSources')}</SelectItem>
-            <SelectItem value="claude-code">Claude Code</SelectItem>
-            <SelectItem value="cursor">Cursor</SelectItem>
-            <SelectItem value="codex-cli">Codex CLI</SelectItem>
-            <SelectItem value="copilot-cli">Copilot CLI</SelectItem>
-            <SelectItem value="copilot">Copilot</SelectItem>
+            <SelectItem value="all">All Sources</SelectItem>
+            {SOURCE_TOOLS.map((tool) => (
+              <SelectItem key={tool.value} value={tool.value}>{tool.label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

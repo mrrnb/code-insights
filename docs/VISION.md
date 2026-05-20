@@ -15,7 +15,8 @@ There is no central Code Insights server. No accounts, no sign-ups, no cloud. Al
 ### 2. Developers Can Handle It
 
 Developers using AI coding tools are technical. They can:
-- Run `code-insights init` and answer three questions
+- Run `code-insights` and get a working dashboard immediately (no setup required)
+- Optionally run `code-insights init` to customize settings and answer three questions
 - Install a post-session hook with one command
 - Open a local dashboard that just works
 
@@ -78,39 +79,74 @@ Code Insights is a utility, not a product. It should:
 - Export Page uses the multi-provider LLM abstraction (same as session analysis) ✅
 
 ### Phase 8: Reflect & Patterns ✅
-- Session facets: per-session structured metadata (friction, patterns, workflow, outcome) extracted during analysis
-- Dedicated `session_facets` SQLite table (Schema V3) with indexed scalar columns
-- Friction category normalization via Levenshtein distance matching
-- `code-insights reflect` CLI command for cross-session LLM synthesis
-- `code-insights stats patterns` for terminal pattern viewing
-- Dashboard Patterns page with three sections: Friction & Wins, Rules & Skills, Working Style
-- Facet backfill CLI command and server endpoint for previously-analyzed sessions
-- Reflect snapshot caching with staleness tracking (Schema V4)
-- Effective pattern normalization with 8 canonical categories and confidence filtering
-- Friction taxonomy revision: 15 generic categories → 9 AI-session-focused categories answering "where did the AI-human collaboration break down?"
-- Friction attribution model: each friction point classified as user-actionable, ai-capability, or environmental — capturing both user and AI contributions to friction
-- Consistent category+description list presentation for both friction and effective patterns
+Session facets infrastructure (Schema V3, V4) shipped with per-session structured metadata: friction points, effective patterns, workflow pattern, and outcome satisfaction. Friction normalized to 9 AI-session-focused categories with attribution model (user-actionable / ai-capability / environmental). Effective patterns normalized to 8 canonical categories. Dashboard Patterns page with three sections: Friction & Wins, Rules & Skills, Working Style. `code-insights reflect` and `stats patterns` CLI commands.
+
+### Phase 8.5: Taxonomy & Classification Refinement ✅
+Effective pattern taxonomy upgraded with `driver` field (`user-driven`/`ai-driven`/`collaborative`), contrastive classification guidance, and in-session signal detection (PR #129). Prompt quality taxonomy revised to 7 deficit + 3 strength categories with 5 dimension scores and a two-layer output (user takeaways + Reflect findings) (PR #136). Reflect navigation switched from sliding windows to ISO week-based navigation with week history endpoint (PR #132). Attribution rewrite added CoT `_reasoning` scratchpad and actor-neutral friction definitions (PR #138). Backfill updated to find both missing and outdated sessions in one pass (PR #130).
+
+### Phase 9: Infrastructure & Reliability ✅
+Message classification V6 schema added `compact_count`, `auto_compact_count`, and `slash_commands` to sessions, with prompt alignment for V6 signals (PRs #151, #154). Prompt caching implemented using provider-native shared prefix caching for Anthropic (PR #180). LLM cost tracking V7 schema (`analysis_usage` table) captures per-session token counts, cache metrics, and estimated USD cost with a pricing calculator and dashboard cost UI (PR #181).
+
+### Phase 10: User Experience & Shareability ✅
+Zero-config first run: `code-insights` with no args auto-syncs and opens the dashboard — no `init` required (v4.1.0). Guided empty states for first-time users. Dashboard auto-sync before server start. Knowledge Journal page with chronological timeline of learnings and decisions by ISO week. Shareable AI Fluency Score card (v4.2.0–v4.3.0): 1200×630 PNG export with hero score (0–100 composite from 5 PQ dimensions), rainbow fingerprint bars, tool logos, effective pattern pills, and 4-week rolling scoring window.
 
 ### What's Next
-- Effective patterns audit: review the 8 pattern categories with the same rigor applied to friction
 - Progress tracking: "Am I getting better?" — weekly snapshots comparing friction trends and pattern emergence, tracking user-actionable friction declining and new patterns solidifying
 - Friction-to-pattern affinity map (e.g., stale-assumptions friction → context-gathering pattern)
 - Test suite expansion (Vitest)
-- Slash commands for quick insights from the terminal
-- LLM cost tracking per call (app-wide)
 - Session merging across tools (linking related sessions from different AI tools)
-- Gamification and shareable badges
+- Shareable badges Phase 2: stats card variant, milestone-specific cards
 
 ## Non-Goals
 
-- **Not a business** — No monetization, no paywall, no premium tier
+- **Not a business** — No monetization, no paywall, no premium tier ⚠ *see discussion below*
 - **Not a central platform** — No central database for user session data
 - **Not a dependency** — Users can stop using it anytime, data remains theirs
-- **Not a team tool** — This is a personal learning tool; no org/team features
+- **Not a team tool** — This is a personal learning tool; no org/team features ⚠ *see discussion below*
+
+---
+
+## Under Active Discussion — May Override Non-Goals
+
+> **Status:** Brainstorming phase. No implementation decisions made. This section documents a direction being explored before any code changes are committed. The founder must make an explicit decision before Phase 3 of the roadmap below begins.
+>
+> Branch: `feature/codebase-knowledge-redesign`
+> Full brainstorm notes: `docs/superpowers/specs/2026-04-22-codebase-knowledge-redesign-brainstorm.md`
+
+### Team Knowledge Sync — Optional Team Tier
+
+A brainstorming session (2026-04-22) explored adding an optional **team tier** that would allow multiple developers on the same codebase to pool their extracted knowledge — without ever sharing raw session transcripts.
+
+**The core insight:** The LLM synthesis step is a natural privacy boundary. Raw sessions stay local forever. Only the already-processed, already-scrubbed extracted knowledge (decisions, learnings, patterns, friction) would sync to a team-owned database.
+
+**What this would look like:**
+
+- **Free tier**: unchanged — fully local SQLite, personal only, everything as it is today
+- **Team tier**: Bring-Your-Own Supabase PostgreSQL — teams configure their own Supabase project; Code Insights never runs the infrastructure
+- **Privacy-preserving sync**: only LLM-extracted structured knowledge syncs; raw transcripts never leave the machine
+- **`code-insights context <topic>`**: a new retrieval command that queries both your local DB and the team's shared knowledge base, with attribution per entry (`@alice · Jan 14, 2026`)
+- **`.code-insights.md`**: generated from the full team's knowledge (not just one person's sessions) — solving the single-author blindspot
+
+**What this would require overriding:**
+
+| Current non-goal | Proposed override |
+|-----------------|-------------------|
+| Not a team tool | Optional team tier — free personal tier unchanged |
+| Not a business | Possible seat-based pricing for team tier (BYOS means no hosted infra cost) |
+| No Supabase | BYOS model — teams own their Supabase instance, not us |
+
+**What stays unchanged regardless:**
+
+- Free personal tier is identical to today — no degradation, no feature gating
+- Raw session data never leaves the machine under any tier
+- MIT-licensed open source codebase
+- No Code Insights central server — team data lives in the team's own Supabase
+
+**Decision required:** Before Phase 3 implementation begins, this file must be explicitly updated to either (a) accept the team tier direction and revise the non-goals, or (b) reject it and keep the current non-goals intact. The brainstorm notes document records all design decisions, TA review, and UX review for reference.
 
 ## Success Looks Like
 
-A developer installs Code Insights, runs `code-insights init`, installs the hook, and from then on has a local dashboard showing:
+A developer installs Code Insights, runs `code-insights` (or `npx @code-insights/cli`), installs the hook, and from then on has a local dashboard showing:
 - What they built with AI coding tools this week
 - Key decisions and why they made them
 - Patterns in how they use AI assistance across tools

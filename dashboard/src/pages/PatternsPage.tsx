@@ -7,6 +7,7 @@ import { WeekSelector } from '@/components/patterns/WeekSelector';
 import { WeekAtAGlanceStrip } from '@/components/patterns/WeekAtAGlanceStrip';
 import { CollapsibleCategoryList } from '@/components/patterns/CollapsibleCategoryList';
 import { WorkingStyleHighlights } from '@/components/patterns/WorkingStyleHighlights';
+import { getCurrentIsoWeek, formatRelativeDate } from '@/lib/date-utils';
 import { parseSSEStream } from '@/lib/sse';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,48 +17,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ErrorCard } from '@/components/ErrorCard';
 import { frictionBarColor, getDominantDriver } from '@/lib/constants/patterns';
-import { useI18n } from '@/lib/i18n';
 import {
-  AlertTriangle, Sparkles, Shield, Brain, Copy, Check, Loader2, Zap,
+  AlertTriangle, Sparkles, Shield, Brain, Copy, Check, Loader2,
 } from 'lucide-react';
-
-function formatRelativeDate(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.max(0, Math.floor(diff / 60000));
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
-// Compute the current ISO week identifier (YYYY-WNN) in UTC.
-// Mirrors formatIsoWeek/parseIsoWeek in server/src/routes/shared-aggregation.ts
-// -- kept here to avoid a server-side import in the dashboard bundle.
-// IMPORTANT: keep in sync with the canonical server implementation.
-function getCurrentIsoWeek(): string {
-  const now = new Date();
-  const nowDay = now.getUTCDay();
-  const daysToMonday = nowDay === 0 ? 6 : nowDay - 1;
-  const monday = new Date(now.getTime() - daysToMonday * 86400000);
-
-  // Thursday of this week determines the ISO year
-  const thursday = new Date(monday.getTime() + 3 * 86400000);
-  const year = thursday.getUTCFullYear();
-
-  // Find Monday of week 1 for this ISO year
-  const jan4 = new Date(Date.UTC(year, 0, 4));
-  const jan4Day = jan4.getUTCDay();
-  const daysToW1Monday = jan4Day === 0 ? 6 : jan4Day - 1;
-  const week1Monday = new Date(jan4.getTime() - daysToW1Monday * 86400000);
-
-  const weekNum = Math.round((monday.getTime() - week1Monday.getTime()) / (7 * 86400000)) + 1;
-  return `${year}-W${String(weekNum).padStart(2, '0')}`;
-}
+import { LlmNudgeBanner } from '@/components/LlmNudgeBanner';
 
 export default function PatternsPage() {
-  const { t } = useI18n();
   const [currentWeek, setCurrentWeek] = useState<string>(() => getCurrentIsoWeek());
   const [selectedProject, setSelectedProject] = useState<string | undefined>(undefined);
   const [generating, setGenerating] = useState(false);
@@ -109,6 +74,9 @@ export default function PatternsPage() {
       handleWeekChange(mostRecentWithSnapshot.week);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Intentional: handleWeekChange is stable (useCallback with no deps) and initialWeekRef
+  // is a ref — neither should trigger re-runs. Re-running on every render would break the
+  // "jump to most recent snapshot only on initial load" logic.
   }, [weeksData]);
 
   // Auto-load cached snapshot when it arrives and no local results exist yet
@@ -227,15 +195,16 @@ export default function PatternsPage() {
     ? aggregation.totalSessions / aggregation.totalAllSessions
     : 0;
 
-  const frictionWinsResult = reflectResults?.['friction-wins'] as Record<string, unknown> | undefined;
   const rulesSkillsResult = reflectResults?.['rules-skills'] as Record<string, unknown> | undefined;
   const workingStyleResult = reflectResults?.['working-style'] as Record<string, unknown> | undefined;
 
   const tagline = workingStyleResult?.tagline as string | undefined;
+  const taglineSubtitle = workingStyleResult?.tagline_subtitle as string | undefined;
   const narrative = workingStyleResult?.narrative as string | undefined;
 
   // Derive working style highlights from aggregation data
-  const successCount = aggregation?.outcomeDistribution?.['success'] ?? 0;
+  // DB stores outcome_satisfaction as 'high' | 'medium' | 'low' | 'abandoned' — NOT 'success'
+  const successCount = aggregation?.outcomeDistribution?.['high'] ?? 0;
 
   const topCharacterEntry = aggregation?.characterDistribution
     ? Object.entries(aggregation.characterDistribution).sort((a, b) => b[1] - a[1])[0]
@@ -259,17 +228,18 @@ export default function PatternsPage() {
 
   return (
     <div className="space-y-4 p-4 lg:p-6">
+      <LlmNudgeBanner context="patterns" />
       {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{t('patterns.title')}</h1>
+          <h1 className="text-2xl font-bold">Patterns</h1>
           <p className="text-sm text-muted-foreground">
-            {t('patterns.desc')}
+            Cross-session analysis — friction, wins, and working style
           </p>
           {/* Snapshot metadata line — shown when a reflection exists for this week */}
           {snapshotData?.snapshot && reflectResults && (
             <p className="text-xs text-muted-foreground mt-1">
-               Generated {formatRelativeDate(snapshotData.snapshot.generatedAt)}
+              Generated {formatRelativeDate(snapshotData.snapshot.generatedAt)}
               {' · '}
               {snapshotData.snapshot.sessionCount} sessions analyzed
               {aggregation && aggregation.totalSessions > snapshotData.snapshot.sessionCount && (
@@ -292,7 +262,7 @@ export default function PatternsPage() {
                 onChange={(e) => handleProjectChange(e.target.value || undefined)}
                 className="h-8 rounded-md border bg-background px-2 text-xs"
               >
-                <option value="">{t('patterns.allProjects')}</option>
+                <option value="">All Projects</option>
                 {projects.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
@@ -304,11 +274,11 @@ export default function PatternsPage() {
               size="sm"
             >
               {generating ? (
-                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />{t('patterns.generating')}</>
+                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Generating...</>
               ) : reflectResults ? (
-                <><Sparkles className="h-4 w-4 mr-1.5" />{t('patterns.regenerate')}</>
+                <><Sparkles className="h-4 w-4 mr-1.5" />Regenerate</>
               ) : (
-                <><Sparkles className="h-4 w-4 mr-1.5" />{t('patterns.generate')}</>
+                <><Sparkles className="h-4 w-4 mr-1.5" />Generate</>
               )}
             </Button>
           </div>
@@ -322,15 +292,15 @@ export default function PatternsPage() {
           <div>
             {aggregation.totalAllSessions === 0 ? (
               <>
-                <p className="text-sm font-medium">{t('patterns.noSessionsWeek')}</p>
+                <p className="text-sm font-medium">No sessions in this week</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {t('patterns.noSessionsWeekDesc')}
+                  Navigate to a week with sessions using the arrows above.
                 </p>
               </>
             ) : (
               <>
                 <p className="text-sm font-medium">
-                  {t('patterns.notEnough')}
+                  Not enough analyzed sessions for pattern synthesis
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Need at least 8 sessions with facets this week (currently {aggregation.totalSessions}).
@@ -348,10 +318,10 @@ export default function PatternsPage() {
           <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
           <div>
             <p className="text-sm font-medium">
-              {t('patterns.coverage', { done: aggregation.totalSessions, total: aggregation.totalAllSessions })}
+              {aggregation.totalSessions} of {aggregation.totalAllSessions} sessions analyzed
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {t('patterns.coverageDesc')}
+              Results may not represent your full patterns. Analyze more sessions for better accuracy.
             </p>
           </div>
         </div>
@@ -362,7 +332,7 @@ export default function PatternsPage() {
         <Alert className="border-amber-500/30 bg-amber-50 dark:bg-amber-950/20">
           <AlertTriangle className="h-4 w-4 text-amber-500" />
           <AlertDescription className="text-xs text-amber-700 dark:text-amber-300">
-            {t('patterns.outdated', { count: outdatedCount })}
+            {outdatedCount} session{outdatedCount !== 1 ? 's have' : ' has'} outdated insight formats. Re-analyze them from the Session Insights page to improve pattern accuracy.
           </AlertDescription>
         </Alert>
       )}
@@ -379,109 +349,101 @@ export default function PatternsPage() {
         </Card>
       )}
 
-      {/* Week at-a-glance strip — replaces WorkingStyleHeroCard + 3 pie charts */}
+      {/* Week hero card — richer summary with stats, character distribution, streak, and outcomes */}
       <WeekAtAGlanceStrip
         tagline={tagline}
+        taglineSubtitle={taglineSubtitle}
         totalSessions={aggregation?.totalSessions ?? 0}
         totalAllSessions={aggregation?.totalAllSessions ?? 0}
         outcomeDistribution={aggregation?.outcomeDistribution ?? {}}
         hasGenerated={!!reflectResults}
+        characterDistribution={aggregation?.characterDistribution}
+        streak={aggregation?.streak}
+        rateLimitCount={aggregation?.rateLimitInfo?.count}
+        rateLimitSessionsAffected={aggregation?.rateLimitInfo?.sessionsAffected}
+        sourceTools={aggregation?.sourceTools}
+        currentWeek={currentWeek}
+        pqScores={aggregation?.pqScores}
+        lifetimeSessions={aggregation?.lifetimeSessions}
+        totalTokens={aggregation?.totalTokens}
+        effectivePatterns={aggregation?.effectivePatterns?.slice(0, 3).map(ep => ({ label: ep.label, frequency: ep.frequency }))}
       />
 
       {/* 2-tab layout */}
       <Tabs defaultValue="insights">
         <TabsList variant="line" className="w-full justify-start border-b rounded-none px-0 h-auto pb-0">
-          <TabsTrigger value="insights" className="flex items-center gap-1.5 pb-2.5">
+          <TabsTrigger
+            value="insights"
+            className="flex items-center gap-1.5 pb-2.5 data-[state=active]:after:bg-blue-500 data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400"
+          >
             <Brain className="h-4 w-4" />
-            {t('patterns.insightsTab')}
+            Insights
           </TabsTrigger>
-          <TabsTrigger value="artifacts" className="flex items-center gap-1.5 pb-2.5">
+          <TabsTrigger
+            value="artifacts"
+            className="flex items-center gap-1.5 pb-2.5 data-[state=active]:after:bg-violet-500 data-[state=active]:text-violet-600 dark:data-[state=active]:text-violet-400"
+          >
             <Shield className="h-4 w-4" />
-            {t('patterns.artifactsTab')}
+            Artifacts
           </TabsTrigger>
         </TabsList>
 
         {/* INSIGHTS TAB */}
         <TabsContent value="insights" className="mt-4 space-y-4">
-          {/* Working style summary — auto-generated bullets + expandable LLM narrative */}
+          {/* Working style summary — borderless content, no Card wrapper */}
           {(reflectResults || (aggregation?.totalSessions ?? 0) > 0) && (
-            <Card className="border-l-2 border-primary">
-              <CardHeader>
-                <CardTitle className="text-base">{t('patterns.workingStyle')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <WorkingStyleHighlights
-                  narrative={narrative}
-                  totalSessions={aggregation?.totalSessions ?? 0}
-                  successCount={successCount}
-                  topCharacter={topCharacter}
-                  topFriction={topFriction}
-                  topPattern={topPattern}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Friction narrative callout — shown above the lists when available */}
-          {frictionWinsResult?.narrative && (
-            <div className="border-l-2 border-primary rounded-sm px-4 py-3 bg-muted/30">
-              <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
-                {String(frictionWinsResult.narrative)}
-              </p>
-            </div>
+            <WorkingStyleHighlights
+              narrative={narrative}
+              totalSessions={aggregation?.totalSessions ?? 0}
+              successCount={successCount}
+              topCharacter={topCharacter}
+              topFriction={topFriction}
+              topPattern={topPattern}
+            />
           )}
 
           {/* Friction + Patterns — 50/50 grid */}
           <div className="grid gap-4 lg:grid-cols-2">
-            {/* Friction Points */}
-            <Card>
+            {/* Friction Points — red left accent */}
+            <Card className="border-l-2 border-red-400 dark:border-red-500">
               <CardHeader>
-                <CardTitle className="text-base">{t('patterns.friction')}</CardTitle>
-                <CardDescription>{t('patterns.frictionDesc')}</CardDescription>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+                  Friction Points
+                </CardTitle>
+                <CardDescription>Most common blockers across sessions — badge color indicates severity</CardDescription>
               </CardHeader>
               <CardContent>
                 {frictionItems.length > 0 ? (
                   <CollapsibleCategoryList items={frictionItems} variant="friction" />
                 ) : (
                   <p className="text-sm text-muted-foreground py-4 text-center">
-                    {t('patterns.noFriction')}
+                    No friction data yet. Analyze sessions to extract facets.
                   </p>
                 )}
               </CardContent>
             </Card>
 
-            {/* Effective Patterns */}
-            <Card>
+            {/* Effective Patterns — emerald left accent */}
+            <Card className="border-l-2 border-emerald-400 dark:border-emerald-500">
               <CardHeader>
-                <CardTitle className="text-base">{t('patterns.effective')}</CardTitle>
-                <CardDescription>{t('patterns.effectiveDesc')}</CardDescription>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Sparkles className="h-4 w-4 text-emerald-500 shrink-0" />
+                  Effective Patterns
+                </CardTitle>
+                <CardDescription>Techniques that work well across sessions</CardDescription>
               </CardHeader>
               <CardContent>
                 {patternItems.length > 0 ? (
                   <CollapsibleCategoryList items={patternItems} variant="pattern" />
                 ) : (
                   <p className="text-sm text-muted-foreground py-4 text-center">
-                    {t('patterns.noEffective')}
+                    No pattern data yet. Analyze sessions to extract facets.
                   </p>
                 )}
               </CardContent>
             </Card>
           </div>
-
-          {/* Rate limit usage insight */}
-          {aggregation?.rateLimitInfo && aggregation.rateLimitInfo.count > 0 && (
-            <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 p-4">
-              <Zap className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                  {t('patterns.rateLimit')}
-                </p>
-                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                  {t('patterns.rateLimitDesc', { count: aggregation.rateLimitInfo.count, sessions: aggregation.rateLimitInfo.sessionsAffected })}
-                </p>
-              </div>
-            </div>
-          )}
         </TabsContent>
 
         {/* ARTIFACTS TAB */}
@@ -492,8 +454,8 @@ export default function PatternsPage() {
               {Array.isArray(rulesSkillsResult.claudeMdRules) && (rulesSkillsResult.claudeMdRules as Array<{ rule: string; rationale: string; frictionSource: string }>).length > 0 && (
                 <Card className="border-l-2 border-primary">
                   <CardHeader>
-                    <CardTitle className="text-base">{t('patterns.claudeRules')}</CardTitle>
-                    <CardDescription>{t('patterns.claudeRulesDesc')}</CardDescription>
+                    <CardTitle className="text-base">CLAUDE.md Rules</CardTitle>
+                    <CardDescription>Add these to your AI assistant configuration</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {(rulesSkillsResult.claudeMdRules as Array<{ rule: string; rationale: string; frictionSource: string }>).map((r, i) => (
@@ -523,8 +485,8 @@ export default function PatternsPage() {
               {Array.isArray(rulesSkillsResult.hookConfigs) && (rulesSkillsResult.hookConfigs as Array<{ event: string; command: string; rationale: string }>).length > 0 && (
                 <Card className="border-l-2 border-primary">
                   <CardHeader>
-                    <CardTitle className="text-base">{t('patterns.hookConfigs')}</CardTitle>
-                    <CardDescription>{t('patterns.hookConfigsDesc')}</CardDescription>
+                    <CardTitle className="text-base">Hook Configurations</CardTitle>
+                    <CardDescription>Automation triggers</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {(rulesSkillsResult.hookConfigs as Array<{ event: string; command: string; rationale: string }>).map((h, i) => (
@@ -555,17 +517,17 @@ export default function PatternsPage() {
             aggregation && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">{t('patterns.ingredients')}</CardTitle>
+                  <CardTitle className="text-base">Pattern Ingredients</CardTitle>
                   <CardDescription>
                     {hasEnoughFacets
-                      ? t('patterns.ingredientsDescReady')
-                      : t('patterns.ingredientsDescLocked')}
+                      ? 'Click Generate to create rules and hooks from these patterns.'
+                      : 'Analyze more sessions to unlock pattern synthesis.'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {aggregation.frictionCategories.filter(fc => fc.count >= 3).length > 0 && (
                     <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-2">{t('patterns.recurringFriction')}:</p>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Recurring friction (3+ occurrences):</p>
                       <ul className="space-y-1">
                         {aggregation.frictionCategories.filter(fc => fc.count >= 3).map((fc, i) => (
                           <li key={i} className="text-sm flex items-center gap-2">
@@ -578,7 +540,7 @@ export default function PatternsPage() {
                   )}
                   {aggregation.effectivePatterns.filter(ep => ep.frequency >= 2).length > 0 && (
                     <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-2">{t('patterns.recurringEffective')}:</p>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Effective patterns (2+ occurrences):</p>
                       <ul className="space-y-1">
                         {aggregation.effectivePatterns.filter(ep => ep.frequency >= 2).map((ep, i) => (
                           <li key={i} className="text-sm flex items-center gap-2">
@@ -592,7 +554,7 @@ export default function PatternsPage() {
                   {aggregation.frictionCategories.filter(fc => fc.count >= 3).length === 0 &&
                    aggregation.effectivePatterns.filter(ep => ep.frequency >= 2).length === 0 && (
                     <p className="text-sm text-muted-foreground">
-                      {t('patterns.noRecurring')}
+                      No recurring patterns yet. Analyze more sessions to detect patterns.
                     </p>
                   )}
                 </CardContent>

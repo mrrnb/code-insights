@@ -3,10 +3,11 @@ import { loadConfig, saveConfig } from '@code-insights/cli/utils/config';
 import type { ClaudeInsightConfig, LLMProviderConfig } from '@code-insights/cli/types';
 import { loadLLMConfig, testLLMConfig } from '../llm/client.js';
 import { discoverOllamaModels } from '../llm/providers/ollama.js';
+import { discoverLlamaCppModels } from '../llm/providers/llamacpp.js';
 
 const app = new Hono();
 
-const VALID_PROVIDERS = ['openai', 'anthropic', 'gemini', 'ollama', 'custom'] as const;
+const VALID_PROVIDERS = ['openai', 'anthropic', 'gemini', 'ollama', 'llamacpp', 'custom'] as const;
 
 function maskApiKey(key: string | undefined): string | undefined {
   if (!key || key.length < 8) return key ? '***' : undefined;
@@ -134,6 +135,13 @@ app.post('/llm/test', async (c) => {
 app.get('/llm/ollama-models', async (c) => {
   const baseUrl = c.req.query('baseUrl');
   const models = await discoverOllamaModels(baseUrl);
+  return c.json({ models });
+});
+
+// GET /api/config/llm/llamacpp-models — return model(s) loaded in the running llama-server instance
+app.get('/llm/llamacpp-models', async (c) => {
+  const baseUrl = c.req.query('baseUrl');
+  const models = await discoverLlamaCppModels(baseUrl);
   return c.json({ models });
 });
 
