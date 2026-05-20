@@ -172,11 +172,13 @@ insightsCmd
   .option('--days <n>', '回溯天数', '7')
   .option('-q, --quiet', '机器可读输出（仅输出数量）')
   .option('--analyze', '依次处理所有发现的会话')
+  .option('-c, --concurrency <n>', '并发 worker 数量（1-10，配合 --analyze 使用）', '1')
   .action(async (opts) => {
     await insightsCheckCommand({
       days: opts.days ? parseInt(opts.days, 10) : 7,
       quiet: opts.quiet,
       analyze: opts.analyze,
+      concurrency: opts.concurrency ? parseInt(opts.concurrency, 10) : 1,
     });
   });
 

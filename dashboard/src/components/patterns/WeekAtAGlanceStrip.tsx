@@ -257,7 +257,7 @@ export function WeekAtAGlanceStrip({
                 key={key}
                 className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border ${SESSION_CHARACTER_COLORS[key] ?? 'bg-muted text-muted-foreground border-border'}`}
               >
-                {SESSION_CHARACTER_LABELS[key] ?? key} {count}
+                {t(SESSION_CHARACTER_LABELS[key]) ?? key} {count}
               </span>
             ))}
           </div>

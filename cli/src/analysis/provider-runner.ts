@@ -38,9 +38,16 @@ type LLMChatFn = (messages: LLMMessage[]) => Promise<LLMResponse>;
 
 // ── Provider implementations ──────────────────────────────────────────────────
 
-function makeOpenAIChat(apiKey: string, model: string): LLMChatFn {
+function makeOpenAIChat(apiKey: string, model: string, baseUrl?: string): LLMChatFn {
+  let url: string;
+  if (baseUrl) {
+    const trimmed = baseUrl.replace(/\/+$/, '');
+    url = trimmed.endsWith('/v1') ? `${trimmed}/chat/completions` : `${trimmed}/v1/chat/completions`;
+  } else {
+    url = 'https://api.openai.com/v1/chat/completions';
+  }
   return async (messages) => {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -240,7 +247,8 @@ function makeChatFn(config: LLMProviderConfig): LLMChatFn {
     case 'gemini':    return makeGeminiChat(config.apiKey ?? '', config.model);
     case 'ollama':    return makeOllamaChat(config.model, config.baseUrl);
     case 'llamacpp':  return makeLlamaCppChat(config.model, config.baseUrl);
-    default:          throw new Error(`Unknown LLM provider: ${(config as LLMProviderConfig).provider}`);
+    case 'custom':    return makeOpenAIChat(config.apiKey ?? '', config.model, config.baseUrl);
+    default:          throw new Error(`未知的 LLM 提供商：${(config as LLMProviderConfig).provider}`);
   }
 }
 

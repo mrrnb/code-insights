@@ -310,10 +310,12 @@ export async function insightsCheckCommand(opts: {
   days?: number;
   quiet?: boolean;
   analyze?: boolean;
+  concurrency?: number;
 }): Promise<void> {
   const days = opts.days ?? 7;
   const quiet = opts.quiet ?? false;
   const analyze = opts.analyze ?? false;
+  const concurrency = Math.min(Math.max(1, opts.concurrency ?? 1), 10);
   const log = quiet ? () => {} : console.log.bind(console);
 
   try {
@@ -346,25 +348,38 @@ export async function insightsCheckCommand(opts: {
     if (analyze) {
       const runner = ProviderRunner.fromConfig();
       let successCount = 0;
+      let failCount = 0;
+      let nextIndex = 0;
 
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        const label = row.custom_title ?? row.generated_title ?? row.id;
-        const position = `[${i + 1}/${count}]`;
-        process.stdout.write(`${position} ${label} ... `);
-        const start = Date.now();
-        try {
-          await runInsightsCommand({ sessionId: row.id, native: false, quiet: true, _runner: runner });
-          const elapsed = Math.round((Date.now() - start) / 1000);
-          process.stdout.write(`完成（${elapsed}s）\n`);
-          successCount++;
-        } catch (err) {
-          process.stdout.write('失败\n');
-          console.error(chalk.red(`  [Code Insights] ${err instanceof Error ? err.message : '分析失败'}`));
+      async function worker(): Promise<void> {
+        while (true) {
+          const idx = nextIndex++;
+          if (idx >= rows.length) break;
+          const row = rows[idx];
+          const label = row.custom_title ?? row.generated_title ?? row.id;
+          const position = `[${idx + 1}/${count}]`;
+          const start = Date.now();
+          try {
+            await runInsightsCommand({ sessionId: row.id, native: false, quiet: true, _runner: runner });
+            const elapsed = Math.round((Date.now() - start) / 1000);
+            const active = concurrency > 1 ? ` (${Math.min(concurrency, count - idx)} 并发)` : '';
+            process.stdout.write(`${position} ${label} ... 完成（${elapsed}s）${active}\n`);
+            successCount++;
+          } catch (err) {
+            process.stdout.write(`${position} ${label} ... 失败\n`);
+            console.error(chalk.red(`  [Code Insights] ${err instanceof Error ? err.message : '分析失败'}`));
+            failCount++;
+          }
         }
       }
 
-      log(chalk.green(`已分析 ${successCount} 个会话。`));
+      const workers: Promise<void>[] = [];
+      for (let i = 0; i < concurrency; i++) {
+        workers.push(worker());
+      }
+      await Promise.all(workers);
+
+      log(chalk.green(`已分析 ${successCount} 个会话${failCount > 0 ? chalk.yellow(`，${failCount} 个失败`) : ''}。`));
       return;
     }
 
