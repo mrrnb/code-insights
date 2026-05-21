@@ -311,24 +311,29 @@ export async function insightsCheckCommand(opts: {
   quiet?: boolean;
   analyze?: boolean;
   concurrency?: number;
+  force?: boolean;
 }): Promise<void> {
   const days = opts.days ?? 7;
   const quiet = opts.quiet ?? false;
   const analyze = opts.analyze ?? false;
   const concurrency = Math.min(Math.max(1, opts.concurrency ?? 1), 10);
+  const force = opts.force ?? false;
   const log = quiet ? () => {} : console.log.bind(console);
 
   try {
     const db = getDb();
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
+    const forceJoin = force ? '' : 'LEFT JOIN analysis_usage au ON au.session_id = s.id AND au.analysis_type = \'session\'';
+    const forceWhere = force ? '' : 'AND au.session_id IS NULL';
+
     const rows = db.prepare(`
       SELECT s.id, s.generated_title, s.custom_title, s.started_at, s.message_count
       FROM sessions s
-      LEFT JOIN analysis_usage au ON au.session_id = s.id AND au.analysis_type = 'session'
+      ${forceJoin}
       WHERE s.started_at >= ?
         AND s.deleted_at IS NULL
-        AND au.session_id IS NULL
+        ${forceWhere}
       ORDER BY s.started_at DESC
     `).all(cutoff) as Array<{ id: string; generated_title: string | null; custom_title: string | null; started_at: string; message_count: number }>;
 
@@ -360,7 +365,7 @@ export async function insightsCheckCommand(opts: {
           const position = `[${idx + 1}/${count}]`;
           const start = Date.now();
           try {
-            await runInsightsCommand({ sessionId: row.id, native: false, quiet: true, _runner: runner });
+            await runInsightsCommand({ sessionId: row.id, native: false, quiet: true, force, _runner: runner });
             const elapsed = Math.round((Date.now() - start) / 1000);
             const active = concurrency > 1 ? ` (${Math.min(concurrency, count - idx)} 并发)` : '';
             process.stdout.write(`${position} ${label} ... 完成（${elapsed}s）${active}\n`);

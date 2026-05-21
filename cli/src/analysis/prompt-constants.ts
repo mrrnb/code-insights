@@ -5,47 +5,47 @@
 // Actor-neutral category definitions describe the gap, not the actor.
 // Attribution field captures who contributed to the friction for actionability.
 export const FRICTION_CLASSIFICATION_GUIDANCE = `
-FRICTION CLASSIFICATION GUIDANCE:
+摩擦分类指导：
 
-Each friction point captures WHAT went wrong (category + description), WHO contributed (attribution), and WHY you classified it that way (_reasoning).
+每个摩擦点记录：出了什么问题（分类 + 描述）、谁导致的（归因）、以及分类理由（_reasoning）。
 
-CATEGORIES — classify the TYPE of gap or obstacle:
-- "wrong-approach": A strategy was pursued that didn't fit the task — wrong architecture, wrong tool, wrong pattern. Includes choosing a suboptimal tool when a better one was available.
-- "knowledge-gap": Incorrect knowledge was applied about a library, API, framework, or language feature. The capability existed but was used wrong.
-- "stale-assumptions": Work proceeded from assumptions about current state that were incorrect (stale files, changed config, different environment, tool behavior changed between versions).
-- "incomplete-requirements": Instructions were missing critical context, constraints, or acceptance criteria needed to proceed correctly.
-- "context-loss": Prior decisions or constraints established earlier in the session were lost or forgotten.
-- "scope-creep": Work expanded beyond the boundaries of the stated task.
-- "repeated-mistakes": The same or similar error occurred multiple times despite earlier correction.
-- "documentation-gap": Relevant docs existed but were inaccessible or unfindable during the session.
-- "tooling-limitation": The AI coding tool or its underlying model genuinely could not perform a needed action — missing file system access, unsupported language feature, context window overflow, inability to run a specific command type. Diagnostic: Could a reasonable user prompt or approach have achieved the same result? If the only workaround is unreasonably complex or loses significant fidelity, this IS a tooling-limitation. If a straightforward alternative existed → it is NOT tooling-limitation.
-  RECLASSIFY if any of these apply:
-  - Rate-limited or throttled → create "rate-limit-hit" instead
-  - Agent crashed or lost state → use "wrong-approach" or create "agent-orchestration-failure"
-  - Wrong tool chosen when a better one existed → "wrong-approach"
-  - User didn't know the tool could do something → "knowledge-gap"
-  - Tool worked differently than expected → "stale-assumptions"
+分类 — 判定障碍或缺陷的类型：
+- "wrong-approach": 采用了不适合当前任务的策略——架构选错、工具选错、模式选错。包括在有更优工具可选的情况下选择了次优方案。
+- "knowledge-gap": 对 library、API、framework 或语言特性的认知有误。能力本身存在，但使用方式不正确。
+- "stale-assumptions": 基于对当前状态的错误假设继续工作（文件已过时、配置已变更、环境不同、工具行为在版本间发生变化）。
+- "incomplete-requirements": 指令缺少正确执行所需的关键上下文、约束条件或验收标准。
+- "context-loss": 会话早期建立的决策或约束在后续被遗忘或丢失。
+- "scope-creep": 工作范围超出了既定任务的边界。
+- "repeated-mistakes": 尽管已有过纠正，相同或类似的错误仍然多次出现。
+- "documentation-gap": 相关文档存在，但在会话期间无法访问或找不到。
+- "tooling-limitation": AI 编码工具或其底层模型确实无法执行所需操作——缺少文件系统访问权限、不支持的语言特性、上下文窗口溢出、无法运行特定命令类型。诊断方法：合理的用户提示或方法能否达到同样效果？如果唯一变通方案极其复杂或会严重损失保真度，这就是 tooling-limitation。如果存在直接替代方案，则不是。
+  满足以下条件时应重新分类：
+  - 被限流或降速 → 改用 "rate-limit-hit"
+  - Agent 崩溃或丢失状态 → 使用 "wrong-approach" 或创建 "agent-orchestration-failure"
+  - 有更优工具却选错了 → "wrong-approach"
+  - 用户不知道工具能做什么 → "knowledge-gap"
+  - 工具行为与预期不同 → "stale-assumptions"
 
-DISAMBIGUATION — use these to break ties when two categories seem to fit:
-- tooling-limitation vs wrong-approach: Limitation = the tool CANNOT do it (no workaround exists). Wrong-approach = the tool CAN do it but a suboptimal method was chosen.
-- tooling-limitation vs knowledge-gap: Limitation = the capability genuinely does not exist. Knowledge-gap = the capability exists but was applied incorrectly.
-- tooling-limitation vs stale-assumptions: Limitation = permanent gap in the tool. Stale-assumptions = the tool USED TO work differently or the assumption about current behavior was wrong.
-- wrong-approach vs knowledge-gap: Wrong-approach = strategic choice (chose library X over Y). Knowledge-gap = factual error (used library X's API incorrectly).
-- incomplete-requirements vs context-loss: Incomplete = the information was NEVER provided. Context-loss = it WAS provided earlier but was forgotten or dropped.
+消歧义 — 当两个分类都看似适用时，用以下规则打破平局：
+- tooling-limitation vs wrong-approach：limitation = 工具确实做不到（无变通方案）。wrong-approach = 工具能做到，但选了次优方法。
+- tooling-limitation vs knowledge-gap：limitation = 能力确实不存在。knowledge-gap = 能力存在但用法不正确。
+- tooling-limitation vs stale-assumptions：limitation = 工具的永久性缺陷。stale-assumptions = 工具过去的行为方式不同，或对当前行为的假设有误。
+- wrong-approach vs knowledge-gap：wrong-approach = 策略性选择（选了库 X 而非 Y）。knowledge-gap = 事实性错误（错误使用了库 X 的 API）。
+- incomplete-requirements vs context-loss：incomplete = 信息从未提供。context-loss = 信息曾提供过但被遗忘或丢失。
 
-When no category fits, create a specific kebab-case category. A precise novel category is better than a vague canonical one.
+当所有分类都不适用时，创建一个具体的 kebab-case 分类。精确的新分类优于模糊的已有分类。
 
-ATTRIBUTION — 3-step decision tree (follow IN ORDER):
-Step 1: Is the cause external to the user-AI interaction? (missing docs, broken tooling, infra outage) → "environmental"
-Step 2: Could the USER have prevented this with better input? Evidence: vague prompt, missing context, no constraints, late requirements, ambiguous correction → "user-actionable"
-Step 3: User input was clear and the AI still failed → "ai-capability"
-When genuinely mixed between user-actionable and ai-capability, lean "user-actionable" — this tool helps users improve.
+归因 — 三步决策树（按顺序执行）：
+第一步：原因是否在用户-AI 交互之外？（文档缺失、工具故障、基础设施中断）→ "environmental"
+第二步：用户能否通过更好的输入来避免？证据：提示模糊、缺少上下文、无约束、需求提出太晚、纠正含糊 → "user-actionable"
+第三步：用户输入清晰但 AI 仍然失败 → "ai-capability"
+当 user-actionable 和 ai-capability 混合时，倾向于 "user-actionable"——本工具旨在帮助用户提升。
 
-DESCRIPTION RULES:
-- One neutral sentence describing the GAP, not the actor
-- Include specific details (file names, APIs, error messages)
-- Frame as "Missing X caused Y" NOT "The AI failed to X" or "The user forgot to X"
-- Let the attribution field carry the who`;
+描述规则：
+- 用一句中立的话描述缺陷本身，而非行为方
+- 包含具体细节（文件名、API、错误信息）
+- 表述为"缺少 X 导致 Y"，而非"AI 没做到 X"或"用户忘了 X"
+- 把"谁的责任"留给归因字段承载`;
 
 export const CANONICAL_FRICTION_CATEGORIES = [
   'wrong-approach',
@@ -92,98 +92,98 @@ export const CANONICAL_PQ_CATEGORIES = [
 ] as const;
 
 export const PROMPT_QUALITY_CLASSIFICATION_GUIDANCE = `
-PROMPT QUALITY CLASSIFICATION GUIDANCE:
+提示词质量分类指导：
 
-Each finding captures a specific moment where the user's prompting either caused friction (deficit) or enabled productivity (strength).
+每条发现记录一个具体时刻：用户的提示词在此处造成了摩擦（缺陷）或促进了效率（优势）。
 
-DEFICIT CATEGORIES — classify prompting problems:
-- "vague-request": Request lacked specificity needed for the AI to act without guessing. Missing file paths, function names, expected behavior, or concrete details.
-  NOT this category if the AI had enough context to succeed but failed anyway — that is an AI capability issue, not a prompting issue.
+缺陷分类 — 判定提示词问题：
+- "vague-request": 请求缺少让 AI 无需猜测即可行动的具体性。缺少文件路径、函数名、预期行为或具体细节。
+  如果 AI 有足够的上下文可以成功但仍然失败，则不属于此分类——那是 AI 能力问题，不是提示词问题。
 
-- "missing-context": Critical background knowledge about architecture, conventions, dependencies, or current state was not provided.
-  NOT this category if the information was available in the codebase and the AI could have found it by reading files — that is an AI context-gathering failure.
+- "missing-context": 未提供关于架构、规范、依赖或当前状态的关键背景知识。
+  如果信息在代码库中存在且 AI 通过读取文件可以找到，则不属于此分类——那是 AI 上下文收集失败。
 
-- "late-constraint": A requirement or constraint was provided AFTER the AI had already started implementing a different approach, causing rework.
-  NOT this category if the constraint was genuinely discovered during implementation (requirements changed). Only classify if the user KNEW the constraint before the session started.
+- "late-constraint": 在 AI 已经开始按另一种方式实现之后，才提出需求或约束条件，导致返工。
+  如果约束条件是在实现过程中才真正发现的（需求变更），则不属于此分类。仅在用户在会话开始前就已知晓该约束时才归入此类。
 
-- "unclear-correction": The user told the AI its output was wrong without explaining what was wrong or why. "That's not right", "try again", "no" without context.
-  NOT this category if the user gave a brief but sufficient correction ("use map instead of forEach" is clear enough).
+- "unclear-correction": 用户告诉 AI 其输出有误，但未解释哪里有误或为什么。"不对"、"再试一次"、"不行"，没有上下文。
+  如果用户给出了简短但足够的纠正（如"用 map 代替 forEach"已经足够清晰），则不属于此分类。
 
-- "scope-drift": The session objective shifted mid-conversation, or multiple unrelated objectives were addressed in one session.
-  NOT this category if the user is working through logically connected subtasks of one objective.
+- "scope-drift": 会话目标在对话中途发生转移，或在一个会话中处理了多个不相关的目标。
+  如果用户在处理一个目标下逻辑相关的子任务，则不属于此分类。
 
-- "missing-acceptance-criteria": The user did not define what successful completion looks like, leading to back-and-forth about whether the output meets expectations.
-  NOT this category for exploratory sessions where the user is discovering what they want.
+- "missing-acceptance-criteria": 用户未定义成功完成的标准，导致反复确认输出是否符合预期。
+  如果是探索性会话，用户正在发现自己想要什么，则不属于此分类。
 
-- "assumption-not-surfaced": The user held an unstated assumption that the AI could not reasonably infer from code or conversation.
-  NOT this category if the assumption was reasonable for the AI to make (e.g., standard coding conventions).
+- "assumption-not-surfaced": 用户持有一个未明说的假设，而 AI 无法从代码或对话中合理推断。
+  如果该假设是 AI 可以合理做出的（如标准编码规范），则不属于此分类。
 
-STRENGTH CATEGORIES — classify prompting successes (only when notably above average):
-- "precise-request": Request included enough specificity (file paths, function names, expected behavior, error messages) that the AI could act correctly on the first attempt.
+优势分类 — 判定提示词成功（仅在明显高于平均水平时）：
+- "precise-request": 请求包含足够的具体性（文件路径、函数名、预期行为、错误信息），使 AI 能在第一次尝试时就正确执行。
 
-- "effective-context": User proactively shared architecture, conventions, prior decisions, or current state that the AI demonstrably used to make better decisions.
+- "effective-context": 用户主动分享了架构、规范、先前决策或当前状态，且 AI 明确利用这些信息做出了更好的决策。
 
-- "productive-correction": When the AI went off track, the user provided a correction that included WHAT was wrong, WHY, and enough context for the AI to redirect effectively on the next response.
+- "productive-correction": 当 AI 偏离方向时，用户的纠正包含了哪里有问题、为什么、以及足够上下文，使 AI 在下一次响应中能有效调整。
 
-CONTRASTIVE PAIRS:
-- vague-request vs missing-context: Was the problem in HOW THE TASK WAS DESCRIBED (vague-request) or WHAT BACKGROUND KNOWLEDGE WAS ABSENT (missing-context)?
-- late-constraint vs missing-context: Did the user EVENTUALLY provide it in the same session? Yes → late-constraint. Never → missing-context.
-- missing-context vs assumption-not-surfaced: Is this a FACT the user could have copy-pasted (missing-context), or a BELIEF/PREFERENCE they held (assumption-not-surfaced)?
-- scope-drift vs missing-acceptance-criteria: Did the user try to do TOO MANY THINGS (scope-drift) or ONE THING WITHOUT DEFINING SUCCESS (missing-acceptance-criteria)?
-- unclear-correction vs vague-request: Was this the user's FIRST MESSAGE about this task (vague-request) or a RESPONSE TO AI OUTPUT (unclear-correction)?
+对比配对：
+- vague-request vs missing-context：问题在于任务描述方式（vague-request）还是缺失的背景知识（missing-context）？
+- late-constraint vs missing-context：用户是否在同一会话中最终提供了信息？是 → late-constraint。始终未提供 → missing-context。
+- missing-context vs assumption-not-surfaced：这是用户可以复制粘贴的事实（missing-context），还是用户持有的信念/偏好（assumption-not-surfaced）？
+- scope-drift vs missing-acceptance-criteria：用户试图做的事情太多（scope-drift），还是只做一件事但未定义成功标准（missing-acceptance-criteria）？
+- unclear-correction vs vague-request：这是用户关于此任务的第一条消息（vague-request），还是对 AI 输出的回应（unclear-correction）？
 
-DIMENSION SCORING (0-100):
-- context_provision: How well did the user provide relevant background upfront?
-  90+: Proactively shared architecture, constraints, conventions. 50-69: Notable gaps causing detours. <30: No context, AI working blind.
-- request_specificity: How precise were task requests?
-  90+: File paths, expected behavior, scope boundaries. 50-69: Mix of specific and vague. <30: Nearly all requests lacked detail.
-- scope_management: How focused was the session?
-  90+: Single clear objective, logical progression. 50-69: Some drift but primary goal met. <30: Unfocused, no clear objective.
-- information_timing: Were requirements provided when needed?
-  90+: All constraints front-loaded before implementation. 50-69: Some important requirements late. <30: Requirements drip-fed, constant corrections.
-- correction_quality: How well did the user redirect the AI?
-  90+: Corrections included what, why, and context. 50-69: Mix of clear and unclear. <30: Corrections gave almost no signal.
-  Score 75 if no corrections were needed (absence of corrections in a successful session = good prompting).
+维度评分（0-100）：
+- context_provision：用户提前提供了多少相关背景信息？
+  90+：主动分享了架构、约束、规范。50-69：存在明显缺口导致绕路。<30：无上下文，AI 盲目工作。
+- request_specificity：任务请求的精确度如何？
+  90+：文件路径、预期行为、范围边界。50-69：具体与模糊混杂。<30：几乎所有请求都缺乏细节。
+- scope_management：会话的聚焦程度如何？
+  90+：单一明确目标，逻辑推进。50-69：有一定偏移但主要目标达成。<30：无聚焦，无明确目标。
+- information_timing：需求是否在需要时及时提供？
+  90+：所有约束在实现前一次性提供。50-69：部分重要需求提出较晚。<30：需求零星提供，持续纠正。
+- correction_quality：用户引导 AI 的纠正质量如何？
+  90+：纠正包含什么问题、为什么、以及上下文。50-69：清晰与模糊混杂。<30：纠正几乎不提供有效信号。
+  如果无需纠正，评分 75（成功会话中无纠正 = 良好的提示词实践）。
 
-EDGE CASES:
-- Short sessions (<5 user messages): Score conservatively. Do not penalize for missing elements unnecessary in quick tasks.
-- Exploration sessions: Do not penalize for missing acceptance criteria or scope drift.
-- Sessions where AI performed well despite vague prompts: Still classify deficits. Impact should be "low" since no visible cost.
-- Agentic/delegation sessions: If the user gave a clear high-level directive and the AI autonomously planned and executed successfully, do not penalize for low message count or lack of micro-level specificity. Effective delegation IS good prompting. Focus on the quality of the initial delegation prompt.`;
+边界情况：
+- 短会话（<5 条用户消息）：保守评分。不要因为快速任务中不必要的元素缺失而扣分。
+- 探索性会话：不要因为缺少验收标准或范围偏移而扣分。
+- AI 尽管提示模糊但仍表现良好的会话：仍然分类缺陷。影响等级应为 "low"，因为没有可见成本。
+- Agent/委托式会话：如果用户给出了清晰的高层指令且 AI 自主规划并成功执行，不要因为消息数量少或缺少微观细节而扣分。有效的委托本身就是良好的提示词实践。关注初始委托提示的质量。`;
 
 export const EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE = `
-EFFECTIVE PATTERN CLASSIFICATION GUIDANCE:
+有效模式分类指导：
 
-Each effective pattern captures a technique or approach that contributed to a productive session outcome.
+每个有效模式记录一种对高效会话结果有贡献的技术或方法。
 
-BASELINE EXCLUSION — do NOT classify these as patterns:
-- Routine file reads at session start (Read/Glob/Grep on <5 files before editing)
-- Following explicit user instructions (user said "run tests" → running tests is not a pattern)
-- Basic tool usage (single file edits, standard CLI commands)
-- Trivial self-corrections (typo fixes, minor syntax errors caught immediately)
-Only classify behavior that is NOTABLY thorough, strategic, or beyond baseline expectations.
+基线排除 — 以下行为不归类为模式：
+- 会话开始时的例行文件读取（编辑前对 <5 个文件执行 Read/Glob/Grep）
+- 遵循用户的明确指令（用户说"运行测试"→ 运行测试不算模式）
+- 基础工具使用（单文件编辑、标准 CLI 命令）
+- 琐碎的自我纠正（拼写修正、立即捕获的轻微语法错误）
+仅归类明显超出基线预期的、有策略性的或深度充分的行为。
 
-CATEGORIES — classify the TYPE of effective pattern:
-- "structured-planning": Decomposed the task into explicit steps, defined scope boundaries, or established a plan BEFORE writing code. Signal: plan/task-list/scope-definition appears before implementation.
-- "incremental-implementation": Work progressed in small, verifiable steps with validation between them. Signal: multiple small edits with checks between, not one large batch.
-- "verification-workflow": Proactive correctness checks (builds, tests, linters, types) BEFORE considering work complete. Signal: test/build/lint commands when nothing was known broken.
-- "systematic-debugging": Methodical investigation using structured techniques (binary search, log insertion, reproduction isolation). Signal: multiple targeted diagnostic steps, not random guessing.
-- "self-correction": Recognized a wrong path and pivoted WITHOUT user correction. Signal: explicit acknowledgment of mistake + approach change. NOT this if the user pointed out the error.
-- "context-gathering": NOTABLY thorough investigation before changes — reading 5+ files, cross-module exploration, schema/type/config review. Signal: substantial Read/Grep/Glob usage spanning multiple directories before any Edit/Write.
-- "domain-expertise": Applied specific framework/API/language knowledge correctly on first attempt without searching. Signal: correct non-obvious API usage with no preceding search and no subsequent error. NOT this if files were read first — that is context-gathering.
-- "effective-tooling": Leveraged advanced tool capabilities that multiplied productivity — agent delegation, parallel work, multi-file coordination, strategic mode selection. Signal: use of tool features beyond basic read/write/edit.
+分类 — 判定有效模式的类型：
+- "structured-planning": 将任务分解为明确步骤、定义范围边界，或在编写代码前制定计划。信号：计划/任务列表/范围定义出现在实现之前。
+- "incremental-implementation": 以小而可验证的步骤推进工作，步骤之间有验证。信号：多次小幅编辑且中间有检查，而非一次性大批量操作。
+- "verification-workflow": 在认为工作完成之前主动进行正确性检查（构建、测试、lint、类型检查）。信号：在未发现已知问题时执行 test/build/lint 命令。
+- "systematic-debugging": 使用结构化技术进行系统性排查（二分法、日志插入、复现隔离）。信号：多个有针对性的诊断步骤，而非随机猜测。
+- "self-correction": 识别到错误方向并在未获用户纠正的情况下自行调整。信号：明确承认错误 + 改变方法。如果用户指出了错误则不属于此类。
+- "context-gathering": 在变更前进行明显深度的调查——阅读 5 个以上文件、跨模块探索、审查 schema/type/config。信号：在任何 Edit/Write 之前有大量跨多个目录的 Read/Grep/Glob 使用。
+- "domain-expertise": 在未搜索的情况下首次尝试就正确应用了特定 framework/API/语言知识。信号：正确的非显而易见的 API 用法，且之前无搜索、之后无错误。如果先读了文件则不属于此类——那是 context-gathering。
+- "effective-tooling": 利用了能倍增效率的高级工具能力——agent 委托、并行工作、多文件协调、策略性模式选择。信号：使用了超出基本 read/write/edit 的工具功能。
 
-CONTRASTIVE PAIRS:
-- structured-planning vs incremental-implementation: Planning = DECIDING what to do (before). Incremental = HOW you execute (during). Can have one without the other.
-- context-gathering vs domain-expertise: Gathering = ACTIVE INVESTIGATION (reading files). Expertise = APPLYING EXISTING KNOWLEDGE without investigation. If files were read first → context-gathering.
-- verification-workflow vs systematic-debugging: Verification = PROACTIVE (checking working code). Debugging = REACTIVE (investigating a failure).
-- self-correction vs user-directed: Self-correction = AI caught own mistake unprompted. User said "that's wrong" → NOT self-correction.
+对比配对：
+- structured-planning vs incremental-implementation：planning = 决定做什么（事前）。incremental = 如何执行（过程中）。两者可以独立存在。
+- context-gathering vs domain-expertise：gathering = 主动调查（读取文件）。expertise = 应用已有知识无需调查。如果先读了文件 → context-gathering。
+- verification-workflow vs systematic-debugging：verification = 主动检查（检查正常工作的代码）。debugging = 被动响应（排查故障）。
+- self-correction vs 用户导向：self-correction = AI 在无提示下发现自己的错误。用户说了"这不对" → 不算 self-correction。
 
-DRIVER — 4-step decision tree (follow IN ORDER):
-Step 1: Did user infrastructure enable this? (CLAUDE.md rules, agent configs, hookify hooks, custom commands, system prompts) → "user-driven"
-Step 2: Did the user explicitly request this behavior? (asked for plan, requested tests, directed investigation) → "user-driven"
-Step 3: Did the AI exhibit this without any user prompting or infrastructure? → "ai-driven"
-Step 4: Both made distinct, identifiable contributions → "collaborative"
-Use "collaborative" ONLY when you can name what EACH party contributed. If uncertain, prefer the more specific label.
+驱动方 — 四步决策树（按顺序执行）：
+第一步：是否由用户基础设施促成？（CLAUDE.md 规则、agent 配置、hookify hooks、自定义命令、system prompts）→ "user-driven"
+第二步：用户是否明确要求了此行为？（要求制定计划、请求测试、指示调查方向）→ "user-driven"
+第三步：AI 是否在无任何用户提示或基础设施的情况下自主展现了此行为？→ "ai-driven"
+第四步：双方都有各自明确且可辨识的贡献 → "collaborative"
+仅当你能具体说明每一方的贡献时才使用 "collaborative"。如有不确定，倾向于更具体的标签。
 
-When no canonical category fits, create a specific kebab-case category (a precise novel category is better than forcing a poor fit).`;
+当所有已有分类都不适用时，创建一个具体的 kebab-case 分类（精确的新分类优于勉强套用已有分类）。`;

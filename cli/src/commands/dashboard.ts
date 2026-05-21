@@ -7,9 +7,11 @@ import net from 'net';
 import { trackEvent, identifyUser, captureError, classifyError } from '../utils/telemetry.js';
 import { printBanner } from '../utils/banner.js';
 import { runSync } from './sync.js';
+import { loadConfig } from '../utils/config.js';
 
 interface DashboardOptions {
   port: string;
+  host?: string;
   open: boolean;
   // Commander's --no-sync flag sets sync=false; default (no flag) is true
   sync?: boolean;
@@ -21,7 +23,7 @@ interface DashboardOptions {
  * - Waits for the test socket to fully close before resolving, avoiding a TOCTOU
  *   race where the real server tries to bind before the OS releases the port.
  */
-function isPortInUse(port: number): Promise<boolean> {
+function isPortInUse(port: number, host: string): Promise<boolean> {
   return new Promise((resolvePromise) => {
     const server = net.createServer();
     server.once('error', (err: NodeJS.ErrnoException) => {
@@ -32,8 +34,19 @@ function isPortInUse(port: number): Promise<boolean> {
       // Wait for close callback before resolving so the OS fully releases the port
       server.close(() => resolvePromise(false));
     });
-    server.listen(port, '127.0.0.1');
+    server.listen(port, host);
   });
+}
+
+/**
+ * Resolve the dashboard host.
+ * Priority: CLI --host > config dashboard.host > default 127.0.0.1
+ */
+function resolveHost(cliHost?: string): string {
+  if (cliHost) return cliHost;
+  const config = loadConfig();
+  if (config?.dashboard?.host) return config.dashboard.host;
+  return '127.0.0.1';
 }
 
 /**
@@ -65,16 +78,17 @@ export async function dashboardCommand(options: DashboardOptions): Promise<void>
   }
 
   const port = parseInt(options.port, 10);
+  const host = resolveHost(options.host);
 
   if (isNaN(port) || port < 1 || port > 65535) {
     console.error(chalk.red(`  无效端口：${options.port}`));
     process.exit(1);
   }
 
-  const inUse = await isPortInUse(port);
+  const inUse = await isPortInUse(port, host);
   if (inUse) {
-    console.error(chalk.red(`  端口 ${port} 已被占用。`));
-    console.error(chalk.dim(`  尝试：code-insights dashboard --port <number>`));
+    console.error(chalk.red(`  端口 ${port} 在 ${host} 上已被占用。`));
+    console.error(chalk.dim(`  尝试：code-insights dashboard --port <number> --host <address>`));
     process.exit(1);
   }
 
@@ -110,17 +124,18 @@ export async function dashboardCommand(options: DashboardOptions): Promise<void>
 
     // Use pathToFileURL so the import specifier is valid on all platforms,
     // including Windows where resolve() returns C:\...\index.js.
-    type ServerModule = { startServer: (opts: { port: number; staticDir: string; openBrowser: boolean }) => Promise<void> };
+    type ServerModule = { startServer: (opts: { port: number; host: string; staticDir: string; openBrowser: boolean }) => Promise<void> };
     const { startServer } = await import(pathToFileURL(serverEntryPath).href) as ServerModule;
 
     spinner.stop();
     printBanner();
-    console.log(chalk.white(`  Dashboard:  `) + chalk.cyan.underline(`http://localhost:${port}`));
+    const displayHost = host === '0.0.0.0' ? '0.0.0.0' : host;
+    console.log(chalk.white(`  Dashboard:  `) + chalk.cyan.underline(`http://${displayHost}:${port}`));
     console.log(chalk.dim(`  按 Ctrl+C 停止`));
     console.log('');
 
-    trackEvent('cli_dashboard', { port: port, success: true });
-    await startServer({ port, staticDir, openBrowser: options.open });
+    trackEvent('cli_dashboard', { port: port, host, success: true });
+    await startServer({ port, host, staticDir, openBrowser: options.open });
   } catch (err) {
     spinner.fail('启动控制台服务失败。');
     console.error(chalk.red(err instanceof Error ? err.message : String(err)));

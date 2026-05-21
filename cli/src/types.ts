@@ -360,6 +360,7 @@ export interface ClaudeInsightConfig {
   };
   dashboard?: {
     port?: number;
+    host?: string;
     llm?: LLMProviderConfig;
   };
   telemetry?: boolean;              // default true (opt-out)

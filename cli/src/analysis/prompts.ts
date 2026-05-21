@@ -25,7 +25,7 @@ import { formatSessionMetaLine } from './message-format.js';
  * Shared system prompt for all LLM analysis calls.
  * Paired with buildCacheableConversationBlock() + an analysis-specific instruction block.
  */
-export const SHARED_ANALYST_SYSTEM_PROMPT = `You are a senior staff engineer analyzing an AI coding session. You will receive the conversation transcript followed by specific extraction instructions. Respond with valid JSON only, wrapped in <json>...</json> tags.`;
+export const SHARED_ANALYST_SYSTEM_PROMPT = `你是一位资深工程师，负责分析一次 AI 辅助编程会话。你将收到对话记录，随后是具体的提取指令。请仅返回合法的 JSON，用 <json>...</json> 标签包裹。`;
 
 // =============================================================================
 // CACHEABLE CONVERSATION BLOCK
@@ -49,7 +49,7 @@ export function buildCacheableConversationBlock(formattedMessages: string): Cont
     type: 'text',
     // Trailing double newline ensures the instruction block (user[1]) reads as a
     // distinct section when providers flatten content blocks to a single string.
-    text: `--- CONVERSATION ---\n${formattedMessages}\n--- END CONVERSATION ---\n\n`,
+    text: `--- 对话记录 ---\n${formattedMessages}\n--- 对话记录结束 ---\n\n`,
     cache_control: { type: 'ephemeral' },
   };
 }
@@ -71,93 +71,93 @@ export function buildSessionAnalysisInstructions(
   sessionSummary: string | null,
   meta?: SessionMetadata
 ): string {
-  return `You are a senior staff engineer writing entries for a team's engineering knowledge base. You've just observed an AI-assisted coding session and your job is to extract the insights that would save another engineer time if they encountered a similar situation 6 months from now.
+  return `你是一位资深工程师，正在为团队的工程知识库撰写条目。你刚刚观察了一次 AI 辅助编程会话，你的任务是提取那些能在 6 个月后帮助另一位工程师节省时间的洞察。
 
-Your audience is a developer who has never seen this session but works on the same codebase. They need enough context to understand WHY a decision was made, WHAT specific gotcha was discovered, and WHEN this knowledge applies.
+你的读者是一位从未看过这次会话但在同一代码库工作的开发者。他们需要足够的上下文来理解：为什么做了这个决策、发现了什么坑、以及这些知识在什么场景下适用。
 
-Project: ${projectName}
-${sessionSummary ? `Session Summary: ${sessionSummary}\n` : ''}${formatSessionMetaLine(meta)}
-=== PART 1: SESSION FACETS ===
-Extract these FIRST as a holistic session assessment:
+项目：${projectName}
+${sessionSummary ? `会话摘要：${sessionSummary}\n` : ''}${formatSessionMetaLine(meta)}
+=== 第一部分：会话特征 ===
+首先作为整体评估提取以下特征：
 
-1. outcome_satisfaction: Rate the session outcome.
-   - "high": Task completed successfully, user satisfied
-   - "medium": Partial completion or minor issues
-   - "low": Significant problems, user frustrated
-   - "abandoned": Session ended without achieving the goal
+1. outcome_satisfaction：评估会话结果。
+   - "high"：任务完成，用户满意
+   - "medium"：部分完成或有小问题
+   - "low"：问题较多，用户受挫
+   - "abandoned"：会话结束但未达成目标
 
-2. workflow_pattern: Identify the dominant workflow pattern (or null if unclear).
-   Recommended values: "plan-then-implement", "iterative-refinement", "debug-fix-verify", "explore-then-build", "direct-execution"
+2. workflow_pattern：识别主要工作模式（如果不清楚则为 null）。
+   推荐值："plan-then-implement"、"iterative-refinement"、"debug-fix-verify"、"explore-then-build"、"direct-execution"
 
-3. friction_points: Identify up to 5 moments where progress was blocked or slowed (array, max 5).
-   Each friction point has:
-   - _reasoning: (REQUIRED) Your reasoning chain for category + attribution. 2-3 sentences max. Walk through the decision tree steps. This field is saved but not shown to users — use it to think before classifying.
-   - category: Use one of these PREFERRED categories when applicable: ${CANONICAL_FRICTION_CATEGORIES.join(', ')}. Create a new kebab-case category only when none of these fit.
-   - attribution: "user-actionable" (better user input would have prevented this), "ai-capability" (AI failed despite adequate input), or "environmental" (external constraint)
-   - description: One neutral sentence describing what happened, with specific details (file names, APIs, errors)
-   - severity: "high" (blocked progress for multiple turns), "medium" (caused a detour), "low" (minor hiccup)
-   - resolution: "resolved" (fixed in session), "workaround" (bypassed), "unresolved" (still broken)
+3. friction_points：识别最多 5 个进度受阻或变慢的时刻（数组，最多 5 个）。
+   每个摩擦点包含：
+   - _reasoning：（必填）你对分类 + 归因的推理链。最多 2-3 句。逐步走完决策树。此字段会保存但不会展示给用户——用它在分类前先想清楚。
+   - category：优先使用这些分类：${CANONICAL_FRICTION_CATEGORIES.join(', ')}。只有当这些都不适用时才创建新的 kebab-case 分类。
+   - attribution："user-actionable"（更好的用户输入可以避免此问题）、"ai-capability"（AI 在输入充足的情况下仍然失败）、或 "environmental"（外部约束）
+   - description：一句中性描述，说明发生了什么，包含具体细节（文件名、API、错误信息）
+   - severity："high"（阻塞进度多轮）、"medium"（导致绕路）、"low"（小波折）
+   - resolution："resolved"（会话中已修复）、"workaround"（绕过了）、"unresolved"（仍未解决）
 ${FRICTION_CLASSIFICATION_GUIDANCE}
 
-4. effective_patterns: Up to 3 techniques or approaches that worked particularly well (array, max 3).
-   Each has:
-   - _reasoning: (REQUIRED) Your reasoning chain for category + driver. 2-3 sentences max. Walk through the decision tree steps and baseline exclusion check. This field is saved but not shown to users — use it to think before classifying.
-   - category: Use one of these PREFERRED categories when applicable: structured-planning, incremental-implementation, verification-workflow, systematic-debugging, self-correction, context-gathering, domain-expertise, effective-tooling. Create a new kebab-case category only when none fit.
-   - description: Specific technique worth repeating (1-2 sentences with concrete detail)
-   - confidence: 0-100 how confident you are this is genuinely effective
-   - driver: Who drove this pattern — "user-driven" (user explicitly requested it), "ai-driven" (AI exhibited it without prompting), or "collaborative" (both contributed or emerged from interaction)
+4. effective_patterns：最多 3 个效果特别好的技术或方法（数组，最多 3 个）。
+   每个包含：
+   - _reasoning：（必填）你对分类 + 驱动者的推理链。最多 2-3 句。逐步走完决策树和基线排除检查。此字段会保存但不会展示给用户——用它在分类前先想清楚。
+   - category：优先使用这些分类：structured-planning、incremental-implementation、verification-workflow、systematic-debugging、self-correction、context-gathering、domain-expertise、effective-tooling。只有当这些都不适用时才创建新的 kebab-case 分类。
+   - description：值得复用的具体技术（1-2 句，包含具体细节）
+   - confidence：0-100，你对这个模式确实有效的信心
+   - driver：谁驱动了这个模式——"user-driven"（用户明确要求）、"ai-driven"（AI 自发表现出来）、或 "collaborative"（双方共同贡献或从交互中涌现）
 ${EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE}
 
-5. had_course_correction: true if the user redirected the AI from a wrong approach, false otherwise
-6. course_correction_reason: If had_course_correction is true, briefly explain what was corrected (or null)
-7. iteration_count: Number of times the user had to clarify, correct, or re-explain something
+5. had_course_correction：用户是否将 AI 从错误方向上拉回来了（true/false）
+6. course_correction_reason：如果 had_course_correction 为 true，简要说明纠正了什么（否则为 null）
+7. iteration_count：用户需要澄清、纠正或重新解释的次数
 
-If the session has minimal friction and straightforward execution, use empty arrays for friction_points, set outcome_satisfaction to "high", and iteration_count to 0.
+如果会话摩擦很小、执行顺畅，friction_points 用空数组，outcome_satisfaction 设为 "high"，iteration_count 设为 0。
 
-=== PART 2: INSIGHTS ===
-Then extract these:
+=== 第二部分：洞察 ===
+然后提取以下内容：
 
-You will extract:
-1. **Summary**: A narrative of what was accomplished and the outcome
-2. **Decisions**: Technical choices made — with full situation context, reasoning, rejected alternatives, trade-offs, and conditions for revisiting (max 3)
-3. **Learnings**: Technical discoveries, gotchas, debugging breakthroughs — with the observable symptom, root cause, and a transferable takeaway (max 5)
+你将提取：
+1. **摘要**：完成了什么以及结果如何的叙述
+2. **决策**：做出的技术选择——包含完整的情境上下文、推理、被否决的替代方案、权衡取舍、以及重新考虑的条件（最多 3 个）
+3. **经验教训**：技术发现、踩坑、调试突破——包含可观测的症状、根因、以及可迁移的收获（最多 5 个）
 
-Quality Standards:
-- Only include insights you would write in a team knowledge base for future reference
-- Each insight MUST reference concrete details: specific file names, library names, error messages, API endpoints, or code patterns
-- Do not invent file names, APIs, errors, or details not present in the conversation
-- Rate your confidence in each insight's value (0-100). Only include insights you rate 70+.
-- It is better to return 0 insights in a category than to include generic or trivial ones
-- If a session is straightforward with no notable decisions or learnings, say so in the summary and leave other categories empty
+质量标准：
+- 只提取你会写进团队知识库供未来参考的洞察
+- 每个洞察必须引用具体细节：文件名、库名、错误信息、API 端点或代码模式
+- 不要编造对话中没有的文件名、API、错误或细节
+- 对每个洞察的价值评估信心分（0-100）。只提取信心分 70 以上的洞察。
+- 宁可某个类别返回 0 个洞察，也不要包含泛泛而谈或琐碎的内容
+- 如果会话很直接，没有值得注意的决策或经验，在摘要中说明，其他类别留空
 
-Length Guidance:
-- Fill every field in the schema. An empty "trade_offs" or "revisit_when" is worse than a longer response.
-- Total response: stay under 2000 tokens. If you must cut, drop lower-confidence insights rather than compressing high-confidence ones.
-- Evidence: 1-3 short quotes per insight, referencing turn labels.
-- Prefer precision over brevity — a specific 3-sentence insight beats a vague 1-sentence insight.
+长度指引：
+- 填写 schema 中的每个字段。空的 "trade_offs" 或 "revisit_when" 比更长的回答更糟糕。
+- 总回答：控制在 2000 token 以内。如果必须精简，丢弃信心分较低的洞察，而不是压缩高信心的洞察。
+- 证据：每个洞察 1-3 条简短引用，标注对话轮次。
+- 宁精确不简短——一个具体的 3 句洞察胜过一个模糊的 1 句洞察。
 
-DO NOT include insights like these (too generic/trivial):
-- "Used debugging techniques to fix an issue"
-- "Made architectural decisions about the codebase"
-- "Implemented a new feature" (the summary already covers this)
-- "Used React hooks for state management" (too generic without specifics)
-- "Fixed a bug in the code" (what bug? what was the root cause?)
-- Anything that restates the task without adding transferable knowledge
+不要提取以下类型的洞察（太泛/太琐碎）：
+- "使用了调试技术来修复问题"
+- "对代码库做了架构决策"
+- "实现了一个新功能"（摘要已经涵盖了）
+- "使用了 React hooks 管理状态"（没有具体细节太泛了）
+- "修复了代码中的 bug"（什么 bug？根因是什么？）
+- 任何只是复述任务但没有提供可迁移知识的内容
 
-Here is an example of an EXCELLENT insight — this is the quality bar:
+以下是一个优秀洞察的示例——这是质量标杆：
 
-EXCELLENT learning:
+优秀的经验教训：
 {
-  "title": "Tailwind v4 requires @theme inline{} for CSS variable utilities",
-  "symptom": "After Tailwind v3→v4 upgrade, custom utilities like bg-primary stopped working. Classes present in HTML but no styles applied.",
-  "root_cause": "Tailwind v4 removed tailwind.config.js theme extension. CSS variables in :root are not automatically available as utilities — must be registered via @theme inline {} in the CSS file.",
-  "takeaway": "When migrating Tailwind v3→v4 with shadcn/ui: add @theme inline {} mapping CSS variables, add @custom-variant dark for class-based dark mode, replace tailwindcss-animate with tw-animate-css.",
-  "applies_when": "Any Tailwind v3→v4 migration using CSS variables for theming, especially with shadcn/ui.",
+  "title": "Tailwind v4 需要 @theme inline{} 才能使用 CSS 变量工具类",
+  "symptom": "Tailwind v3→v4 升级后，bg-primary 等自定义工具类失效。HTML 中有类名但没有样式生效。",
+  "root_cause": "Tailwind v4 移除了 tailwind.config.js 的主题扩展机制。:root 中的 CSS 变量不会自动作为工具类可用——必须在 CSS 文件中通过 @theme inline {} 注册。",
+  "takeaway": "迁移 Tailwind v3→v4 搭配 shadcn/ui 时：添加 @theme inline {} 映射 CSS 变量，添加 @custom-variant dark 以支持 class 模式暗色主题，将 tailwindcss-animate 替换为 tw-animate-css。",
+  "applies_when": "任何使用 CSS 变量做主题的 Tailwind v3→v4 迁移，尤其是搭配 shadcn/ui。",
   "confidence": 95,
-  "evidence": ["User#12: 'The colors are all gone after the upgrade'", "Assistant#13: 'Tailwind v4 requires explicit @theme inline registration...'"]
+  "evidence": ["User#12: '升级后颜色全没了'", "Assistant#13: 'Tailwind v4 需要显式通过 @theme inline 注册...'"]
 }
 
-Extract insights in this JSON format:
+按以下 JSON 格式提取洞察：
 {
   "facets": {
     "outcome_satisfaction": "high | medium | low | abandoned",
@@ -167,70 +167,70 @@ Extract insights in this JSON format:
     "iteration_count": 0,
     "friction_points": [
       {
-        "_reasoning": "User said 'fix the auth' without specifying OAuth vs session-based or which file. Step 1: not external — this is about the prompt, not infrastructure. Step 2: user could have specified which auth flow → user-actionable. Category: incomplete-requirements fits better than vague-request because specific constraints (which flow, which file) were missing, not the overall task description.",
+        "_reasoning": "用户说了 'fix the auth' 但没有指定是 OAuth 还是 session 认证，也没指定哪个文件。步骤 1：不是外部因素——问题在于提示词，不是基础设施。步骤 2：用户本可以指定用哪种认证流程 → user-actionable。分类：incomplete-requirements 比 vague-request 更合适，因为缺失的是具体约束（哪种流程、哪个文件），而非整体任务描述。",
         "category": "incomplete-requirements",
         "attribution": "user-actionable",
-        "description": "Missing specification of which auth flow (OAuth vs session) caused implementation of wrong provider in auth.ts",
+        "description": "未指定使用哪种认证流程（OAuth vs session），导致在 auth.ts 中实现了错误的 provider",
         "severity": "medium",
         "resolution": "resolved"
       },
       {
-        "_reasoning": "AI applied Express middleware pattern to a Hono route despite conversation showing Hono imports. Step 1: not external. Step 2: user provided clear Hono context in prior messages. Step 3: AI failed despite adequate input → ai-capability. Category: knowledge-gap — incorrect framework API knowledge was applied.",
+        "_reasoning": "AI 将 Express 中间件模式应用到了 Hono 路由上，尽管对话中已有 Hono 的 import。步骤 1：不是外部因素。步骤 2：用户在之前的消息中已提供了明确的 Hono 上下文。步骤 3：AI 在输入充足的情况下仍然失败 → ai-capability。分类：knowledge-gap——应用了错误的框架 API 知识。",
         "category": "knowledge-gap",
         "attribution": "ai-capability",
-        "description": "Express-style middleware pattern applied to Hono route despite Hono imports visible in conversation context",
+        "description": "尽管对话上下文中可见 Hono import，仍将 Express 风格的中间件模式应用到 Hono 路由上",
         "severity": "high",
         "resolution": "resolved"
       }
     ],
     "effective_patterns": [
       {
-        "_reasoning": "Before editing, AI read 8 files across server/src/routes/ and server/src/llm/ to understand the data flow. Baseline check: 8 files across 2 directories = beyond routine (<5 file) reads. Step 1: no CLAUDE.md rule requiring this. Step 2: user didn't ask for investigation. Step 3: AI explored autonomously → ai-driven. Category: context-gathering (active investigation, not pre-existing knowledge).",
+        "_reasoning": "在编辑之前，AI 读取了 server/src/routes/ 和 server/src/llm/ 下的 8 个文件来理解数据流。基线检查：跨 2 个目录读取 8 个文件 = 超出常规（<5 文件）读取量。步骤 1：没有 CLAUDE.md 规则要求这样做。步骤 2：用户没有要求调查。步骤 3：AI 自主探索 → ai-driven。分类：context-gathering（主动调查，而非已有知识）。",
         "category": "context-gathering",
-        "description": "Read 8 files across routes/ and llm/ directories to map the data flow before modifying the aggregation query, preventing a type mismatch that would have required rework",
+        "description": "在修改聚合查询之前，读取了 routes/ 和 llm/ 目录下的 8 个文件来梳理数据流，避免了一个会导致返工的类型不匹配问题",
         "confidence": 88,
         "driver": "ai-driven"
       }
     ]
   },
   "summary": {
-    "title": "Brief title describing main accomplishment (max 80 chars)",
-    "content": "2-4 sentence narrative: what was the goal, what was done, what was the outcome. Mention the primary file or component changed.",
+    "title": "简要描述主要成果的标题（最多 80 字符）",
+    "content": "2-4 句叙述：目标是什么、做了什么、结果如何。提及主要修改的文件或组件。",
     "outcome": "success | partial | abandoned | blocked",
-    "bullets": ["Each bullet names a specific artifact (file, function, endpoint) and what changed"]
+    "bullets": ["每条列出一个具体的产出物（文件、函数、端点）及其变更"]
   },
   "decisions": [
     {
-      "title": "The specific technical choice made (max 80 chars)",
-      "situation": "What problem or requirement led to this decision point",
-      "choice": "What was chosen and how it was implemented",
-      "reasoning": "Why this choice was made — the key factors that tipped the decision",
+      "title": "做出的具体技术选择（最多 80 字符）",
+      "situation": "什么问题或需求导致了这个决策点",
+      "choice": "选择了什么以及如何实现",
+      "reasoning": "为什么做出这个选择——影响决策的关键因素",
       "alternatives": [
-        {"option": "Name of alternative", "rejected_because": "Why it was not chosen"}
-      ],
-      "trade_offs": "What downsides were accepted, what was given up",
-      "revisit_when": "Under what conditions this decision should be reconsidered (or 'N/A' if permanent)",
+        {"option": "替代方案名称", "rejected_because": "为什么没有选择它"}
+      },
+      "trade_offs": "接受了什么代价、放弃了什么",
+      "revisit_when": "在什么条件下应该重新考虑这个决策（如果永久有效则填 'N/A'）",
       "confidence": 85,
-      "evidence": ["User#4: quoted text...", "Assistant#5: quoted text..."]
+      "evidence": ["User#4: 引用文本...", "Assistant#5: 引用文本..."]
     }
   ],
   "learnings": [
     {
-      "title": "Specific technical discovery or gotcha (max 80 chars)",
-      "symptom": "What went wrong or was confusing — the observable behavior that triggered investigation",
-      "root_cause": "The underlying technical reason — why it happened",
-      "takeaway": "The transferable lesson — what to do or avoid in similar situations, useful outside this project",
-      "applies_when": "Conditions under which this knowledge is relevant (framework version, configuration, etc.)",
+      "title": "具体的技术发现或踩坑（最多 80 字符）",
+      "symptom": "出了什么问题或哪里让人困惑——触发调查的可观测行为",
+      "root_cause": "底层技术原因——为什么会发生",
+      "takeaway": "可迁移的经验——在类似场景下应该做什么或避免什么，在本项目之外也有用",
+      "applies_when": "这条知识适用的条件（框架版本、配置等）",
       "confidence": 80,
-      "evidence": ["User#7: quoted text...", "Assistant#8: quoted text..."]
+      "evidence": ["User#7: 引用文本...", "Assistant#8: 引用文本..."]
     }
   ]
 }
 
-Only include insights rated 70+ confidence. If you cannot cite evidence, drop the insight. Return empty arrays for categories with no strong insights. Max 3 decisions, 5 learnings.
-Evidence should reference the labeled turns in the conversation (e.g., "User#2", "Assistant#5").
+只提取信心分 70 以上的洞察。如果无法引用证据，丢弃该洞察。没有强洞察的类别返回空数组。最多 3 个决策、5 个经验教训。
+证据应引用对话中的标签化轮次（如 "User#2"、"Assistant#5"）。
 
-Respond with valid JSON only, wrapped in <json>...</json> tags. Do not include any other text.`;
+请仅返回合法的 JSON，用 <json>...</json> 标签包裹。不要包含任何其他文本。`;
 }
 
 // =============================================================================
@@ -251,83 +251,83 @@ export function buildPromptQualityInstructions(
   },
   meta?: SessionMetadata
 ): string {
-  return `You are a prompt engineering coach helping developers communicate more effectively with AI coding assistants. You review conversations and identify specific moments where better prompting would have saved time — AND moments where the user prompted particularly well.
+  return `你是一位提示词工程教练，帮助开发者更有效地与 AI 编程助手沟通。你审查对话并识别出哪些时刻使用更好的提示词可以节省时间——以及哪些时刻用户的提示词特别好。
 
-You will produce:
-1. **Takeaways**: Concrete before/after examples the user can learn from (max 4)
-2. **Findings**: Categorized findings for cross-session aggregation (max 8)
-3. **Dimension scores**: 5 numeric dimensions for progress tracking
-4. **Efficiency score**: 0-100 overall rating
-5. **Assessment**: 2-3 sentence summary
+你将产出：
+1. **要点总结**：用户可以学习的具体前后对比示例（最多 4 个）
+2. **发现项**：用于跨会话聚合的分类发现（最多 8 个）
+3. **维度评分**：5 个数值维度，用于跟踪进步
+4. **效率评分**：0-100 的整体评分
+5. **评估**：2-3 句总结
 
-Project: ${projectName}
-Session shape: ${sessionMeta.humanMessageCount} user messages, ${sessionMeta.assistantMessageCount} assistant messages, ${sessionMeta.toolExchangeCount} tool exchanges
+项目：${projectName}
+会话结构：${sessionMeta.humanMessageCount} 条用户消息、${sessionMeta.assistantMessageCount} 条助手消息、${sessionMeta.toolExchangeCount} 次工具调用
 ${formatSessionMetaLine(meta)}
-Before evaluating, mentally walk through the conversation and identify:
-1. Each time the assistant asked for clarification that could have been avoided
-2. Each time the user corrected the assistant's interpretation
-3. Each time the user repeated an instruction they gave earlier
-4. Whether critical context or requirements were provided late
-5. Whether the user discussed the plan/approach before implementation
-6. Moments where the user's prompt was notably well-crafted
-7. If context compactions occurred, note that the AI may have lost context — repeated instructions IMMEDIATELY after a compaction are NOT a user prompting deficit
-These are your candidate findings. Only include them if they are genuinely actionable.
+在评估之前，先通读对话并识别：
+1. 助手要求澄清的每次时刻——这些本可以避免
+2. 用户纠正助手理解的每次时刻
+3. 用户重复之前给过的指令的每次时刻
+4. 关键上下文或需求是否提供得太晚
+5. 用户是否在实现之前讨论了方案/方法
+6. 用户的提示词写得特别好的时刻
+7. 如果发生了上下文压缩，注意 AI 可能丢失了上下文——压缩后立即重复指令不属于用户的提示词缺陷
+以上是你的候选发现。只保留那些真正有可操作性的。
 
 ${PROMPT_QUALITY_CLASSIFICATION_GUIDANCE}
 
-Guidelines:
-- Focus on USER messages only — don't critique the assistant's responses
-- Be constructive, not judgmental — the goal is to help users improve
-- A score of 100 means every user message was perfectly clear and complete
-- A score of 50 means about half the messages could have been more efficient
-- Include BOTH deficits and strengths — what went right matters as much as what went wrong
-- If the user prompted well, say so — don't manufacture issues
-- If the session had context compactions, do NOT penalize the user for repeating instructions immediately after a compaction — the AI lost context, not the user. Repetition unrelated to compaction events should still be flagged.
+指引：
+- 只关注用户消息——不要评价助手的回答
+- 建设性而非评判性——目标是帮助用户提升
+- 100 分意味着每条用户消息都清晰完整
+- 50 分意味着大约一半的消息可以更高效
+- 同时包含不足和亮点——做对了什么和做错了什么同样重要
+- 如果用户的提示词写得好，就明确说——不要硬找问题
+- 如果会话中发生了上下文压缩，不要因为用户在压缩后重复指令而扣分——是 AI 丢失了上下文，不是用户的问题。与压缩事件无关的重复仍应标注。
 
-Length Guidance:
-- Max 4 takeaways (ordered: improve first, then reinforce), max 8 findings
-- better_prompt must be a complete, usable prompt — not vague meta-advice
-- assessment: 2-3 sentences
-- Total response: stay under 2500 tokens
+长度指引：
+- 最多 4 个要点（排序：先改进项，再强化项），最多 8 个发现项
+- better_prompt 必须是一个完整可用的提示词——不是模糊的元建议
+- assessment：2-3 句
+- 总回答：控制在 2500 token 以内
 
-Evaluate the user's prompting quality and respond with this JSON format:
+评估用户的提示词质量，按以下 JSON 格式回答：
 {
   "efficiency_score": 75,
   "message_overhead": 3,
-  "assessment": "2-3 sentence summary of prompting style and efficiency",
+  "assessment": "2-3 句总结用户的提示词风格和效率",
   "takeaways": [
     {
       "type": "improve",
       "category": "late-constraint",
-      "label": "Short human-readable heading",
+      "label": "简短的人类可读标题",
       "message_ref": "User#5",
-      "original": "The user's original message (abbreviated)",
-      "better_prompt": "A concrete rewrite with the missing context included",
-      "why": "One sentence: why the original caused friction"
+      "original": "用户的原始消息（简要摘录）",
+      "better_prompt": "包含缺失上下文的具体改写",
+      "why": "一句话：为什么原始消息导致了摩擦"
     },
     {
       "type": "reinforce",
       "category": "precise-request",
-      "label": "Short human-readable heading",
+      "label": "简短的人类可读标题",
       "message_ref": "User#0",
-      "what_worked": "What the user did well",
-      "why_effective": "Why it led to a good outcome"
+      "what_worked": "用户做得好的地方",
+      "why_effective": "为什么带来了好结果"
     }
   ],
   "findings": [
     {
       "category": "late-constraint",
       "type": "deficit",
-      "description": "One neutral sentence with specific details",
+      "description": "一句包含具体细节的中性描述",
       "message_ref": "User#5",
       "impact": "high",
       "confidence": 90,
-      "suggested_improvement": "Concrete rewrite or behavioral change"
+      "suggested_improvement": "具体的改写或行为改变"
     },
     {
       "category": "precise-request",
       "type": "strength",
-      "description": "One sentence describing what the user did well",
+      "description": "一句描述用户做得好的地方",
       "message_ref": "User#0",
       "impact": "medium",
       "confidence": 85
@@ -342,21 +342,21 @@ Evaluate the user's prompting quality and respond with this JSON format:
   }
 }
 
-Category values — use these PREFERRED categories:
-Deficits: ${CANONICAL_PQ_DEFICIT_CATEGORIES.join(', ')}
-Strengths: ${CANONICAL_PQ_STRENGTH_CATEGORIES.join(', ')}
-Create a new kebab-case category only when none of these fit.
+分类值——优先使用这些分类：
+不足项：${CANONICAL_PQ_DEFICIT_CATEGORIES.join(', ')}
+亮点项：${CANONICAL_PQ_STRENGTH_CATEGORIES.join(', ')}
+只有当这些都不适用时才创建新的 kebab-case 分类。
 
-Rules:
-- message_ref uses the labeled turns in the conversation (e.g., "User#0", "User#5")
-- Only include genuinely notable findings, not normal back-and-forth
-- Takeaways are the user-facing highlights — max 4, ordered: improve first, then reinforce
-- Findings are the full categorized set for aggregation — max 8
-- If the user prompted well, include strength findings and reinforce takeaways — don't manufacture issues
-- message_overhead is how many fewer messages the session could have taken with better prompts
-- dimension_scores: each 0-100. Score correction_quality as 75 if no corrections were needed.
+规则：
+- message_ref 使用对话中的标签化轮次（如 "User#0"、"User#5"）
+- 只包含真正值得注意的发现，不要包含正常的来回对话
+- 要点是面向用户的亮点——最多 4 个，排序：先改进项，再强化项
+- 发现项是完整的分类集，用于聚合——最多 8 个
+- 如果用户的提示词写得好，就包含亮点发现和强化要点——不要硬找问题
+- message_overhead 是如果提示词更好，会话本可以少多少条消息
+- dimension_scores：每项 0-100。如果没有需要纠正的地方，correction_quality 给 75 分。
 
-Respond with valid JSON only, wrapped in <json>...</json> tags. Do not include any other text.`;
+请仅返回合法的 JSON，用 <json>...</json> 标签包裹。不要包含任何其他文本。`;
 }
 
 // =============================================================================
@@ -373,25 +373,25 @@ export function buildFacetOnlyInstructions(
   sessionSummary: string | null,
   meta?: SessionMetadata
 ): string {
-  return `You are assessing an AI coding session to extract structured metadata for cross-session pattern analysis.
+  return `你正在评估一次 AI 编程会话，提取结构化元数据用于跨会话的模式分析。
 
-Project: ${projectName}
-${sessionSummary ? `Session Summary: ${sessionSummary}\n` : ''}${formatSessionMetaLine(meta)}
-Extract session facets — a holistic assessment of how the session went:
+项目：${projectName}
+${sessionSummary ? `会话摘要：${sessionSummary}\n` : ''}${formatSessionMetaLine(meta)}
+提取会话特征——对会话整体情况的评估：
 
-1. outcome_satisfaction: "high" (completed successfully), "medium" (partial), "low" (problems), "abandoned" (gave up)
-2. workflow_pattern: The dominant pattern, or null. Values: "plan-then-implement", "iterative-refinement", "debug-fix-verify", "explore-then-build", "direct-execution"
-3. friction_points: Up to 5 moments where progress stalled (array).
-   Each: { _reasoning (3-step attribution decision tree reasoning), category (kebab-case, prefer: ${CANONICAL_FRICTION_CATEGORIES.join(', ')}), attribution ("user-actionable"|"ai-capability"|"environmental"), description (one neutral sentence with specific details), severity ("high"|"medium"|"low"), resolution ("resolved"|"workaround"|"unresolved") }
+1. outcome_satisfaction："high"（成功完成）、"medium"（部分完成）、"low"（有问题）、"abandoned"（放弃了）
+2. workflow_pattern：主要模式，或 null。值："plan-then-implement"、"iterative-refinement"、"debug-fix-verify"、"explore-then-build"、"direct-execution"
+3. friction_points：最多 5 个进度停滞的时刻（数组）。
+   每个：{ _reasoning（3 步归因决策树推理）、category（kebab-case，优先：${CANONICAL_FRICTION_CATEGORIES.join(', ')}）、attribution（"user-actionable"|"ai-capability"|"environmental"）、description（一句包含具体细节的中性描述）、severity（"high"|"medium"|"low"）、resolution（"resolved"|"workaround"|"unresolved"） }
 ${FRICTION_CLASSIFICATION_GUIDANCE}
-4. effective_patterns: Up to 3 things that worked well (array).
-   Each: { _reasoning (driver decision tree reasoning — check user infrastructure first), category (kebab-case, prefer: ${CANONICAL_PATTERN_CATEGORIES.join(', ')}), description (specific technique, 1-2 sentences), confidence (0-100), driver ("user-driven"|"ai-driven"|"collaborative") }
+4. effective_patterns：最多 3 个效果好的做法（数组）。
+   每个：{ _reasoning（驱动者决策树推理——先检查用户基础设施）、category（kebab-case，优先：${CANONICAL_PATTERN_CATEGORIES.join(', ')}）、description（具体技术，1-2 句）、confidence（0-100）、driver（"user-driven"|"ai-driven"|"collaborative"） }
 ${EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE}
-5. had_course_correction: true/false — did the user redirect the AI?
-6. course_correction_reason: Brief explanation if true, null otherwise
-7. iteration_count: How many user clarification/correction cycles occurred
+5. had_course_correction：true/false——用户是否将 AI 从错误方向拉回来了？
+6. course_correction_reason：如果为 true 则简要说明，否则为 null
+7. iteration_count：用户需要澄清/纠正的循环次数
 
-Extract facets in this JSON format:
+按以下 JSON 格式提取特征：
 {
   "outcome_satisfaction": "high | medium | low | abandoned",
   "workflow_pattern": "string or null",
@@ -400,24 +400,24 @@ Extract facets in this JSON format:
   "iteration_count": 0,
   "friction_points": [
     {
-      "_reasoning": "Reasoning for category + attribution classification",
+      "_reasoning": "分类 + 归因的推理过程",
       "category": "kebab-case-category",
       "attribution": "user-actionable | ai-capability | environmental",
-      "description": "One neutral sentence about the gap, with specific details",
+      "description": "一句关于问题的中性描述，包含具体细节",
       "severity": "high | medium | low",
       "resolution": "resolved | workaround | unresolved"
     }
   ],
   "effective_patterns": [
     {
-      "_reasoning": "Reasoning for category + driver classification, including baseline check",
+      "_reasoning": "分类 + 驱动者的推理过程，包含基线检查",
       "category": "kebab-case-category",
-      "description": "technique",
+      "description": "技术描述",
       "confidence": 85,
       "driver": "user-driven | ai-driven | collaborative"
     }
   ]
 }
 
-Respond with valid JSON only, wrapped in <json>...</json> tags.`;
+请仅返回合法的 JSON，用 <json>...</json> 标签包裹。`;
 }

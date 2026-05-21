@@ -123,6 +123,7 @@ program
   .command('dashboard')
   .description('启动 Code Insights 控制台服务并在浏览器中打开')
   .option('-p, --port <number>', '端口号', String(7890))
+  .option('-H, --host <address>', '监听地址（默认 127.0.0.1，0.0.0.0 允许外部访问）')
   .option('--no-open', '不自动打开浏览器')
   .option('--no-sync', '启动前跳过自动会话同步')
   .action(dashboardCommand);
@@ -173,12 +174,14 @@ insightsCmd
   .option('-q, --quiet', '机器可读输出（仅输出数量）')
   .option('--analyze', '依次处理所有发现的会话')
   .option('-c, --concurrency <n>', '并发 worker 数量（1-10，配合 --analyze 使用）', '1')
+  .option('--force', '强制重新分析已有洞察的会话（覆盖）')
   .action(async (opts) => {
     await insightsCheckCommand({
       days: opts.days ? parseInt(opts.days, 10) : 7,
       quiet: opts.quiet,
       analyze: opts.analyze,
       concurrency: opts.concurrency ? parseInt(opts.concurrency, 10) : 1,
+      force: opts.force,
     });
   });
 

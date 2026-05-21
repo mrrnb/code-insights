@@ -82,11 +82,11 @@ export function buildInsightContext(insights: ExportInsightRow[]): string {
 
   const typeOrder = ['decision', 'learning', 'technique', 'prompt_quality', 'summary'];
   const typeLabels: Record<string, string> = {
-    decision: 'DECISIONS',
-    learning: 'LEARNINGS',
-    technique: 'TECHNIQUES',
-    prompt_quality: 'PROMPT QUALITY',
-    summary: 'SESSION SUMMARIES',
+    decision: '决策',
+    learning: '学习收获',
+    technique: '技巧',
+    prompt_quality: '提示词质量',
+    summary: '会话摘要',
   };
 
   for (const type of typeOrder) {
@@ -100,7 +100,7 @@ export function buildInsightContext(insights: ExportInsightRow[]): string {
       const projectTag = item.project_name ? ` [${item.project_name}]` : '';
       const confidence = Math.round(item.confidence * 100);
       sections.push(
-        `### ${item.title}${projectTag} (confidence: ${confidence}%)\n${item.content || item.summary}\n`
+        `### ${item.title}${projectTag}（置信度：${confidence}%）\n${item.content || item.summary}\n`
       );
     }
   }
@@ -111,85 +111,81 @@ export function buildInsightContext(insights: ExportInsightRow[]): string {
 // ─── System prompts ──────────────────────────────────────────────────────────
 
 export const AGENT_RULES_PROJECT_SYSTEM_PROMPT = (projectName: string) => `\
-You are a technical writer converting AI coding session insights into agent \
-instruction rules for the project "${projectName}". Produce imperative \
-instructions suitable for a CLAUDE.md or .cursorrules file.
+你是一位技术作家，正在将 AI 编码会话的 insights 转换为项目 "${projectName}" 的 agent 指令规则。\
+产出适用于 CLAUDE.md 或 .cursorrules 文件的祈使句式指令。
 
-Rules:
-- Deduplicate overlapping insights — merge into single rules
-- Use imperative mood: "USE X", "DO NOT Y", "WHEN Z, do W"
-- Group by topic (not by session)
-- Include REVISIT conditions where relevant
-- Prioritize by confidence and frequency
-- If decisions evolved over time, note the current decision and why it changed
-- Include a "Prompt Hygiene" section aggregating anti-patterns from prompt quality insights (if any exist)
-- Output clean markdown only — no preamble, no meta-commentary
-- Write all generated markdown in Simplified Chinese while preserving code identifiers, filenames, URLs, CLI commands, and section syntax where required`;
+规则：
+- 对重叠的 insights 去重——合并为单一规则
+- 使用祈使语气："USE X"、"DO NOT Y"、"WHEN Z, do W"
+- 按主题分组（而非按会话）
+- 在相关处包含 REVISIT 条件
+- 按置信度和频率排定优先级
+- 如果决策随时间演变，记录当前决策及其变更原因
+- 包含"提示词卫生"部分，汇总来自 prompt quality insights 的反模式（如果存在）
+- 仅输出干净的 Markdown——不要添加前言或元评论
+- 所有生成的 Markdown 使用简体中文撰写，同时保留代码标识符、文件名、URL、CLI 命令和必要的 section 语法`;
 
 export const AGENT_RULES_ALL_SYSTEM_PROMPT = `\
-You are a technical writer converting AI coding session insights from multiple \
-projects into agent instruction rules. Produce imperative instructions suitable \
-for a CLAUDE.md or .cursorrules file.
+你是一位技术作家，正在将来自多个项目的 AI 编码会话 insights 转换为 agent 指令规则。\
+产出适用于 CLAUDE.md 或 .cursorrules 文件的祈使句式指令。
 
-For each rule you produce, classify its scope:
+对你产出的每条规则，按以下范围分类：
 
-- PROJECT-SPECIFIC: The rule references a specific project, framework version, \
-  library, or codebase structure that only applies to that project. \
-  Prefix with "[project-name]" e.g. "[code-insights] USE WAL mode for SQLite"
+- PROJECT-SPECIFIC：该规则引用了特定项目、框架版本、库或代码库结构，仅适用于该项目。\
+  以 "[project-name]" 为前缀，例如 "[code-insights] USE WAL mode for SQLite"
 
-- UNIVERSAL: The rule is a general engineering practice, debugging technique, \
-  or prompting pattern that applies across any project. \
-  No prefix needed.
+- UNIVERSAL：该规则是通用的工程实践、调试技巧或提示模式，适用于任何项目。\
+  无需前缀。
 
-When in doubt, label as PROJECT-SPECIFIC.
+如有疑问，标记为 PROJECT-SPECIFIC。
 
-Structure the output as:
+按如下结构组织输出：
 ## Universal Rules
-(rules that apply to any project)
+（适用于任何项目的规则）
 
 ## Project-Specific Rules
 ### {project-name}
-(rules specific to this project)
+（特定于该项目的规则）
 
-Additional rules:
-- Deduplicate overlapping insights — merge into single rules
-- Use imperative mood: "USE X", "DO NOT Y", "WHEN Z, do W"
-- Group by topic within each section
-- Prioritize by confidence and frequency
-- Include a "Prompt Hygiene" section with universal anti-patterns (if any exist)
-- Output clean markdown only — no preamble, no meta-commentary
-- Write all generated markdown in Simplified Chinese while preserving project names, code identifiers, URLs, and section syntax where required`;
+附加规则：
+- 对重叠的 insights 去重——合并为单一规则
+- 使用祈使语气："USE X"、"DO NOT Y"、"WHEN Z, do W"
+- 在每个 section 内按主题分组
+- 按置信度和频率排定优先级
+- 包含"提示词卫生"部分，汇总通用反模式（如果存在）
+- 仅输出干净的 Markdown——不要添加前言或元评论
+- 所有生成的 Markdown 使用简体中文撰写，同时保留项目名称、代码标识符、URL 和必要的 section 语法`;
 
 export const KNOWLEDGE_BRIEF_PROJECT_SYSTEM_PROMPT = (projectName: string) => `\
-You are a technical writer creating a project knowledge handoff document for "${projectName}". \
-Produce a readable markdown document summarizing decisions, learnings, and techniques from AI coding sessions.
+你是一位技术作家，正在为项目 "${projectName}" 创建知识交接文档。\
+产出一份可读的 Markdown 文档，汇总来自 AI 编码会话的决策、学习收获和技巧。
 
-Structure:
-- Executive summary (3-5 sentences covering the project's trajectory and key architectural bets)
-- Key decisions (with reasoning and trade-offs noted)
-- Learnings (grouped by topic)
-- Techniques worth reusing
+结构：
+- 执行摘要（3-5 句话，涵盖项目走向和关键架构决策）
+- 关键决策（附带理由和权衡说明）
+- 学习收获（按主题分组）
+- 值得复用的技巧
 
-Output clean markdown only — no preamble, no meta-commentary.
-Write all generated markdown in Simplified Chinese while preserving project names, code identifiers, filenames, commands, and URLs.`;
+仅输出干净的 Markdown——不要添加前言或元评论。
+所有生成的 Markdown 使用简体中文撰写，同时保留项目名称、代码标识符、文件名、命令和 URL。`;
 
 export const KNOWLEDGE_BRIEF_ALL_SYSTEM_PROMPT = `\
-You are a technical writer creating a knowledge handoff document from AI coding sessions across multiple projects. \
-Produce a readable markdown document summarizing decisions, learnings, and techniques.
+你是一位技术作家，正在基于多个项目的 AI 编码会话创建知识交接文档。\
+产出一份可读的 Markdown 文档，汇总决策、学习收获和技巧。
 
-Structure:
-- Cross-cutting themes section at the top (patterns that appear across projects)
-- Then organize by project, each with:
-  - Key decisions (with reasoning and trade-offs noted)
-  - Learnings (grouped by topic)
-  - Techniques worth reusing
+结构：
+- 顶部设置跨项目主题部分（跨项目出现的模式）
+- 然后按项目组织，每个项目包含：
+  - 关键决策（附带理由和权衡说明）
+  - 学习收获（按主题分组）
+  - 值得复用的技巧
 
-Output clean markdown only — no preamble, no meta-commentary.
-Write all generated markdown in Simplified Chinese while preserving project names, code identifiers, filenames, commands, and URLs.`;
+仅输出干净的 Markdown——不要添加前言或元评论。
+所有生成的 Markdown 使用简体中文撰写，同时保留项目名称、代码标识符、文件名、命令和 URL。`;
 
 export const OBSIDIAN_PROJECT_SYSTEM_PROMPT = (projectName: string, exportDate: string) => `\
-Produce markdown with YAML frontmatter suitable for Obsidian for the project "${projectName}". \
-Start with exactly this frontmatter block:
+为项目 "${projectName}" 生成适用于 Obsidian 的带 YAML frontmatter 的 Markdown。\
+以如下 frontmatter 块开头：
 
 ---
 date: ${exportDate}
@@ -198,14 +194,14 @@ tags: [code-insights, decisions, learnings, techniques]
 type: knowledge-export
 ---
 
-Use [[wikilinks]] for cross-references between concepts where appropriate. \
-Group content by topic, not by session. \
-Output clean markdown only — no preamble, no meta-commentary.
-Write all generated markdown in Simplified Chinese while preserving YAML/frontmatter keys, wikilinks syntax, code identifiers, filenames, commands, and URLs.`;
+在适当处使用 [[wikilinks]] 进行概念间的交叉引用。\
+按主题分组内容，而非按会话。\
+仅输出干净的 Markdown——不要添加前言或元评论。
+所有生成的 Markdown 使用简体中文撰写，同时保留 YAML/frontmatter 键名、wikilinks 语法、代码标识符、文件名、命令和 URL。`;
 
 export const OBSIDIAN_ALL_SYSTEM_PROMPT = (exportDate: string) => `\
-Produce markdown with YAML frontmatter suitable for Obsidian covering multiple projects. \
-Start with exactly this frontmatter block:
+为涵盖多个项目的场景生成适用于 Obsidian 的带 YAML frontmatter 的 Markdown。\
+以如下 frontmatter 块开头：
 
 ---
 date: ${exportDate}
@@ -214,32 +210,32 @@ tags: [code-insights, decisions, learnings, techniques]
 type: knowledge-export
 ---
 
-Use [[wikilinks]] for cross-references between concepts where appropriate. \
-Organize content by project with a cross-cutting themes section first. \
-Output clean markdown only — no preamble, no meta-commentary.
-Write all generated markdown in Simplified Chinese while preserving YAML/frontmatter keys, wikilinks syntax, code identifiers, filenames, commands, and URLs.`;
+在适当处使用 [[wikilinks]] 进行概念间的交叉引用。\
+按项目组织内容，首先设置跨项目主题部分。\
+仅输出干净的 Markdown——不要添加前言或元评论。
+所有生成的 Markdown 使用简体中文撰写，同时保留 YAML/frontmatter 键名、wikilinks 语法、代码标识符、文件名、命令和 URL。`;
 
 export const NOTION_PROJECT_SYSTEM_PROMPT = (projectName: string) => `\
-Produce Notion-compatible markdown for the project "${projectName}". Use:
-- Toggle blocks (▶ **Section Name**) for collapsible sections
-- Callout blocks (> [!note] content) for key decisions
-- Tables for structured comparisons where appropriate
-- No wikilinks — use standard markdown links only
+为项目 "${projectName}" 生成兼容 Notion 的 Markdown。使用：
+- Toggle blocks（▶ **Section Name**）实现可折叠章节
+- Callout blocks（> [!note] content）标注关键决策
+- 在适当处使用表格进行结构化对比
+- 不使用 wikilinks——仅使用标准 Markdown 链接
 
-Group content by topic, not by session. \
-Output clean markdown only — no preamble, no meta-commentary.
-Write all generated markdown in Simplified Chinese while preserving Notion syntax markers, code identifiers, filenames, commands, and URLs.`;
+按主题分组内容，而非按会话。\
+仅输出干净的 Markdown——不要添加前言或元评论。
+所有生成的 Markdown 使用简体中文撰写，同时保留 Notion 语法标记、代码标识符、文件名、命令和 URL。`;
 
 export const NOTION_ALL_SYSTEM_PROMPT = `\
-Produce Notion-compatible markdown covering multiple projects. Use:
-- Toggle blocks (▶ **Section Name**) for collapsible sections
-- Callout blocks (> [!note] content) for key decisions
-- Tables for structured comparisons where appropriate
-- No wikilinks — use standard markdown links only
+为涵盖多个项目的场景生成兼容 Notion 的 Markdown。使用：
+- Toggle blocks（▶ **Section Name**）实现可折叠章节
+- Callout blocks（> [!note] content）标注关键决策
+- 在适当处使用表格进行结构化对比
+- 不使用 wikilinks——仅使用标准 Markdown 链接
 
-Organize content by project with a cross-cutting themes section first. \
-Output clean markdown only — no preamble, no meta-commentary.
-Write all generated markdown in Simplified Chinese while preserving Notion syntax markers, code identifiers, filenames, commands, and URLs.`;
+按项目组织内容，首先设置跨项目主题部分。\
+仅输出干净的 Markdown——不要添加前言或元评论。
+所有生成的 Markdown 使用简体中文撰写，同时保留 Notion 语法标记、代码标识符、文件名、命令和 URL。`;
 
 /**
  * Select the appropriate system prompt for the given format and scope.
@@ -278,13 +274,13 @@ export function getExportSystemPrompt(ctx: ExportContext): string {
  */
 export function buildExportUserPrompt(ctx: ExportContext, insightContext: string): string {
   const scopeDescription = ctx.scope === 'project'
-    ? `Project: ${ctx.projectName}`
-    : `All projects (${ctx.projectCount} project${ctx.projectCount !== 1 ? 's' : ''})`;
+    ? `项目：${ctx.projectName}`
+    : `全部项目（${ctx.projectCount} 个项目）`;
 
   const header = [
-    `Source: ${scopeDescription}`,
-    `Sessions analyzed: ${ctx.sessionCount}`,
-    `Date range: ${ctx.dateRange.from} to ${ctx.dateRange.to}`,
+    `来源：${scopeDescription}`,
+    `分析会话数：${ctx.sessionCount}`,
+    `日期范围：${ctx.dateRange.from} 至 ${ctx.dateRange.to}`,
   ].join('\n');
 
   return `${header}\n\n${insightContext}`;

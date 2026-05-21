@@ -4,26 +4,26 @@
 
 // --- Friction & Wins ---
 
-export const FRICTION_WINS_SYSTEM_PROMPT = `You are analyzing cross-session patterns from a developer's AI coding sessions. You will receive pre-aggregated friction categories and effective patterns with counts and severity scores.
+export const FRICTION_WINS_SYSTEM_PROMPT = `你正在分析一位开发者在多个 AI 编码会话中的模式。你将收到预聚合的摩擦类别和有效模式，包含出现次数和严重度评分。
 
-Your job is to synthesize a narrative analysis of the 3-5 most significant patterns. For each pattern:
-1. State what the pattern is
-2. Explain why it matters (impact on productivity)
-3. Identify the likely root cause
-4. Note if it's trending (getting better or worse)
+你的任务是综合分析 3-5 个最重要的模式。对于每个模式：
+1. 说明该模式是什么
+2. 解释其重要性（对生产力的影响）
+3. 识别可能的根本原因
+4. 标注其趋势（在改善还是恶化）
 
-RULES:
-- Every claim must trace to the statistics provided. Do not invent patterns.
-- Patterns require 2+ occurrences to be mentioned.
-- Do not give advice — that's for the Rules & Skills section.
-- Be specific: "wrong-approach appeared 7 times with high severity" not "there were some issues"
-- Keep the narrative under 500 words.
-- Where PQ deficit signals corroborate friction categories, note the reinforcing evidence briefly.
-- PQ signals are supplementary context, not primary evidence. Never dedicate a full pattern to PQ alone — mention PQ only within friction or wins paragraphs.
+规则：
+- 每项结论必须有统计数据支撑，不得凭空编造模式。
+- 模式需出现 2 次以上才会被提及。
+- 不要给出建议——那是"规则与技能"部分的职责。
+- 要具体明确："wrong-approach 出现了 7 次，严重度为高"，而非"存在一些问题"。
+- 叙述控制在 500 字以内。
+- 当 PQ 缺陷信号与摩擦类别相互印证时，简要说明佐证。
+- PQ 信号是补充性上下文，而非主要证据。切勿单独为 PQ 设置完整模式——仅在摩擦或胜利段落中提及 PQ。
 
-All narrative and explanation fields must be written in Simplified Chinese. Keep enum values and machine-readable category IDs unchanged.
+所有叙述和解释字段必须使用简体中文撰写。枚举值和机器可读的类别 ID 保持不变。
 
-Respond with valid JSON only, wrapped in <json>...</json> tags.`;
+仅返回有效的 JSON，包裹在 <json>...</json> 标签中。`;
 
 export function generateFrictionWinsPrompt(data: {
   frictionCategories: Array<{ category: string; count: number; avg_severity: number; examples: string[] }>;
@@ -38,127 +38,127 @@ export function generateFrictionWinsPrompt(data: {
   const hasPQData = data.pqSignals?.deficits.length || data.pqSignals?.strengths.length;
   const pqSection = hasPQData
     ? `
-PROMPT QUALITY SIGNALS (supplementary):
+PROMPT QUALITY SIGNALS（补充）：
 
-Deficits:
-${((data.pqSignals?.deficits ?? []).map(d => `  ${d.category}: ${d.count}`).join('\n') || '  (none above threshold)')}
+缺陷：
+${((data.pqSignals?.deficits ?? []).map(d => `  ${d.category}: ${d.count}`).join('\n') || '  （无超过阈值的项目）')}
 
-Strengths:
-${((data.pqSignals?.strengths ?? []).map(s => `  ${s.category}: ${s.count}`).join('\n') || '  (none above threshold)')}
+优势：
+${((data.pqSignals?.strengths ?? []).map(s => `  ${s.category}: ${s.count}`).join('\n') || '  （无超过阈值的项目）')}
 `
     : '';
 
-  return `Analyze these cross-session patterns from ${data.totalSessions} sessions over ${data.period}.
+  return `分析来自 ${data.totalSessions} 个会话（时间跨度 ${data.period}）的跨会话模式。
 
-FRICTION CATEGORIES (ranked by frequency × severity):
+摩擦类别（按频率 × 严重度排序）：
 ${JSON.stringify(data.frictionCategories.slice(0, 15), null, 2)}
 
-EFFECTIVE PATTERNS (ranked by frequency, grouped by category):
+有效模式（按频率排序，按类别分组）：
 ${JSON.stringify(data.effectivePatterns.slice(0, 10), null, 2)}
 ${pqSection}
-Respond with this JSON format:
+请按以下 JSON 格式响应：
 {
-  "narrative": "Your 300-500 word analysis of the most significant patterns",
+  "narrative": "对最重要模式的 300-500 字分析",
   "topFriction": [
     {
-      "category": "category-name",
-      "significance": "Why this matters",
-      "rootCause": "Likely underlying cause",
+      "category": "类别名称",
+      "significance": "为什么这很重要",
+      "rootCause": "可能的根本原因",
       "trend": "increasing | stable | decreasing | new"
     }
   ],
   "topWins": [
     {
       "category": "structured-planning",
-      "pattern": "Description of what works",
-      "significance": "Why this is effective"
+      "pattern": "对有效做法的描述",
+      "significance": "为什么这很有效"
     }
   ]
 }
 
-All narrative and explanation fields must be written in Simplified Chinese. Keep enum values and machine-readable category IDs unchanged.
+所有叙述和解释字段必须使用简体中文撰写。枚举值和机器可读的类别 ID 保持不变。
 
-Respond with valid JSON only, wrapped in <json>...</json> tags.`;
+仅返回有效的 JSON，包裹在 <json>...</json> 标签中。`;
 }
 
 // --- Rules & Skills ---
 
-export const RULES_SKILLS_SYSTEM_PROMPT = `You are generating actionable artifacts from cross-session analysis of a developer's AI coding sessions. You will receive recurring friction patterns and effective practices.
+export const RULES_SKILLS_SYSTEM_PROMPT = `你正在根据开发者多个 AI 编码会话的跨会话分析，生成可直接使用的成果物。你将收到反复出现的摩擦模式和有效实践。
 
-Your job is to produce concrete, copy-paste-ready artifacts:
-1. CLAUDE.md rules — specific instructions to add to the AI assistant's config
-2. Hook configurations — automation triggers
+你的任务是产出具体、可直接复制粘贴的成果物：
+1. CLAUDE.md 规则——添加到 AI 助手配置中的具体指令
+2. Hook 配置——自动化触发器
 
-RULES:
-- Only generate artifacts for patterns with 3+ occurrences (friction) or 2+ occurrences (effective patterns)
-- Rules must be specific enough to be actionable: "Always run tests before creating PRs" not "Be careful with code"
-- Hook configs must include the event trigger and command
-- Max 6 rules, 3 hooks
-- Each artifact must reference the friction pattern or effective practice it addresses
+规则：
+- 仅为出现 3 次以上的摩擦模式或 2 次以上的有效模式生成成果物
+- 规则必须足够具体，具有可操作性："创建 PR 前务必运行测试"，而非"注意代码质量"
+- Hook 配置必须包含事件触发器和命令
+- 最多 6 条规则、3 个 hook
+- 每个成果物必须注明其所针对的摩擦模式或有效实践
 
-All narrative and explanation fields must be written in Simplified Chinese. Keep enum values and machine-readable category IDs unchanged.
+所有叙述和解释字段必须使用简体中文撰写。枚举值和机器可读的类别 ID 保持不变。
 
-Respond with valid JSON only, wrapped in <json>...</json> tags.`;
+仅返回有效的 JSON，包裹在 <json>...</json> 标签中。`;
 
 export function generateRulesSkillsPrompt(data: {
   recurringFriction: Array<{ category: string; count: number; avg_severity: number; examples: string[] }>;
   effectivePatterns: Array<{ category: string; label: string; frequency: number; avg_confidence: number; descriptions: string[] }>;
   targetTool: string;
 }): string {
-  return `Generate actionable artifacts from these recurring patterns.
+  return `根据这些反复出现的模式生成可操作的成果物。
 
-TARGET TOOL: ${data.targetTool} (generate artifacts compatible with this tool's ecosystem)
+目标工具：${data.targetTool}（生成与该工具生态兼容的成果物）
 
-RECURRING FRICTION (3+ occurrences):
+反复出现的摩擦（3 次以上）：
 ${JSON.stringify(data.recurringFriction, null, 2)}
 
-EFFECTIVE PATTERNS (2+ occurrences):
+有效模式（2 次以上）：
 ${JSON.stringify(data.effectivePatterns, null, 2)}
 
-Respond with this JSON format:
+请按以下 JSON 格式响应：
 {
   "claudeMdRules": [
     {
-      "rule": "The exact text to add to CLAUDE.md",
-      "rationale": "Why this rule helps (reference the friction pattern)",
-      "frictionSource": "category-name (N occurrences)"
+      "rule": "要添加到 CLAUDE.md 的具体文本",
+      "rationale": "该规则为何有效（引用摩擦模式）",
+      "frictionSource": "类别名称（出现 N 次）"
     }
   ],
   "hookConfigs": [
     {
       "event": "pre-commit | post-file-edit | etc.",
-      "command": "The shell command to run",
-      "rationale": "Why this automation helps"
+      "command": "要执行的 shell 命令",
+      "rationale": "该自动化为何有帮助"
     }
   ]
 }
 
-All narrative and explanation fields must be written in Simplified Chinese. Keep enum values and machine-readable category IDs unchanged.
+所有叙述和解释字段必须使用简体中文撰写。枚举值和机器可读的类别 ID 保持不变。
 
-Respond with valid JSON only, wrapped in <json>...</json> tags.`;
+仅返回有效的 JSON，包裹在 <json>...</json> 标签中。`;
 }
 
 // --- Working Style ---
 
-export const WORKING_STYLE_SYSTEM_PROMPT = `You are writing a brief working style profile based on aggregated statistics from a developer's AI coding sessions. You will receive distributions of workflow patterns, outcomes, session types, and friction frequency.
+export const WORKING_STYLE_SYSTEM_PROMPT = `你正在根据开发者 AI 编码会话的聚合统计数据，撰写简短的工作风格画像。你将收到工作流模式、成果分布、会话类型和摩擦频率的分布数据。
 
-Your job is to describe WHAT you see, not what they should change. Write in second person ("You tend to...").
+你的任务是描述你观察到的现象，而非建议他们应该如何改变。使用第二人称撰写（"你倾向于……"）。
 
-RULES:
-- Base every statement on the statistics provided
-- Keep the narrative to 3-5 sentences
-- Be descriptive, not prescriptive (no advice)
-- Mention the dominant workflow pattern, outcome distribution, and any notable characteristics
-- If the data is too sparse (< 5 sessions), say so and keep it brief
-- Generate a tagline: a 2-4 word archetype label in title case, maximum 40 characters (e.g. "The Methodical Builder", "Relentless Debugger", "Ship Fast Fix Later", "Deep Focus Specialist")
-- The tagline must be empowering and descriptive, never critical or negative
-- Base the tagline on the dominant session types, workflow patterns, and outcome distribution
-- Think of it like a developer personality type — specific and earned, not generic
-- Generate a tagline_subtitle: a single short sentence (≤80 chars) that completes or elaborates the tagline with a specific behavioral observation (e.g. "plans thoroughly, debugs systematically, ships with confidence")
+规则：
+- 每项陈述必须基于所提供的统计数据
+- 叙述控制在 3-5 句话
+- 只做描述，不做处方（不提建议）
+- 提及主导的工作流模式、成果分布以及显著特征
+- 如果数据过于稀疏（少于 5 个会话），如实说明并保持简洁
+- 生成一个标签：2-4 个英文单词的原型标签，使用首字母大写格式，最多 40 个字符（例如 "The Methodical Builder"、"Relentless Debugger"、"Ship Fast Fix Later"、"Deep Focus Specialist"）
+- 标签必须具有赋能性和描述性，绝不使用批评性或负面措辞
+- 标签应基于主导的会话类型、工作流模式和成果分布
+- 将其视为开发者人格类型——具体且有据可循，而非泛泛而谈
+- 生成一个 tagline_subtitle：一句简短的话（不超过 80 个字符），用具体的行为观察来补充或阐释标签（例如 "plans thoroughly, debugs systematically, ships with confidence"）
 
-All narrative and explanation fields must be written in Simplified Chinese. Keep enum values and machine-readable category IDs unchanged.
+所有叙述和解释字段必须使用简体中文撰写。枚举值和机器可读的类别 ID 保持不变。
 
-Respond with valid JSON only, wrapped in <json>...</json> tags.`;
+仅返回有效的 JSON，包裹在 <json>...</json> 标签中。`;
 
 export function generateWorkingStylePrompt(data: {
   workflowDistribution: Record<string, number>;
@@ -168,27 +168,27 @@ export function generateWorkingStylePrompt(data: {
   period: string;
   frictionFrequency: number;
 }): string {
-  return `Write a working style profile based on ${data.totalSessions} sessions over ${data.period}.
+  return `根据 ${data.totalSessions} 个会话（时间跨度 ${data.period}）撰写工作风格画像。
 
-WORKFLOW PATTERNS:
+工作流模式：
 ${JSON.stringify(data.workflowDistribution, null, 2)}
 
-OUTCOME SATISFACTION:
+成果满意度：
 ${JSON.stringify(data.outcomeDistribution, null, 2)}
 
-SESSION TYPES:
+会话类型：
 ${JSON.stringify(data.characterDistribution, null, 2)}
 
-FRICTION FREQUENCY: ${data.frictionFrequency} total friction points across all sessions
+摩擦频率：所有会话中共有 ${data.frictionFrequency} 个摩擦点
 
-Respond with this JSON format:
+请按以下 JSON 格式响应：
 {
-  "tagline": "2-4 word archetype label (e.g. The Methodical Builder)",
-  "tagline_subtitle": "single sentence ≤80 chars elaborating on the tagline (e.g. plans thoroughly, debugs systematically, ships with confidence)",
-  "narrative": "3-5 sentence working style description"
+  "tagline": "2-4 个英文单词的原型标签（例如 The Methodical Builder）",
+  "tagline_subtitle": "不超过 80 个字符的单句补充说明（例如 plans thoroughly, debugs systematically, ships with confidence）",
+  "narrative": "3-5 句话的工作风格描述"
 }
 
-All narrative and explanation fields must be written in Simplified Chinese. Keep enum values and machine-readable category IDs unchanged.
+所有叙述和解释字段必须使用简体中文撰写。枚举值和机器可读的类别 ID 保持不变。
 
-Respond with valid JSON only, wrapped in <json>...</json> tags.`;
+仅返回有效的 JSON，包裹在 <json>...</json> 标签中。`;
 }

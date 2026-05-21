@@ -22,6 +22,7 @@ import dispatchRouter from './routes/dispatch.js';
 
 export interface ServerOptions {
   port: number;
+  host?: string;
   // Absolute path to the dashboard/dist directory
   staticDir: string;
   openBrowser: boolean;
@@ -80,6 +81,7 @@ export function createApp(): Hono {
  */
 export async function startServer(options: ServerOptions): Promise<void> {
   const { port, staticDir, openBrowser } = options;
+  const host = options.host ?? '127.0.0.1';
 
   const app = createApp();
 
@@ -128,8 +130,8 @@ export async function startServer(options: ServerOptions): Promise<void> {
   process.on('SIGINT', () => { void shutdown(); });
   process.on('SIGTERM', () => { void shutdown(); });
 
-  serve({ fetch: app.fetch, port }, (info) => {
-    const url = `http://localhost:${info.port}`;
+  serve({ fetch: app.fetch, port, hostname: host }, (info) => {
+    const url = `http://${host}:${info.port}`;
     console.log(`  Code Insights dashboard running at ${url}`);
     if (openBrowser) {
       openUrl(url);
