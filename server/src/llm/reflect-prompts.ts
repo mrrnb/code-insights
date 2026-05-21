@@ -2,9 +2,11 @@
 // These prompts receive pre-aggregated facet data and produce cross-session narratives.
 // LLMs synthesize — they don't count. All counting is done in code before calling these.
 
+import { loadPrompt } from '@code-insights/cli/prompts/prompt-loader';
+
 // --- Friction & Wins ---
 
-export const FRICTION_WINS_SYSTEM_PROMPT = `你正在分析一位开发者在多个 AI 编码会话中的模式。你将收到预聚合的摩擦类别和有效模式，包含出现次数和严重度评分。
+const FRICTION_WINS_SYSTEM_PROMPT_DEFAULT = `你正在分析一位开发者在多个 AI 编码会话中的模式。你将收到预聚合的摩擦类别和有效模式，包含出现次数和严重度评分。
 
 你的任务是综合分析 3-5 个最重要的模式。对于每个模式：
 1. 说明该模式是什么
@@ -24,6 +26,17 @@ export const FRICTION_WINS_SYSTEM_PROMPT = `你正在分析一位开发者在多
 所有叙述和解释字段必须使用简体中文撰写。枚举值和机器可读的类别 ID 保持不变。
 
 仅返回有效的 JSON，包裹在 <json>...</json> 标签中。`;
+
+/** Load friction-wins system prompt from template, falling back to built-in default. */
+export function getFrictionWinsSystemPrompt(): string {
+  const full = loadPrompt('friction-wins', undefined, FRICTION_WINS_SYSTEM_PROMPT_DEFAULT);
+  // Template contains system + user parts separated by '---'; extract system part only.
+  const parts = full.split(/\n---\n/);
+  return (parts[0] ?? full).trim();
+}
+
+/** @deprecated Use getFrictionWinsSystemPrompt() for template-loaded version. */
+export const FRICTION_WINS_SYSTEM_PROMPT = FRICTION_WINS_SYSTEM_PROMPT_DEFAULT;
 
 export function generateFrictionWinsPrompt(data: {
   frictionCategories: Array<{ category: string; count: number; avg_severity: number; examples: string[] }>;
@@ -48,13 +61,21 @@ ${((data.pqSignals?.strengths ?? []).map(s => `  ${s.category}: ${s.count}`).joi
 `
     : '';
 
-  return `分析来自 ${data.totalSessions} 个会话（时间跨度 ${data.period}）的跨会话模式。
+  const frictionData = JSON.stringify(data.frictionCategories.slice(0, 15), null, 2);
+  const effectiveData = JSON.stringify(data.effectivePatterns.slice(0, 10), null, 2);
+
+  // Fallback: complete prompt with actual values (returned as-is when template file is missing)
+  const fallback = `${FRICTION_WINS_SYSTEM_PROMPT_DEFAULT}
+
+---
+
+分析来自 ${data.totalSessions} 个会话（时间跨度 ${data.period}）的跨会话模式。
 
 摩擦类别（按频率 × 严重度排序）：
-${JSON.stringify(data.frictionCategories.slice(0, 15), null, 2)}
+${frictionData}
 
 有效模式（按频率排序，按类别分组）：
-${JSON.stringify(data.effectivePatterns.slice(0, 10), null, 2)}
+${effectiveData}
 ${pqSection}
 请按以下 JSON 格式响应：
 {
@@ -79,11 +100,19 @@ ${pqSection}
 所有叙述和解释字段必须使用简体中文撰写。枚举值和机器可读的类别 ID 保持不变。
 
 仅返回有效的 JSON，包裹在 <json>...</json> 标签中。`;
+
+  return loadPrompt('friction-wins', {
+    totalSessions: String(data.totalSessions),
+    period: data.period,
+    frictionData,
+    effectiveData,
+    pqSection,
+  }, fallback);
 }
 
 // --- Rules & Skills ---
 
-export const RULES_SKILLS_SYSTEM_PROMPT = `你正在根据开发者多个 AI 编码会话的跨会话分析，生成可直接使用的成果物。你将收到反复出现的摩擦模式和有效实践。
+const RULES_SKILLS_SYSTEM_PROMPT_DEFAULT = `你正在根据开发者多个 AI 编码会话的跨会话分析，生成可直接使用的成果物。你将收到反复出现的摩擦模式和有效实践。
 
 你的任务是产出具体、可直接复制粘贴的成果物：
 1. CLAUDE.md 规则——添加到 AI 助手配置中的具体指令
@@ -100,20 +129,37 @@ export const RULES_SKILLS_SYSTEM_PROMPT = `你正在根据开发者多个 AI 编
 
 仅返回有效的 JSON，包裹在 <json>...</json> 标签中。`;
 
+/** Load rules-skills system prompt from template, falling back to built-in default. */
+export function getRulesSkillsSystemPrompt(): string {
+  const full = loadPrompt('rules-skills', undefined, RULES_SKILLS_SYSTEM_PROMPT_DEFAULT);
+  const parts = full.split(/\n---\n/);
+  return (parts[0] ?? full).trim();
+}
+
+/** @deprecated Use getRulesSkillsSystemPrompt() for template-loaded version. */
+export const RULES_SKILLS_SYSTEM_PROMPT = RULES_SKILLS_SYSTEM_PROMPT_DEFAULT;
+
 export function generateRulesSkillsPrompt(data: {
   recurringFriction: Array<{ category: string; count: number; avg_severity: number; examples: string[] }>;
   effectivePatterns: Array<{ category: string; label: string; frequency: number; avg_confidence: number; descriptions: string[] }>;
   targetTool: string;
 }): string {
-  return `根据这些反复出现的模式生成可操作的成果物。
+  const recurringFriction = JSON.stringify(data.recurringFriction, null, 2);
+  const effectivePatterns = JSON.stringify(data.effectivePatterns, null, 2);
+
+  const fallback = `${RULES_SKILLS_SYSTEM_PROMPT_DEFAULT}
+
+---
+
+根据这些反复出现的模式生成可操作的成果物。
 
 目标工具：${data.targetTool}（生成与该工具生态兼容的成果物）
 
 反复出现的摩擦（3 次以上）：
-${JSON.stringify(data.recurringFriction, null, 2)}
+${recurringFriction}
 
 有效模式（2 次以上）：
-${JSON.stringify(data.effectivePatterns, null, 2)}
+${effectivePatterns}
 
 请按以下 JSON 格式响应：
 {
@@ -136,11 +182,17 @@ ${JSON.stringify(data.effectivePatterns, null, 2)}
 所有叙述和解释字段必须使用简体中文撰写。枚举值和机器可读的类别 ID 保持不变。
 
 仅返回有效的 JSON，包裹在 <json>...</json> 标签中。`;
+
+  return loadPrompt('rules-skills', {
+    targetTool: data.targetTool,
+    recurringFriction,
+    effectivePatterns,
+  }, fallback);
 }
 
 // --- Working Style ---
 
-export const WORKING_STYLE_SYSTEM_PROMPT = `你正在根据开发者 AI 编码会话的聚合统计数据，撰写简短的工作风格画像。你将收到工作流模式、成果分布、会话类型和摩擦频率的分布数据。
+const WORKING_STYLE_SYSTEM_PROMPT_DEFAULT = `你正在根据开发者 AI 编码会话的聚合统计数据，撰写简短的工作风格画像。你将收到工作流模式、成果分布、会话类型和摩擦频率的分布数据。
 
 你的任务是描述你观察到的现象，而非建议他们应该如何改变。使用第二人称撰写（"你倾向于……"）。
 
@@ -160,6 +212,16 @@ export const WORKING_STYLE_SYSTEM_PROMPT = `你正在根据开发者 AI 编码�
 
 仅返回有效的 JSON，包裹在 <json>...</json> 标签中。`;
 
+/** Load working-style system prompt from template, falling back to built-in default. */
+export function getWorkingStyleSystemPrompt(): string {
+  const full = loadPrompt('working-style', undefined, WORKING_STYLE_SYSTEM_PROMPT_DEFAULT);
+  const parts = full.split(/\n---\n/);
+  return (parts[0] ?? full).trim();
+}
+
+/** @deprecated Use getWorkingStyleSystemPrompt() for template-loaded version. */
+export const WORKING_STYLE_SYSTEM_PROMPT = WORKING_STYLE_SYSTEM_PROMPT_DEFAULT;
+
 export function generateWorkingStylePrompt(data: {
   workflowDistribution: Record<string, number>;
   outcomeDistribution: Record<string, number>;
@@ -168,16 +230,24 @@ export function generateWorkingStylePrompt(data: {
   period: string;
   frictionFrequency: number;
 }): string {
-  return `根据 ${data.totalSessions} 个会话（时间跨度 ${data.period}）撰写工作风格画像。
+  const workflowData = JSON.stringify(data.workflowDistribution, null, 2);
+  const outcomeData = JSON.stringify(data.outcomeDistribution, null, 2);
+  const characterData = JSON.stringify(data.characterDistribution, null, 2);
+
+  const fallback = `${WORKING_STYLE_SYSTEM_PROMPT_DEFAULT}
+
+---
+
+根据 ${data.totalSessions} 个会话（时间跨度 ${data.period}）撰写工作风格画像。
 
 工作流模式：
-${JSON.stringify(data.workflowDistribution, null, 2)}
+${workflowData}
 
 成果满意度：
-${JSON.stringify(data.outcomeDistribution, null, 2)}
+${outcomeData}
 
 会话类型：
-${JSON.stringify(data.characterDistribution, null, 2)}
+${characterData}
 
 摩擦频率：所有会话中共有 ${data.frictionFrequency} 个摩擦点
 
@@ -191,4 +261,13 @@ ${JSON.stringify(data.characterDistribution, null, 2)}
 所有叙述和解释字段必须使用简体中文撰写。枚举值和机器可读的类别 ID 保持不变。
 
 仅返回有效的 JSON，包裹在 <json>...</json> 标签中。`;
+
+  return loadPrompt('working-style', {
+    totalSessions: String(data.totalSessions),
+    period: data.period,
+    workflowData,
+    outcomeData,
+    characterData,
+    frictionFrequency: String(data.frictionFrequency),
+  }, fallback);
 }

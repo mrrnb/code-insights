@@ -1,10 +1,15 @@
 // Canonical category arrays and classification guidance strings for LLM analysis.
 // Extracted from prompts.ts — imported by normalizers and prompt generators.
+//
+// Guidance text is loaded from prompts/*.md files when available,
+// falling back to built-in defaults. Users can customize by editing the files.
+
+import { loadPrompt } from '../prompts/prompt-loader.js';
 
 // Shared guidance for friction category and attribution classification.
 // Actor-neutral category definitions describe the gap, not the actor.
 // Attribution field captures who contributed to the friction for actionability.
-export const FRICTION_CLASSIFICATION_GUIDANCE = `
+const FRICTION_CLASSIFICATION_GUIDANCE_DEFAULT = `
 摩擦分类指导：
 
 每个摩擦点记录：出了什么问题（分类 + 描述）、谁导致的（归因）、以及分类理由（_reasoning）。
@@ -46,6 +51,13 @@ export const FRICTION_CLASSIFICATION_GUIDANCE = `
 - 包含具体细节（文件名、API、错误信息）
 - 表述为"缺少 X 导致 Y"，而非"AI 没做到 X"或"用户忘了 X"
 - 把"谁的责任"留给归因字段承载`;
+
+export function getFrictionClassificationGuidance(): string {
+  return loadPrompt('friction-classification', undefined, FRICTION_CLASSIFICATION_GUIDANCE_DEFAULT);
+}
+
+// Backward-compatible export
+export const FRICTION_CLASSIFICATION_GUIDANCE = FRICTION_CLASSIFICATION_GUIDANCE_DEFAULT;
 
 export const CANONICAL_FRICTION_CATEGORIES = [
   'wrong-approach',
@@ -91,7 +103,7 @@ export const CANONICAL_PQ_CATEGORIES = [
   ...CANONICAL_PQ_STRENGTH_CATEGORIES,
 ] as const;
 
-export const PROMPT_QUALITY_CLASSIFICATION_GUIDANCE = `
+const PROMPT_QUALITY_CLASSIFICATION_GUIDANCE_DEFAULT = `
 提示词质量分类指导：
 
 每条发现记录一个具体时刻：用户的提示词在此处造成了摩擦（缺陷）或促进了效率（优势）。
@@ -151,7 +163,13 @@ export const PROMPT_QUALITY_CLASSIFICATION_GUIDANCE = `
 - AI 尽管提示模糊但仍表现良好的会话：仍然分类缺陷。影响等级应为 "low"，因为没有可见成本。
 - Agent/委托式会话：如果用户给出了清晰的高层指令且 AI 自主规划并成功执行，不要因为消息数量少或缺少微观细节而扣分。有效的委托本身就是良好的提示词实践。关注初始委托提示的质量。`;
 
-export const EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE = `
+export function getPromptQualityClassificationGuidance(): string {
+  return loadPrompt('pq-classification', undefined, PROMPT_QUALITY_CLASSIFICATION_GUIDANCE_DEFAULT);
+}
+
+export const PROMPT_QUALITY_CLASSIFICATION_GUIDANCE = PROMPT_QUALITY_CLASSIFICATION_GUIDANCE_DEFAULT;
+
+const EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE_DEFAULT = `
 有效模式分类指导：
 
 每个有效模式记录一种对高效会话结果有贡献的技术或方法。
@@ -187,3 +205,9 @@ export const EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE = `
 仅当你能具体说明每一方的贡献时才使用 "collaborative"。如有不确定，倾向于更具体的标签。
 
 当所有已有分类都不适用时，创建一个具体的 kebab-case 分类（精确的新分类优于勉强套用已有分类）。`;
+
+export function getEffectivePatternClassificationGuidance(): string {
+  return loadPrompt('pattern-classification', undefined, EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE_DEFAULT);
+}
+
+export const EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE = EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE_DEFAULT;

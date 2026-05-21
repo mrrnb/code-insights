@@ -1,6 +1,10 @@
 // Prompt template strings and generator functions for LLM session analysis.
 // Types → prompt-types.ts, constants → prompt-constants.ts,
 // formatting → message-format.ts, parsers → response-parsers.ts.
+//
+// Prompts are loaded from ~/.code-insights/prompts/*.md files when available,
+// falling back to built-in defaults. Users can customize prompts by editing
+// the files in ~/.code-insights/prompts/.
 
 import type { SessionMetadata, ContentBlock } from './prompt-types.js';
 import {
@@ -13,6 +17,7 @@ import {
   EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE,
 } from './prompt-constants.js';
 import { formatSessionMetaLine } from './message-format.js';
+import { loadPrompt } from '../prompts/prompt-loader.js';
 
 // =============================================================================
 // SHARED SYSTEM PROMPT
@@ -24,8 +29,16 @@ import { formatSessionMetaLine } from './message-format.js';
 /**
  * Shared system prompt for all LLM analysis calls.
  * Paired with buildCacheableConversationBlock() + an analysis-specific instruction block.
+ * Loaded from ~/.code-insights/prompts/system-prompt.md if it exists.
  */
-export const SHARED_ANALYST_SYSTEM_PROMPT = `你是一位资深工程师，负责分析一次 AI 辅助编程会话。你将收到对话记录，随后是具体的提取指令。请仅返回合法的 JSON，用 <json>...</json> 标签包裹。`;
+const SYSTEM_PROMPT_DEFAULT = `你是一位资深工程师，负责分析一次 AI 辅助编程会话。你将收到对话记录，随后是具体的提取指令。请仅返回合法的 JSON，用 <json>...</json> 标签包裹。`;
+
+export function getSharedSystemPrompt(): string {
+  return loadPrompt('system-prompt', undefined, SYSTEM_PROMPT_DEFAULT);
+}
+
+// Backward-compatible export
+export const SHARED_ANALYST_SYSTEM_PROMPT = SYSTEM_PROMPT_DEFAULT;
 
 // =============================================================================
 // CACHEABLE CONVERSATION BLOCK
@@ -65,18 +78,35 @@ export function buildCacheableConversationBlock(formattedMessages: string): Cont
 /**
  * Build the instruction suffix for session analysis.
  * Used as the second content block in the user message, after the cached conversation.
+ * Loads from ~/.code-insights/prompts/session-analysis.md if it exists.
  */
 export function buildSessionAnalysisInstructions(
   projectName: string,
   sessionSummary: string | null,
   meta?: SessionMetadata
 ): string {
+  const summaryLine = sessionSummary ? `会话摘要：${sessionSummary}\n` : '';
+  const metaLine = formatSessionMetaLine(meta);
+
+  const vars = {
+    projectName,
+    summaryLine,
+    metaLine,
+    frictionCategories: CANONICAL_FRICTION_CATEGORIES.join(', '),
+    frictionGuidance: FRICTION_CLASSIFICATION_GUIDANCE,
+    patternGuidance: EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE,
+  };
+
+  return loadPrompt('session-analysis', vars, SESSION_ANALYSIS_DEFAULT(projectName, summaryLine, metaLine));
+}
+
+function SESSION_ANALYSIS_DEFAULT(projectName: string, summaryLine: string, metaLine: string): string {
   return `你是一位资深工程师，正在为团队的工程知识库撰写条目。你刚刚观察了一次 AI 辅助编程会话，你的任务是提取那些能在 6 个月后帮助另一位工程师节省时间的洞察。
 
 你的读者是一位从未看过这次会话但在同一代码库工作的开发者。他们需要足够的上下文来理解：为什么做了这个决策、发现了什么坑、以及这些知识在什么场景下适用。
 
 项目：${projectName}
-${sessionSummary ? `会话摘要：${sessionSummary}\n` : ''}${formatSessionMetaLine(meta)}
+${summaryLine}${metaLine}
 === 第一部分：会话特征 ===
 首先作为整体评估提取以下特征：
 
@@ -251,6 +281,22 @@ export function buildPromptQualityInstructions(
   },
   meta?: SessionMetadata
 ): string {
+  const sessionShape = `${sessionMeta.humanMessageCount} 条用户消息、${sessionMeta.assistantMessageCount} 条助手消息、${sessionMeta.toolExchangeCount} 次工具调用`;
+  const metaLine = formatSessionMetaLine(meta);
+
+  const vars = {
+    projectName,
+    sessionShape,
+    sessionMeta: metaLine,
+    pqGuidance: PROMPT_QUALITY_CLASSIFICATION_GUIDANCE,
+    pqDeficitCategories: CANONICAL_PQ_DEFICIT_CATEGORIES.join(', '),
+    pqStrengthCategories: CANONICAL_PQ_STRENGTH_CATEGORIES.join(', '),
+  };
+
+  return loadPrompt('prompt-quality', vars, PQ_ANALYSIS_DEFAULT(projectName, sessionShape, metaLine, vars.pqDeficitCategories, vars.pqStrengthCategories));
+}
+
+function PQ_ANALYSIS_DEFAULT(projectName: string, sessionShape: string, metaLine: string, pqDeficitCategories: string, pqStrengthCategories: string): string {
   return `你是一位提示词工程教练，帮助开发者更有效地与 AI 编程助手沟通。你审查对话并识别出哪些时刻使用更好的提示词可以节省时间——以及哪些时刻用户的提示词特别好。
 
 你将产出：
@@ -261,8 +307,8 @@ export function buildPromptQualityInstructions(
 5. **评估**：2-3 句总结
 
 项目：${projectName}
-会话结构：${sessionMeta.humanMessageCount} 条用户消息、${sessionMeta.assistantMessageCount} 条助手消息、${sessionMeta.toolExchangeCount} 次工具调用
-${formatSessionMetaLine(meta)}
+会话结构：${sessionShape}
+${metaLine}
 在评估之前，先通读对话并识别：
 1. 助手要求澄清的每次时刻——这些本可以避免
 2. 用户纠正助手理解的每次时刻
@@ -343,8 +389,8 @@ ${PROMPT_QUALITY_CLASSIFICATION_GUIDANCE}
 }
 
 分类值——优先使用这些分类：
-不足项：${CANONICAL_PQ_DEFICIT_CATEGORIES.join(', ')}
-亮点项：${CANONICAL_PQ_STRENGTH_CATEGORIES.join(', ')}
+不足项：${pqDeficitCategories}
+亮点项：${pqStrengthCategories}
 只有当这些都不适用时才创建新的 kebab-case 分类。
 
 规则：
@@ -373,10 +419,27 @@ export function buildFacetOnlyInstructions(
   sessionSummary: string | null,
   meta?: SessionMetadata
 ): string {
+  const summaryLine = sessionSummary ? `会话摘要：${sessionSummary}\n` : '';
+  const metaLine = formatSessionMetaLine(meta);
+
+  const vars = {
+    projectName,
+    summaryLine,
+    metaLine,
+    frictionCategories: CANONICAL_FRICTION_CATEGORIES.join(', '),
+    patternCategories: CANONICAL_PATTERN_CATEGORIES.join(', '),
+    frictionGuidance: FRICTION_CLASSIFICATION_GUIDANCE,
+    patternGuidance: EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE,
+  };
+
+  return loadPrompt('facet-only', vars, FACET_ONLY_DEFAULT(projectName, summaryLine, metaLine));
+}
+
+function FACET_ONLY_DEFAULT(projectName: string, summaryLine: string, metaLine: string): string {
   return `你正在评估一次 AI 编程会话，提取结构化元数据用于跨会话的模式分析。
 
 项目：${projectName}
-${sessionSummary ? `会话摘要：${sessionSummary}\n` : ''}${formatSessionMetaLine(meta)}
+${summaryLine}${metaLine}
 提取会话特征——对会话整体情况的评估：
 
 1. outcome_satisfaction："high"（成功完成）、"medium"（部分完成）、"low"（有问题）、"abandoned"（放弃了）
@@ -387,6 +450,7 @@ ${FRICTION_CLASSIFICATION_GUIDANCE}
 4. effective_patterns：最多 3 个效果好的做法（数组）。
    每个：{ _reasoning（驱动者决策树推理——先检查用户基础设施）、category（kebab-case，优先：${CANONICAL_PATTERN_CATEGORIES.join(', ')}）、description（具体技术，1-2 句）、confidence（0-100）、driver（"user-driven"|"ai-driven"|"collaborative"） }
 ${EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE}
+
 5. had_course_correction：true/false——用户是否将 AI 从错误方向拉回来了？
 6. course_correction_reason：如果为 true 则简要说明，否则为 null
 7. iteration_count：用户需要澄清/纠正的循环次数

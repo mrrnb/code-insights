@@ -2,6 +2,8 @@
 // Each format has two scope variants (project vs. all).
 // The LLM returns raw markdown — no JSON parsing needed.
 
+import { loadPrompt } from '@code-insights/cli/prompts/prompt-loader';
+
 export type ExportFormat = 'agent-rules' | 'knowledge-brief' | 'obsidian' | 'notion';
 export type ExportScope = 'project' | 'all';
 export type ExportDepth = 'essential' | 'standard' | 'comprehensive';
@@ -110,7 +112,7 @@ export function buildInsightContext(insights: ExportInsightRow[]): string {
 
 // ─── System prompts ──────────────────────────────────────────────────────────
 
-export const AGENT_RULES_PROJECT_SYSTEM_PROMPT = (projectName: string) => `\
+const AGENT_RULES_PROJECT_DEFAULT = (projectName: string) => `\
 你是一位技术作家，正在将 AI 编码会话的 insights 转换为项目 "${projectName}" 的 agent 指令规则。\
 产出适用于 CLAUDE.md 或 .cursorrules 文件的祈使句式指令。
 
@@ -125,7 +127,10 @@ export const AGENT_RULES_PROJECT_SYSTEM_PROMPT = (projectName: string) => `\
 - 仅输出干净的 Markdown——不要添加前言或元评论
 - 所有生成的 Markdown 使用简体中文撰写，同时保留代码标识符、文件名、URL、CLI 命令和必要的 section 语法`;
 
-export const AGENT_RULES_ALL_SYSTEM_PROMPT = `\
+export const AGENT_RULES_PROJECT_SYSTEM_PROMPT = (projectName: string) =>
+  loadPrompt('export-agent-rules-project', { projectName }, AGENT_RULES_PROJECT_DEFAULT(projectName));
+
+const AGENT_RULES_ALL_DEFAULT = `\
 你是一位技术作家，正在将来自多个项目的 AI 编码会话 insights 转换为 agent 指令规则。\
 产出适用于 CLAUDE.md 或 .cursorrules 文件的祈使句式指令。
 
@@ -156,7 +161,10 @@ export const AGENT_RULES_ALL_SYSTEM_PROMPT = `\
 - 仅输出干净的 Markdown——不要添加前言或元评论
 - 所有生成的 Markdown 使用简体中文撰写，同时保留项目名称、代码标识符、URL 和必要的 section 语法`;
 
-export const KNOWLEDGE_BRIEF_PROJECT_SYSTEM_PROMPT = (projectName: string) => `\
+export const AGENT_RULES_ALL_SYSTEM_PROMPT =
+  loadPrompt('export-agent-rules-all', undefined, AGENT_RULES_ALL_DEFAULT);
+
+const KNOWLEDGE_BRIEF_PROJECT_DEFAULT = (projectName: string) => `\
 你是一位技术作家，正在为项目 "${projectName}" 创建知识交接文档。\
 产出一份可读的 Markdown 文档，汇总来自 AI 编码会话的决策、学习收获和技巧。
 
@@ -169,7 +177,10 @@ export const KNOWLEDGE_BRIEF_PROJECT_SYSTEM_PROMPT = (projectName: string) => `\
 仅输出干净的 Markdown——不要添加前言或元评论。
 所有生成的 Markdown 使用简体中文撰写，同时保留项目名称、代码标识符、文件名、命令和 URL。`;
 
-export const KNOWLEDGE_BRIEF_ALL_SYSTEM_PROMPT = `\
+export const KNOWLEDGE_BRIEF_PROJECT_SYSTEM_PROMPT = (projectName: string) =>
+  loadPrompt('export-knowledge-brief-project', { projectName }, KNOWLEDGE_BRIEF_PROJECT_DEFAULT(projectName));
+
+const KNOWLEDGE_BRIEF_ALL_DEFAULT = `\
 你是一位技术作家，正在基于多个项目的 AI 编码会话创建知识交接文档。\
 产出一份可读的 Markdown 文档，汇总决策、学习收获和技巧。
 
@@ -183,7 +194,10 @@ export const KNOWLEDGE_BRIEF_ALL_SYSTEM_PROMPT = `\
 仅输出干净的 Markdown——不要添加前言或元评论。
 所有生成的 Markdown 使用简体中文撰写，同时保留项目名称、代码标识符、文件名、命令和 URL。`;
 
-export const OBSIDIAN_PROJECT_SYSTEM_PROMPT = (projectName: string, exportDate: string) => `\
+export const KNOWLEDGE_BRIEF_ALL_SYSTEM_PROMPT =
+  loadPrompt('export-knowledge-brief-all', undefined, KNOWLEDGE_BRIEF_ALL_DEFAULT);
+
+const OBSIDIAN_PROJECT_DEFAULT = (projectName: string, exportDate: string) => `\
 为项目 "${projectName}" 生成适用于 Obsidian 的带 YAML frontmatter 的 Markdown。\
 以如下 frontmatter 块开头：
 
@@ -199,7 +213,10 @@ type: knowledge-export
 仅输出干净的 Markdown——不要添加前言或元评论。
 所有生成的 Markdown 使用简体中文撰写，同时保留 YAML/frontmatter 键名、wikilinks 语法、代码标识符、文件名、命令和 URL。`;
 
-export const OBSIDIAN_ALL_SYSTEM_PROMPT = (exportDate: string) => `\
+export const OBSIDIAN_PROJECT_SYSTEM_PROMPT = (projectName: string, exportDate: string) =>
+  loadPrompt('export-obsidian-project', { projectName, exportDate }, OBSIDIAN_PROJECT_DEFAULT(projectName, exportDate));
+
+const OBSIDIAN_ALL_DEFAULT = (exportDate: string) => `\
 为涵盖多个项目的场景生成适用于 Obsidian 的带 YAML frontmatter 的 Markdown。\
 以如下 frontmatter 块开头：
 
@@ -215,7 +232,10 @@ type: knowledge-export
 仅输出干净的 Markdown——不要添加前言或元评论。
 所有生成的 Markdown 使用简体中文撰写，同时保留 YAML/frontmatter 键名、wikilinks 语法、代码标识符、文件名、命令和 URL。`;
 
-export const NOTION_PROJECT_SYSTEM_PROMPT = (projectName: string) => `\
+export const OBSIDIAN_ALL_SYSTEM_PROMPT = (exportDate: string) =>
+  loadPrompt('export-obsidian-all', { exportDate }, OBSIDIAN_ALL_DEFAULT(exportDate));
+
+const NOTION_PROJECT_DEFAULT = (projectName: string) => `\
 为项目 "${projectName}" 生成兼容 Notion 的 Markdown。使用：
 - Toggle blocks（▶ **Section Name**）实现可折叠章节
 - Callout blocks（> [!note] content）标注关键决策
@@ -226,7 +246,10 @@ export const NOTION_PROJECT_SYSTEM_PROMPT = (projectName: string) => `\
 仅输出干净的 Markdown——不要添加前言或元评论。
 所有生成的 Markdown 使用简体中文撰写，同时保留 Notion 语法标记、代码标识符、文件名、命令和 URL。`;
 
-export const NOTION_ALL_SYSTEM_PROMPT = `\
+export const NOTION_PROJECT_SYSTEM_PROMPT = (projectName: string) =>
+  loadPrompt('export-notion-project', { projectName }, NOTION_PROJECT_DEFAULT(projectName));
+
+const NOTION_ALL_DEFAULT = `\
 为涵盖多个项目的场景生成兼容 Notion 的 Markdown。使用：
 - Toggle blocks（▶ **Section Name**）实现可折叠章节
 - Callout blocks（> [!note] content）标注关键决策
@@ -236,6 +259,9 @@ export const NOTION_ALL_SYSTEM_PROMPT = `\
 按项目组织内容，首先设置跨项目主题部分。\
 仅输出干净的 Markdown——不要添加前言或元评论。
 所有生成的 Markdown 使用简体中文撰写，同时保留 Notion 语法标记、代码标识符、文件名、命令和 URL。`;
+
+export const NOTION_ALL_SYSTEM_PROMPT =
+  loadPrompt('export-notion-all', undefined, NOTION_ALL_DEFAULT);
 
 /**
  * Select the appropriate system prompt for the given format and scope.

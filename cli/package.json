@@ -32,7 +32,8 @@
     "./analysis/analysis-usage-db": "./dist/analysis/analysis-usage-db.js",
     "./analysis/provider-runner": "./dist/analysis/provider-runner.js",
     "./analysis/schemas/session-analysis.json": "./dist/analysis/schemas/session-analysis.json",
-    "./analysis/schemas/prompt-quality.json": "./dist/analysis/schemas/prompt-quality.json"
+    "./analysis/schemas/prompt-quality.json": "./dist/analysis/schemas/prompt-quality.json",
+    "./prompts/prompt-loader": "./dist/prompts/prompt-loader.js"
   },
   "bin": {
     "code-insights": "./dist/index.js",
