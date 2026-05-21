@@ -10,7 +10,7 @@ import { runSync } from './sync.js';
 import { loadConfig } from '../utils/config.js';
 
 interface DashboardOptions {
-  port: string;
+  port?: string;
   host?: string;
   open: boolean;
   // Commander's --no-sync flag sets sync=false; default (no flag) is true
@@ -50,6 +50,23 @@ function resolveHost(cliHost?: string): string {
 }
 
 /**
+ * Resolve the dashboard port.
+ * Priority: CLI --port > config dashboard.port > default 7890
+ * If CLI port is provided but invalid (NaN), falls through to config/default.
+ */
+function resolvePort(cliPort?: string): number {
+  if (cliPort !== undefined) {
+    const parsed = parseInt(cliPort, 10);
+    if (!isNaN(parsed)) return parsed;
+  }
+  const config = loadConfig();
+  if (config?.dashboard?.port !== undefined) {
+    return config.dashboard.port;
+  }
+  return 7890;
+}
+
+/**
  * Start the Code Insights local dashboard server.
  *
  * Loads server/dist/index.js by file URL rather than package name to avoid a
@@ -77,7 +94,7 @@ export async function dashboardCommand(options: DashboardOptions): Promise<void>
     await autoDetectOllama();
   }
 
-  const port = parseInt(options.port, 10);
+  const port = resolvePort(options.port);
   const host = resolveHost(options.host);
 
   if (isNaN(port) || port < 1 || port > 65535) {

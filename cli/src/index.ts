@@ -122,7 +122,7 @@ program
 program
   .command('dashboard')
   .description('启动 Code Insights 控制台服务并在浏览器中打开')
-  .option('-p, --port <number>', '端口号', String(7890))
+  .option('-p, --port <number>', '端口号')
   .option('-H, --host <address>', '监听地址（默认 127.0.0.1，0.0.0.0 允许外部访问）')
   .option('--no-open', '不自动打开浏览器')
   .option('--no-sync', '启动前跳过自动会话同步')
@@ -188,7 +188,7 @@ insightsCmd
 // Default action: running `code-insights` with no arguments opens the dashboard.
 // Dashboard auto-syncs sessions first, giving "1 command to value" on first run.
 program.action(async () => {
-  await dashboardCommand({ port: '7890', open: true, sync: true });
+  await dashboardCommand({ open: true, sync: true });
 });
 
 // Show one-time telemetry disclosure before any command runs
