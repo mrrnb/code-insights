@@ -93,6 +93,7 @@ export function buildSessionAnalysisInstructions(
     summaryLine,
     metaLine,
     frictionCategories: CANONICAL_FRICTION_CATEGORIES.join(', '),
+    patternCategories: CANONICAL_PATTERN_CATEGORIES.join(', '),
     frictionGuidance: FRICTION_CLASSIFICATION_GUIDANCE,
     patternGuidance: EFFECTIVE_PATTERN_CLASSIFICATION_GUIDANCE,
   };

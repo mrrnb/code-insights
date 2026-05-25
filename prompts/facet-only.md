@@ -1,7 +1,7 @@
 你正在评估一次 AI 编程会话，提取结构化元数据用于跨会话的模式分析。
 
 项目：${projectName}
-${sessionSummary}${sessionMeta}
+${summaryLine}${metaLine}
 提取会话特征——对会话整体情况的评估：
 
 1. outcome_satisfaction："high"（成功完成）、"medium"（部分完成）、"low"（有问题）、"abandoned"（放弃了）
