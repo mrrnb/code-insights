@@ -65,9 +65,10 @@ zcripts
 
 CLAUDE.md
 
-.agents
 
 AGENT.md
 .playwright-mcp/
 
 .tasks
+
+.codegraph/
