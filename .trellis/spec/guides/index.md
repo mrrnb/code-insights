@@ -1,19 +1,6 @@
 # Thinking Guides
 
-> **Purpose**: Expand your thinking to catch things you might not have considered.
-
----
-
-## Why Thinking Guides?
-
-**Most bugs and tech debt come from "didn't think of that"**, not from lack of skill:
-
-- Didn't think about what happens at layer boundaries → cross-layer bugs
-- Didn't think about code patterns repeating → duplicated code everywhere
-- Didn't think about edge cases → runtime errors
-- Didn't think about future maintainers → unreadable code
-
-These guides help you **ask the right questions before coding**.
+> 在写代码前问对问题。本仓库的典型故障发生在 **sync / insights / facets / export** 边界，而不是 React 组件内部。
 
 ---
 
@@ -21,77 +8,63 @@ These guides help you **ask the right questions before coding**.
 
 | Guide | Purpose | When to Use |
 |-------|---------|-------------|
-| [Code Reuse Thinking Guide](./code-reuse-thinking-guide.md) | Identify patterns and reduce duplication | When you notice repeated patterns |
-| [Cross-Layer Thinking Guide](./cross-layer-thinking-guide.md) | Think through data flow across layers | Features spanning multiple layers |
+| [Data Pipeline](./data-pipeline.md) | 分清采集、insights、facets、memories | 任何“数据怎么没了 / 为什么没分析” |
+| [Cross-Layer Thinking Guide](./cross-layer-thinking-guide.md) | CLI ↔ SQLite ↔ Hono ↔ Dashboard 合同 | 改字段、API、JSON 列、SSE |
+| [Code Reuse Thinking Guide](./code-reuse-thinking-guide.md) | 避免双份 normalize / SELECT / 格式化 | 复制函数、加模型名、加 insight type |
 
 ---
 
 ## Quick Reference: Thinking Triggers
 
-### When to Think About Cross-Layer Issues
+### 数据怎么没出来
 
-- [ ] Feature touches 3+ layers (API, Service, Component, Database)
-- [ ] Data format changes between layers
-- [ ] Multiple consumers need the same data
-- [ ] You're not sure where to put some logic
-- [ ] You are adding an event kind, JSONL record, RPC payload, or config field
-- [ ] UI / command code starts casting raw payload fields directly
+- [ ] 刚 `sync` 完却没有 insights
+- [ ] `reflect backfill` 说 facets 已最新，但 SQLite 有缺口
+- [ ] dashboard 有会话无分析，或有 insights 无 facets
+- [ ] `export-memories` skip 很多文件
 
-→ Read [Cross-Layer Thinking Guide](./cross-layer-thinking-guide.md)
+→ [Data Pipeline](./data-pipeline.md)
 
-### When to Think About Code Reuse
+### 跨层
 
-- [ ] You're writing similar code to something that exists
-- [ ] You see the same pattern repeated 3+ times
-- [ ] You're adding a new field to multiple places
-- [ ] **You're modifying any constant or config**
-- [ ] **You're creating a new utility/helper function** ← Search first!
-- [ ] Two files read the same untyped payload field with local casts
-- [ ] Multiple branches update the same derived state from `kind` / `action`
+- [ ] 给 `sessions` / `insights` / `session_facets` 加列或 JSON 字段
+- [ ] 改 `/api/*` 的 JSON key 或 SSE event 名
+- [ ] Dashboard 开始 `JSON.parse` 某个 TEXT 列
+- [ ] CLI stats 与 dashboard 展示同一数字却公式不同
 
-→ Read [Code Reuse Thinking Guide](./code-reuse-thinking-guide.md)
+→ [Cross-Layer Thinking Guide](./cross-layer-thinking-guide.md)
 
-### When Verifying AI Cross-Review Results
+### 复用
 
-- [ ] Reviewer claims "user input can be malicious" → Check the actual data source (internal manifest? user config? external API?)
-- [ ] Reviewer flags "missing validation" → Is the data from a trusted internal source?
-- [ ] Reviewer says "behavior change" → Read the code comments — is it intentional design?
-- [ ] Reviewer identifies a "bug" in test → Mentally delete the feature being tested — does the test still pass? If yes → tautological test
+- [ ] 准备写 `safeParseJson` / `parseJsonField` 的第三份
+- [ ] 改 `friction-normalize` 或 prompt schema
+- [ ] 加模型展示名、insight 类型色、session 标题优先级
+- [ ] 在多个 route 里复制 `SELECT ... FROM sessions`
 
-**Common AI reviewer false-positive patterns**:
-1. **Trust boundary confusion**: Treating internal data (bundled JSON manifests) as untrusted external input
-2. **Ignoring design comments**: Flagging intentional behavior documented in code comments as bugs
-3. **Variable misreading**: Not tracing a variable to its actual definition (e.g., Map keyed by path vs name)
+→ [Code Reuse Thinking Guide](./code-reuse-thinking-guide.md)
 
-**Verification rule**: Every CRITICAL/WARNING finding must be verified against the actual code before prioritizing. Budget ~35% false-positive rate for AI reviews.
+### 运行态（本机服务）
+
+- [ ] 改了 server 源码，CLI 行为没变
+- [ ] 端口在听但页面报错
+- [ ] Node 升级后 `ERR_DLOPEN_FAILED`
+
+先：配置端口 → PID → `/api/health` → 数据接口 → 是否加载了新的 `server/dist`。
 
 ---
 
-## Pre-Modification Rule (CRITICAL)
+## Pre-Modification Rule
 
-> **Before changing ANY value, ALWAYS search first!**
+改任何常量、JSON key、event 名、表列之前先搜：
 
 ```bash
-# Search for the value you're about to change
-grep -r "value_to_change" .
+rg "the_symbol_or_key" cli/src server/src dashboard/src
 ```
 
-This single habit prevents most "forgot to update X" bugs.
-
 ---
 
-## How to Use This Directory
+## Durable Facts
 
-1. **Before coding**: Skim the relevant thinking guide
-2. **During coding**: If something feels repetitive or complex, check the guides
-3. **After bugs**: Add new insights to the relevant guide (learn from mistakes)
-
----
-
-## Contributing
-
-Found a new "didn't think of that" moment? Add it to the relevant guide.
-
----
-
-**Core Principle**: 30 minutes of thinking saves 3 hours of debugging.
+- CLI 与 dashboard **没有**共享的前端层；`spec/cli/frontend` 与 `spec/server/frontend` 已删除。
+- 工作区是 `cli/` + `server/` + `dashboard/`，不是 `packages/*`。
+- 本 spec 的每条规则都对应真实源码路径或已踩过的坑；发现与代码不符时直接改 spec，不留模板句。

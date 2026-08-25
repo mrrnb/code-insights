@@ -25,6 +25,6 @@
     ".trellis/spec/dashboard/",
     ".trellis/spec/server/"
   ],
-  "notes": "First-time setup task created by trellis init (frontend project)",
+  "notes": "Spec bootstrap complete: cli/backend, server/backend, dashboard/frontend, guides. Removed inapplicable frontend layers for cli/server.",
   "meta": {}
 }

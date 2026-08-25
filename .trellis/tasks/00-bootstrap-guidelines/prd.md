@@ -21,10 +21,10 @@ the rest conversationally.
 
 ## Status (update the checkboxes as you complete each item)
 
-- [ ] Fill guidelines for @code-insights/cli
-- [ ] Fill guidelines for @code-insights/dashboard
-- [ ] Fill guidelines for @code-insights/server
-- [ ] Add code examples
+- [x] Fill guidelines for @code-insights/cli
+- [x] Fill guidelines for @code-insights/dashboard
+- [x] Fill guidelines for @code-insights/server
+- [x] Add code examples
 
 ---
 
@@ -33,8 +33,7 @@ the rest conversationally.
 ### Package: @code-insights/cli (`spec/cli/`)
 
 - Backend guidelines: `.trellis/spec/cli/backend/`
-
-- Frontend guidelines: `.trellis/spec/cli/frontend/`
+- Frontend layer deleted: CLI has no React UI
 
 ### Package: @code-insights/dashboard (`spec/dashboard/`)
 
@@ -43,14 +42,11 @@ the rest conversationally.
 ### Package: @code-insights/server (`spec/server/`)
 
 - Backend guidelines: `.trellis/spec/server/backend/`
+- Frontend layer deleted: server is Hono API only
 
-- Frontend guidelines: `.trellis/spec/server/frontend/`
+### Thinking guides
 
-
-### Thinking guides (already populated)
-
-`.trellis/spec/guides/` contains general thinking guides pre-filled with
-best practices. Customize only if something clearly doesn't fit this project.
+`.trellis/spec/guides/` rewritten for this repo; added `data-pipeline.md`.
 
 ---
 
@@ -111,8 +107,10 @@ is a separate conversation, not a bootstrap concern.
 
 ## Completion
 
-When the developer confirms the checklist items above are done with real
-examples (not placeholders), guide them to run:
+Bootstrap result (2026-08-25): `.trellis/spec/` filled from source + AGENTS.md.
+No GitNexus/ABCoder. Placeholders removed. Index links verified.
+
+When archiving this bootstrap task, run:
 
 ```bash
 python3 ./.trellis/scripts/task.py finish
