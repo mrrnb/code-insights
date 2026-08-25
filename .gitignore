@@ -52,7 +52,6 @@ docs/plans/
 # Git worktrees
 .worktrees/
 .aiws
-AGENTS.md
 
 notes
 .devkit
@@ -63,7 +62,6 @@ CLAUDE.local.md
 zcripts
 .claude
 
-CLAUDE.md
 
 
 AGENT.md
