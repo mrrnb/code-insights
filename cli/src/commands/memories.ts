@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join, basename } from 'path';
 import chalk from 'chalk';
 import { getDb } from '../db/client.js';
@@ -286,6 +286,10 @@ async function memoriesAction(options: MemoriesOptions): Promise<void> {
   for (const [projectPath, projectSessions] of byProject) {
     const projectName = basename(projectPath) || projectPath;
     const memoriesDir = join(gainsDir, projectName, 'aiws', 'memories');
+    if (!existsSync(memoriesDir)) {
+      console.log(chalk.dim(`  跳过 ${projectName}：${memoriesDir} 目录不存在`));
+      continue;
+    }
     const filePath = join(memoriesDir, `${dateStr}.md`);
 
     const existingIds = loadExistingSessionIds(filePath);
@@ -316,10 +320,6 @@ async function memoriesAction(options: MemoriesOptions): Promise<void> {
       console.log(chalk.dim('  ' + '─'.repeat(64)));
       console.log();
     } else {
-      if (!existsSync(memoriesDir)) {
-        mkdirSync(memoriesDir, { recursive: true });
-      }
-
       if (existsSync(filePath)) {
         const existing = readFileSync(filePath, 'utf-8').trimEnd();
         writeFileSync(filePath, `${existing}\n\n---\n\n${newContent}`, 'utf-8');
@@ -350,7 +350,7 @@ async function memoriesAction(options: MemoriesOptions): Promise<void> {
 // ──────────────────────────────────────────────────────
 
 export const memoriesCommand = new Command('memories')
-  .description('提取会话记忆并按项目写入 .aiws/memories/ 目录')
+  .description('提取会话记忆并写入已存在的 .aiws/memories/；目录不存在则跳过，不创建')
   .option('--date <date>', '要处理的日期（YYYY-MM-DD，默认：今天）')
   .option('--project <name>', '按项目名称或路径片段筛选')
   .option('--dry-run', '预览输出但不写入文件')

@@ -103,7 +103,7 @@ code-insights 是主人魔改的开源 AI 会话分析工具，将散落在各�
 - `/api/facets/missing` 必须从 `sessions` 主表出发并 `LEFT JOIN session_facets ON s.id = sf.session_id` → 从 `insights` 反查会漏掉零 insights 的会话。
 - SQLite 主键约定：`sessions.id` 是主键，`messages`/`insights`/`session_facets` 外键才叫 `session_id` → 写 JOIN 前先查 schema。
 - Dashboard 默认端口是 `7890`，实际以 `code-insights config`/`config.dashboard.port` 为准 → 本机曾因 ClashX 占用改跑 `7891` 或临时用 `7899`。
-- `memories` 按日期聚合写 `/data/apps/gains/<project>/aiws/memories/<date>.md` 并会 `mkdir -p` → `export-memories` 按 session 写 `YYYY-MM-DD_<source>_<seq>_<shortId>.md`，只消费已存在的 `aiws/memories` 目录。
+- `memories` 与 `export-memories` 只写入已存在的 `gains/<project>/aiws/memories`；目录不存在则跳过，禁止 `mkdir`。活 aiws 已退役，这两条命令应对空集。
 - `export-memories` 的增量状态在 `~/.code-insights/export-state.json`，`--force` 才覆盖重导 → 不把导出状态写入 SQLite。
 
 ## 踩坑记录
@@ -133,7 +133,7 @@ code-insights 是主人魔改的开源 AI 会话分析工具，将散落在各�
 
 ## 依赖与集成
 - 采集输入来自 Claude Code `~/.claude/projects/**/*.jsonl`、Cursor `state.vscdb`、Codex `~/.codex/sessions/**/rollout-*.jsonl`、Copilot `~/.copilot/session-state/{id}/events.jsonl` → provider 入口在 `cli/src/providers/`。
-- 本项目与 gains/aiws 集成走 `/data/apps/gains/<project>/aiws/memories` → `memories` 会创建目录，`export-memories` 只消费已存在目录。
+- 本项目不再重建 `gains/<project>/aiws/memories`；缺目录跳过。会话真相在 `~/.code-insights/data.db`。
 - 全量导出数量受两件事影响：SQLite 是否有 `insights`、目标 gains 项目是否已有 `.aiws/memories/` → skip 不是导出失败。
 - Claude Code hook 只在会话结束后触发同步入库 → 不会连带触发 reflect、facets backfill 或完整 LLM 分析。
 - 费用校验以 assistant usage 或 `task_complete.payload.usage` 为准 → session frontmatter 的 `cost: $X` 可用于对账但不是唯一真值。
